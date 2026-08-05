@@ -1,0 +1,1 @@
+import{j as e}from"./index-DuAFP_z5.js";const r=()=>e.jsx("div",{className:"bg-white border p-6 rounded-luxury shadow-luxury",children:"Manage Bookings Page Placeholder"});export{r as BookingsPage,r as default};

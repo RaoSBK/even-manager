@@ -1,0 +1,1 @@
+import{j as e}from"./index-DuAFP_z5.js";const a=()=>e.jsx("div",{className:"text-center p-8 font-bold text-primary-800",children:"Hall Detail Page Placeholder"});export{a as HallDetailPage,a as default};
