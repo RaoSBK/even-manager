@@ -1,0 +1,1 @@
+import{j as e}from"./index-DuAFP_z5.js";const o=()=>e.jsx("div",{className:"bg-white border p-6 rounded-luxury shadow-luxury",children:"Reports Page Placeholder"});export{o as ReportsPage,o as default};

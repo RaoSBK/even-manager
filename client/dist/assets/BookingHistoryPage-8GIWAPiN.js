@@ -1,0 +1,1 @@
+import{j as t}from"./index-DuAFP_z5.js";const o=()=>t.jsx("div",{className:"text-center p-8 font-bold text-primary-800",children:"Booking History Page Placeholder"});export{o as BookingHistoryPage,o as default};
