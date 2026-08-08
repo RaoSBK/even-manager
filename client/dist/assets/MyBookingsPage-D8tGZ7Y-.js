@@ -1,1 +1,0 @@
-import{j as e}from"./index-DuAFP_z5.js";const o=()=>e.jsx("div",{className:"text-center p-8 font-bold text-primary-800",children:"My Bookings Page Placeholder"});export{o as MyBookingsPage,o as default};

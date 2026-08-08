@@ -1,1 +1,0 @@
-import{j as e}from"./index-DuAFP_z5.js";const r=()=>e.jsx("div",{className:"text-center p-8 font-bold text-primary-800",children:"Travel Listing Page Placeholder"});export{r as TravelListingPage,r as default};
