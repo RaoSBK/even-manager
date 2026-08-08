@@ -1,0 +1,1 @@
+import{j as r}from"./index-BFQUU-Ml.js";const e=()=>r.jsx("div",{className:"text-center font-bold text-primary-800",children:"Forgot Password Page Placeholder"});export{e as ForgotPasswordPage,e as default};

@@ -1,0 +1,1 @@
+import{j as e}from"./index-BFQUU-Ml.js";const t=()=>e.jsx("div",{className:"text-center p-8 font-bold text-primary-800",children:"Package Detail Page Placeholder"});export{t as PackageDetailPage,t as default};

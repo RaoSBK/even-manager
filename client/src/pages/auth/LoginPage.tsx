@@ -6,6 +6,7 @@ import { Mail, Lock, LogIn, ArrowRight } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
   const { login } = useAuth();
+  const { addToast } = useNotifications();
   const navigate = useNavigate();
   const { addToast } = useNotifications();
 

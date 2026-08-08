@@ -1,0 +1,1 @@
+import{j as e}from"./index-BFQUU-Ml.js";const o=()=>e.jsx("div",{className:"text-center p-8 font-bold text-primary-800",children:"Hall Booking Page Placeholder"});export{o as HallBookingPage,o as default};
