@@ -1,1 +1,0 @@
-import{j as e}from"./index-BFQUU-Ml.js";const r=()=>e.jsx("div",{className:"bg-white border p-6 rounded-luxury shadow-luxury",children:"Manage Travel Packages Page Placeholder"});export{r as PackagesPage,r as default};

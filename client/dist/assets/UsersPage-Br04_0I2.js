@@ -1,1 +1,0 @@
-import{j as e}from"./index-BFQUU-Ml.js";const s=()=>e.jsx("div",{className:"bg-white border p-6 rounded-luxury shadow-luxury",children:"Manage Users Page Placeholder"});export{s as UsersPage,s as default};
