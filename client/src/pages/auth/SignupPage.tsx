@@ -1,267 +1,175 @@
 import React, { useState } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router';
 import { useNotifications } from '../../contexts/NotificationContext';
-import { User, Mail, Phone, Lock, Gift } from 'lucide-react';
-import Input from '../../components/common/Input';
-import Button from '../../components/common/Button';
-import { signupUser } from '../../api/authApi';
+import { User, Mail, Phone, Lock, UserPlus, ArrowLeft } from 'lucide-react';
 
 export const SignupPage: React.FC = () => {
-  const { addToast } = useNotifications();
+  const { signup } = useAuth();
   const navigate = useNavigate();
+  const { addToast } = useNotifications();
 
-  // Form Fields
-  const [fullName, setFullName] = useState('');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [mobileNumber, setMobileNumber] = useState('');
+  const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [referralCode, setReferralCode] = useState('');
-  const [agreeTerms, setAgreeTerms] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  // Validation States
-  const [errors, setErrors] = useState<{
-    fullName?: string;
-    email?: string;
-    mobileNumber?: string;
-    password?: string;
-    confirmPassword?: string;
-    agreeTerms?: string;
-  }>({});
-  const [loading, setLoading] = useState(false);
-
-  const validate = () => {
-    const newErrors: typeof errors = {};
-
-    // Full Name validation
-    if (!fullName.trim()) {
-      newErrors.fullName = 'Full name is required';
-    } else if (fullName.trim().length < 3) {
-      newErrors.fullName = 'Full name must be at least 3 characters';
-    }
-
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email) {
-      newErrors.email = 'Email address is required';
-    } else if (!emailRegex.test(email)) {
-      newErrors.email = 'Please enter a valid email address';
-    }
-
-    // Mobile validation
-    if (!mobileNumber) {
-      newErrors.mobileNumber = 'Mobile number is required';
-    } else if (!/^\d+$/.test(mobileNumber)) {
-      newErrors.mobileNumber = 'Mobile number must contain only digits';
-    } else if (mobileNumber.length !== 10) {
-      newErrors.mobileNumber = 'Mobile number must be exactly 10 digits';
-    }
-
-    // Password validation
-    if (!password) {
-      newErrors.password = 'Password is required';
-    } else if (password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-    }
-
-    // Confirm Password validation
-    if (!confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your password';
-    } else if (confirmPassword !== password) {
-      newErrors.confirmPassword = 'Passwords do not match';
-    }
-
-    // Agree Terms validation
-    if (!agreeTerms) {
-      newErrors.agreeTerms = 'You must agree to the Terms & Conditions';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSignupSubmit = async (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) {
-      addToast('Please correct the errors in the signup form', 'error');
+
+    if (!name.trim() || !email.trim() || !mobile.trim() || !password || !confirmPassword) {
+      addToast('All fields are required.', 'warning');
       return;
     }
 
-    setLoading(true);
+    if (password !== confirmPassword) {
+      addToast('Passwords do not match.', 'error');
+      return;
+    }
+
+    if (password.length < 6) {
+      addToast('Password must be at least 6 characters.', 'warning');
+      return;
+    }
+
+    setSubmitting(true);
     try {
-      await signupUser({
-        name: fullName,
-        email: email,
-        mobile: mobileNumber,
-        password: password,
-        referralCode: referralCode || undefined
-      });
-      
-      setLoading(false);
-      addToast('Account created successfully! Please sign in.', 'success');
-      navigate('/login');
+      await signup({ name, email, mobile, password });
+      addToast('OTP sent to your mobile number/email. Use demo code 123456.', 'success');
+      navigate('/otp');
     } catch (err: any) {
-      console.error(err);
-      const errMsg = err.message || '';
-      
-      const newErrors: typeof errors = {};
-      if (errMsg.toLowerCase().includes('mobile number')) {
-        newErrors.mobileNumber = 'This mobile number is already registered';
-      } else if (errMsg.toLowerCase().includes('email address')) {
-        newErrors.email = 'This email address is already registered';
-      }
-      
-      setErrors((prev) => ({ ...prev, ...newErrors }));
-      addToast(errMsg || 'Registration failed', 'error');
-      setLoading(false);
+      addToast(err.message || 'Signup failed. Please try again.', 'error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
-    <div className="flex flex-col w-full">
-      <div className="text-center mb-4 sm:mb-6">
-        <h3 className="text-base sm:text-lg font-bold font-serif text-primary-800 tracking-wide">
-          Create User Account
-        </h3>
-        <p className="text-[11px] sm:text-xs text-neutral-500 mt-0.5 sm:mt-1">
-          Join us to explore and book premium event spaces
-        </p>
+    <div className="space-y-6 font-sans">
+      <div className="text-center">
+        <h3 className="text-2xl font-bold font-serif text-primary-800">Create an Account</h3>
+        <p className="text-xs text-neutral-400 mt-1">Join GK Events to organize your dream functions</p>
       </div>
 
-      <form onSubmit={handleSignupSubmit} className="space-y-3 sm:space-y-4" noValidate>
-        {/* Full Name */}
-        <Input
-          id="fullName"
-          name="fullName"
-          type="text"
-          label="Full Name"
-          placeholder="Enter your full name"
-          value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
-          leftIcon={<User size={16} />}
-          error={errors.fullName}
-          required
-        />
-
-        {/* Email Address */}
-        <Input
-          id="email"
-          name="email"
-          type="email"
-          label="Email Address"
-          placeholder="name@example.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          leftIcon={<Mail size={16} />}
-          error={errors.email}
-          required
-        />
-
-        {/* Mobile Number */}
-        <Input
-          id="mobileNumber"
-          name="mobileNumber"
-          type="tel"
-          label="Mobile Number"
-          placeholder="Enter 10-digit mobile number"
-          value={mobileNumber}
-          onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
-          leftIcon={<Phone size={16} />}
-          error={errors.mobileNumber}
-          maxLength={10}
-          required
-        />
-
-        {/* Password */}
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          label="Password"
-          placeholder="Create a strong password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          leftIcon={<Lock size={16} />}
-          error={errors.password}
-          required
-        />
-
-        {/* Confirm Password */}
-        <Input
-          id="confirmPassword"
-          name="confirmPassword"
-          type="password"
-          label="Confirm Password"
-          placeholder="Re-enter your password"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          leftIcon={<Lock size={16} />}
-          error={errors.confirmPassword}
-          required
-        />
-
-        {/* Referral Code */}
-        <Input
-          id="referralCode"
-          name="referralCode"
-          type="text"
-          label="Referral Code (Optional)"
-          placeholder="Enter referral code if any"
-          value={referralCode}
-          onChange={(e) => setReferralCode(e.target.value)}
-          leftIcon={<Gift size={16} />}
-        />
-
-        {/* Agree Terms Checkbox */}
-        <div className="flex flex-col gap-1 mt-2">
-          <label className="flex items-start gap-2 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={agreeTerms}
-              onChange={(e) => setAgreeTerms(e.target.checked)}
-              className="mt-0.5 w-4 h-4 rounded border-cream-200 text-gold-500 focus:ring-gold-500/20 focus:ring-2 accent-gold-500"
-            />
-            <span className="text-[11px] font-medium text-neutral-600 leading-normal">
-              I agree to the{' '}
-              <a href="#terms" className="text-gold-600 hover:text-gold-700 underline font-semibold">
-                Terms of Service
-              </a>{' '}
-              and{' '}
-              <a href="#privacy" className="text-gold-600 hover:text-gold-700 underline font-semibold">
-                Privacy Policy
-              </a>
-            </span>
+      <form onSubmit={handleSignup} className="space-y-4">
+        <div>
+          <label className="block text-xs font-bold text-primary-800 uppercase tracking-wider mb-1">
+            Full Name
           </label>
-          {errors.agreeTerms && (
-            <p className="text-[11px] font-medium text-red-500 mt-0.5 leading-tight">
-              {errors.agreeTerms}
-            </p>
-          )}
+          <div className="relative">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gold-500">
+              <User size={16} />
+            </span>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-cream-200 rounded-luxury focus:outline-none focus:ring-1 focus:ring-gold-500 focus:border-gold-500 text-sm"
+              placeholder="e.g. Rahul Kumar"
+              disabled={submitting}
+            />
+          </div>
         </div>
 
-        {/* Register Button */}
-        <Button
+        <div>
+          <label className="block text-xs font-bold text-primary-800 uppercase tracking-wider mb-1">
+            Email Address
+          </label>
+          <div className="relative">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gold-500">
+              <Mail size={16} />
+            </span>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-cream-200 rounded-luxury focus:outline-none focus:ring-1 focus:ring-gold-500 focus:border-gold-500 text-sm"
+              placeholder="e.g. rahul@example.com"
+              disabled={submitting}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs font-bold text-primary-800 uppercase tracking-wider mb-1">
+            Mobile Number
+          </label>
+          <div className="relative">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gold-500">
+              <Phone size={16} />
+            </span>
+            <input
+              type="tel"
+              value={mobile}
+              onChange={(e) => setMobile(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-cream-200 rounded-luxury focus:outline-none focus:ring-1 focus:ring-gold-500 focus:border-gold-500 text-sm"
+              placeholder="e.g. 9876543210 (10 digits)"
+              disabled={submitting}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs font-bold text-primary-800 uppercase tracking-wider mb-1">
+            Password
+          </label>
+          <div className="relative">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gold-500">
+              <Lock size={16} />
+            </span>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-cream-200 rounded-luxury focus:outline-none focus:ring-1 focus:ring-gold-500 focus:border-gold-500 text-sm"
+              placeholder="•••••••• (Min 6 chars)"
+              disabled={submitting}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs font-bold text-primary-800 uppercase tracking-wider mb-1">
+            Confirm Password
+          </label>
+          <div className="relative">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gold-500">
+              <Lock size={16} />
+            </span>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-cream-200 rounded-luxury focus:outline-none focus:ring-1 focus:ring-gold-500 focus:border-gold-500 text-sm"
+              placeholder="••••••••"
+              disabled={submitting}
+            />
+          </div>
+        </div>
+
+        <button
           type="submit"
-          variant="primary"
-          fullWidth
-          loading={loading}
-          className="mt-4 sm:mt-6"
+          disabled={submitting}
+          className="w-full bg-primary-800 text-white font-bold py-2.5 px-4 rounded-luxury hover:bg-primary-900 transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-luxury disabled:bg-primary-300"
         >
-          Sign Up
-        </Button>
+          {submitting ? (
+            <span className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+          ) : (
+            <>
+              <UserPlus size={18} />
+              <span>Create Account</span>
+            </>
+          )}
+        </button>
       </form>
 
-      {/* Login link */}
-      <div className="text-center mt-4 sm:mt-6 pt-4 sm:pt-5 border-t border-cream-100">
-        <p className="text-xs text-neutral-500">
-          Already have an account?{' '}
-          <Link
-            to="/login"
-            className="font-bold text-gold-600 hover:text-gold-700 transition-all hover:underline"
-          >
-            Sign In
-          </Link>
-        </p>
+      <div className="text-center text-xs text-neutral-400">
+        Already have an account?{' '}
+        <Link to="/login" className="text-gold-600 hover:text-gold-700 font-bold flex items-center justify-center gap-1 mt-1.5">
+          <ArrowLeft size={12} /> <span>Back to Login</span>
+        </Link>
       </div>
     </div>
   );

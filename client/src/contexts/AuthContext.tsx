@@ -1,64 +1,100 @@
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
+import { User, UserRole, SignupData, demoAuthService } from '../services/demoAuthService';
 
-export type UserRole = 'Customer' | 'Admin' | 'Super Admin';
-
-interface User {
-  name: string;
-  email: string;
-  role: UserRole;
-  phone?: string;
-}
-
-interface AuthContextType {
-  isAuthenticated: boolean;
+export interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (role: UserRole, userDetails?: Partial<User>) => void;
-  logout: () => void;
+  login: (emailOrMobile: string, password: string) => Promise<User>;
+  signup: (data: SignupData) => Promise<void>;
+  verifyOTP: (otp: string) => Promise<User>;
+  logout: () => Promise<void>;
+  getCurrentUser: () => User | null;
+  isAuthenticated: () => boolean;
+  hasRole: (role: UserRole) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return localStorage.getItem('auth_isAuthenticated') === 'true';
-  });
-  const [user, setUser] = useState<User | null>(() => {
-    try {
-      const savedUser = localStorage.getItem('auth_user');
-      return savedUser ? JSON.parse(savedUser) : null;
-    } catch {
-      return null;
-    }
-  });
-  const [loading, setLoading] = useState<boolean>(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
-  const login = (role: UserRole, userDetails?: Partial<User>) => {
+  // Load persistent session on mount
+  useEffect(() => {
+    const sessionUser = demoAuthService.getCurrentUser();
+    if (sessionUser) {
+      setUser(sessionUser);
+    }
+    setLoading(false);
+  }, []);
+
+  const login = async (emailOrMobile: string, password: string): Promise<User> => {
     setLoading(true);
-    setTimeout(() => {
-      const loggedInUser: User = {
-        name: userDetails?.name || (role === 'Customer' ? 'Rao SBK' : 'GK Admin'),
-        email: userDetails?.email || (role === 'Customer' ? 'customer@gkevents.com' : 'admin@gkevents.com'),
-        role: role,
-        phone: userDetails?.phone || (role === 'Customer' ? '+91 98765 43210' : undefined)
-      };
-      setIsAuthenticated(true);
-      setUser(loggedInUser);
-      localStorage.setItem('auth_isAuthenticated', 'true');
-      localStorage.setItem('auth_user', JSON.stringify(loggedInUser));
+    try {
+      const loggedUser = await demoAuthService.login(emailOrMobile, password);
+      setUser(loggedUser);
+      return loggedUser;
+    } finally {
       setLoading(false);
-    }, 200);
+    }
   };
 
-  const logout = () => {
-    setIsAuthenticated(false);
-    setUser(null);
-    localStorage.removeItem('auth_isAuthenticated');
-    localStorage.removeItem('auth_user');
+  const signup = async (data: SignupData): Promise<void> => {
+    setLoading(true);
+    try {
+      await demoAuthService.signup(data);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifyOTP = async (otp: string): Promise<User> => {
+    setLoading(true);
+    try {
+      const verifiedUser = await demoAuthService.verifyOTP(otp);
+      setUser(verifiedUser);
+      return verifiedUser;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const logout = async (): Promise<void> => {
+    setLoading(true);
+    try {
+      await demoAuthService.logout();
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getCurrentUser = (): User | null => {
+    return user;
+  };
+
+  const isAuthenticated = (): boolean => {
+    return user !== null;
+  };
+
+  const hasRole = (role: UserRole): boolean => {
+    return user?.role === role;
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, loading, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        login,
+        signup,
+        verifyOTP,
+        logout,
+        getCurrentUser,
+        isAuthenticated,
+        hasRole
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

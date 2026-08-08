@@ -119,7 +119,7 @@ export const Navbar: React.FC = () => {
             </a>
 
             {/* Profile Dropdown / Login button */}
-            {isAuthenticated && user ? (
+            {isAuthenticated() && user ? (
               <div className="relative">
                 <button
                   onClick={toggleProfile}
@@ -147,21 +147,41 @@ export const Navbar: React.FC = () => {
                     >
                       <User size={15} className="text-gold-500" /> My Profile
                     </Link>
-                    <Link
-                      to="/dashboard"
-                      className="flex items-center gap-2 px-4 py-2.5 text-sm text-primary-800 hover:bg-cream-50"
-                      onClick={() => setIsProfileOpen(false)}
-                    >
-                      <Calendar size={15} className="text-gold-500" /> Bookings
-                    </Link>
-                    {user.role !== 'Customer' && (
+                    {user.role === 'ADMIN' && (
                       <Link
-                        to="/admin"
+                        to="/admin/dashboard"
                         className="flex items-center gap-2 px-4 py-2.5 text-sm text-primary-800 hover:bg-cream-50"
                         onClick={() => setIsProfileOpen(false)}
                       >
                         <Settings size={15} className="text-gold-500" /> Admin Panel
                       </Link>
+                    )}
+                    {user.role === 'EMPLOYEE' && (
+                      <Link
+                        to="/employee/dashboard"
+                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-primary-800 hover:bg-cream-50"
+                        onClick={() => setIsProfileOpen(false)}
+                      >
+                        <Calendar size={15} className="text-gold-500" /> Employee Panel
+                      </Link>
+                    )}
+                    {user.role === 'USER' && (
+                      <>
+                        <Link
+                          to="/user/dashboard"
+                          className="flex items-center gap-2 px-4 py-2.5 text-sm text-primary-800 hover:bg-cream-50"
+                          onClick={() => setIsProfileOpen(false)}
+                        >
+                          <Calendar size={15} className="text-gold-500" /> Dashboard
+                        </Link>
+                        <Link
+                          to="/user/bookings"
+                          className="flex items-center gap-2 px-4 py-2.5 text-sm text-primary-800 hover:bg-cream-50"
+                          onClick={() => setIsProfileOpen(false)}
+                        >
+                          <Calendar size={15} className="text-gold-500" /> My Bookings
+                        </Link>
+                      </>
                     )}
                     <div className="border-t border-cream-100 mt-2">
                       <button
@@ -190,7 +210,7 @@ export const Navbar: React.FC = () => {
 
           {/* Mobile hamburger menu */}
           <div className="lg:hidden flex items-center gap-3">
-            {isAuthenticated && user && (
+            {isAuthenticated() && user && (
               <div className="bg-primary-800 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs">
                 {user.name.split(' ').map((n) => n[0]).join('')}
               </div>
@@ -251,11 +271,11 @@ export const Navbar: React.FC = () => {
               <Phone size={14} className="text-gold-500" />
               <span>+91 12345 67890</span>
             </a>
-            {!isAuthenticated ? (
+            {!isAuthenticated() ? (
               <Link
                 to="/login"
                 onClick={() => setIsMenuOpen(false)}
-                className="flex items-center justify-center gap-2 bg-primary-800 text-white text-xs font-semibold px-5 py-2.5 rounded-full"
+                className="flex items-center justify-center gap-2 bg-primary-800 text-white text-xs font-semibold px-5 py-2.5 rounded-full text-center w-full"
               >
                 <User size={14} />
                 <span>Login / Signup</span>

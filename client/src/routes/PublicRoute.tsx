@@ -17,12 +17,15 @@ export const PublicRoute: React.FC<PublicRouteProps> = ({ children }) => {
     );
   }
 
-  if (isAuthenticated && user) {
+  if (isAuthenticated() && user) {
     // Redirect based on role
-    if (user.role === 'Super Admin' || user.role === 'Admin') {
-      return <Navigate to="/admin" replace />;
+    if (user.role === 'ADMIN') {
+      return <Navigate to="/admin/dashboard" replace />;
     }
-    return <Navigate to="/dashboard" replace />;
+    if (user.role === 'EMPLOYEE') {
+      return <Navigate to="/employee/dashboard" replace />;
+    }
+    return <Navigate to="/user/dashboard" replace />;
   }
 
   return children ? <>{children}</> : <Outlet />;
