@@ -8,7 +8,6 @@ export const LoginPage: React.FC = () => {
   const { login } = useAuth();
   const { addToast } = useNotifications();
   const navigate = useNavigate();
-  const { addToast } = useNotifications();
 
   const [emailOrMobile, setEmailOrMobile] = useState('');
   const [password, setPassword] = useState('');

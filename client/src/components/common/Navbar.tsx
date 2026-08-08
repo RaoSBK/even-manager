@@ -92,19 +92,25 @@ export const Navbar: React.FC = () => {
               My Bookings
             </Link>
 
-            <a
-              href="#contact"
-              className="text-sm font-medium text-primary-800 hover:text-gold-500 transition-all tracking-wide py-1"
+            <Link
+              to="/contact"
+              className={`text-sm font-medium tracking-wide transition-all py-1 border-b-2 ${
+                isActive('/contact') ? 'text-gold-500 border-gold-500' : 'text-primary-800 border-transparent hover:text-gold-500'
+              }`}
             >
               Contact
-            </a>
+            </Link>
 
-            <a
-              href="#help"
-              className="text-sm font-medium text-primary-800 hover:text-gold-500 transition-all tracking-wide py-1"
+
+            <Link
+              to="/help"
+              className={`text-sm font-medium tracking-wide transition-all py-1 border-b-2 ${
+                isActive('/help') ? 'text-gold-500 border-gold-500' : 'text-primary-800 border-transparent hover:text-gold-500'
+              }`}
             >
               Help
-            </a>
+            </Link>
+
           </nav>
 
           {/* Contact Details & User profile */}
@@ -263,6 +269,22 @@ export const Navbar: React.FC = () => {
           >
             My Bookings
           </Link>
+          <Link
+            to="/contact"
+            onClick={() => setIsMenuOpen(false)}
+            className="block text-sm font-medium text-primary-800 hover:text-gold-500 py-1"
+          >
+            Contact
+          </Link>
+          <Link
+            to="/help"
+            onClick={() => setIsMenuOpen(false)}
+            className="block text-sm font-medium text-primary-800 hover:text-gold-500 py-1"
+          >
+            Help
+          </Link>
+
+
           <div className="border-t border-cream-100 pt-3 flex flex-col gap-2">
             <a
               href="tel:+911234567890"

@@ -13,6 +13,10 @@ const DashboardLayout = lazy(() => import('../components/dashboard/DashboardLayo
 
 // Public Pages
 const HomePage = lazy(() => import('../pages/events/EventListingPage'));
+const ContactPage = lazy(() => import('../pages/contact/ContactPage'));
+const HelpPage = lazy(() => import('../pages/help/HelpPage'));
+
+
 
 // Auth Pages
 const LoginPage = lazy(() => import('../pages/auth/LoginPage'));
@@ -90,8 +94,12 @@ export const router = createBrowserRouter([
       { path: 'halls/:id', element: <HallDetailPage /> },
       { path: 'travel', element: <TravelListingPage /> },
       { path: 'travel/:id', element: <PackageDetailPage /> },
+      { path: 'contact', element: <ContactPage /> },
+      { path: 'help', element: <HelpPage /> },
     ],
   },
+
+
 
   // Auth Routes (Public Only - redirect authenticated users)
   {
