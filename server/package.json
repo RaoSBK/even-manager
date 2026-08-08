@@ -1,0 +1,9 @@
+{
+  "name": "even-manager-server",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "node --watch src/app.js",
+    "start": "node src/app.js"
+  }
+}

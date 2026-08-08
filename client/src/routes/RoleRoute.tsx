@@ -3,7 +3,7 @@ import { Navigate, Outlet } from 'react-router';
 import { useAuth } from '../hooks/useAuth';
 
 interface RoleRouteProps {
-  allowedRoles: Array<'Customer' | 'Admin' | 'Super Admin'>;
+  allowedRoles: Array<'ADMIN' | 'EMPLOYEE' | 'USER'>;
   children?: React.ReactNode;
 }
 
@@ -18,13 +18,19 @@ export const RoleRoute: React.FC<RoleRouteProps> = ({ allowedRoles, children }) 
     );
   }
 
-  if (!isAuthenticated || !user) {
+  if (!isAuthenticated() || !user) {
     return <Navigate to="/login" replace />;
   }
 
   if (!allowedRoles.includes(user.role)) {
-    // Redirect to unauthorized page or default home/dashboard
-    return <Navigate to="/403" replace />;
+    // Redirect based on user's actual role to their dashboard
+    if (user.role === 'ADMIN') {
+      return <Navigate to="/admin/dashboard" replace />;
+    } else if (user.role === 'EMPLOYEE') {
+      return <Navigate to="/employee/dashboard" replace />;
+    } else {
+      return <Navigate to="/user/dashboard" replace />;
+    }
   }
 
   return children ? <>{children}</> : <Outlet />;
