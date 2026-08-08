@@ -5,7 +5,7 @@ import { Phone, User, ChevronDown, Menu, X, LogOut, Settings, Calendar } from 'l
 import logoImg from '../../assets/images/logo.png';
 
 export const Navbar: React.FC = () => {
-  const { isAuthenticated, user, login, logout } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -178,13 +178,13 @@ export const Navbar: React.FC = () => {
                 )}
               </div>
             ) : (
-              <button
-                onClick={() => login('Customer')}
+              <Link
+                to="/login"
                 className="flex items-center gap-2 bg-primary-800 text-white text-xs font-semibold px-5 py-2.5 rounded-full hover:bg-primary-900 transition-all shadow-md"
               >
                 <User size={14} />
                 <span>Login / Signup</span>
-              </button>
+              </Link>
             )}
           </div>
 
@@ -252,16 +252,14 @@ export const Navbar: React.FC = () => {
               <span>+91 12345 67890</span>
             </a>
             {!isAuthenticated ? (
-              <button
-                onClick={() => {
-                  login('Customer');
-                  setIsMenuOpen(false);
-                }}
+              <Link
+                to="/login"
+                onClick={() => setIsMenuOpen(false)}
                 className="flex items-center justify-center gap-2 bg-primary-800 text-white text-xs font-semibold px-5 py-2.5 rounded-full"
               >
                 <User size={14} />
                 <span>Login / Signup</span>
-              </button>
+              </Link>
             ) : (
               <button
                 onClick={() => {

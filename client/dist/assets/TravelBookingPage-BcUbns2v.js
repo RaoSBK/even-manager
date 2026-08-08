@@ -1,1 +1,0 @@
-import{j as e}from"./index-DuAFP_z5.js";const t=()=>e.jsx("div",{className:"text-center p-8 font-bold text-primary-800",children:"Travel Booking Page Placeholder"});export{t as TravelBookingPage,t as default};

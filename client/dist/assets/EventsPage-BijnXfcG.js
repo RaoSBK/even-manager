@@ -1,0 +1,1 @@
+import{j as e}from"./index-BFQUU-Ml.js";const a=()=>e.jsx("div",{className:"bg-white border p-6 rounded-luxury shadow-luxury",children:"Manage Events Page Placeholder"});export{a as EventsPage,a as default};

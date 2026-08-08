@@ -13,32 +13,39 @@ interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
   loading: boolean;
-  login: (role: UserRole) => void;
+  login: (role: UserRole, userDetails?: Partial<User>) => void;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true); // Default logged in for easy routing
-  const [user, setUser] = useState<User | null>({
-    name: 'Rao SBK',
-    email: 'raosbk@example.com',
-    role: 'Customer', // Default to Customer role
-    phone: '+91 98765 43210'
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    return localStorage.getItem('auth_isAuthenticated') === 'true';
+  });
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const savedUser = localStorage.getItem('auth_user');
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch {
+      return null;
+    }
   });
   const [loading, setLoading] = useState<boolean>(false);
 
-  const login = (role: UserRole) => {
+  const login = (role: UserRole, userDetails?: Partial<User>) => {
     setLoading(true);
     setTimeout(() => {
-      setIsAuthenticated(true);
-      setUser({
-        name: role === 'Customer' ? 'Rao SBK' : 'GK Admin',
-        email: role === 'Customer' ? 'customer@gkevents.com' : 'admin@gkevents.com',
+      const loggedInUser: User = {
+        name: userDetails?.name || (role === 'Customer' ? 'Rao SBK' : 'GK Admin'),
+        email: userDetails?.email || (role === 'Customer' ? 'customer@gkevents.com' : 'admin@gkevents.com'),
         role: role,
-        phone: '+91 98765 43210'
-      });
+        phone: userDetails?.phone || (role === 'Customer' ? '+91 98765 43210' : undefined)
+      };
+      setIsAuthenticated(true);
+      setUser(loggedInUser);
+      localStorage.setItem('auth_isAuthenticated', 'true');
+      localStorage.setItem('auth_user', JSON.stringify(loggedInUser));
       setLoading(false);
     }, 200);
   };
@@ -46,6 +53,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setIsAuthenticated(false);
     setUser(null);
+    localStorage.removeItem('auth_isAuthenticated');
+    localStorage.removeItem('auth_user');
   };
 
   return (

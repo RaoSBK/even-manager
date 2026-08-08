@@ -1,1 +1,0 @@
-import{j as r}from"./index-DuAFP_z5.js";const e=()=>r.jsx("div",{className:"text-center font-bold text-primary-800",children:"Forgot Password Page Placeholder"});export{e as ForgotPasswordPage,e as default};
