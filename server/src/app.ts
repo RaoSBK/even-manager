@@ -39,14 +39,15 @@ async function initDb() {
     )
   `);
 
-<<<<<<< HEAD
   // Create OTPs Table (fallback for mock development mode)
   await db.exec(`
     CREATE TABLE IF NOT EXISTS otps (
       mobile TEXT PRIMARY KEY,
       code TEXT NOT NULL,
       expiresAt TEXT NOT NULL
-=======
+    )
+  `);
+
   // Create Hall Bookings Table
   await db.exec(`
     CREATE TABLE IF NOT EXISTS hall_bookings (
@@ -97,7 +98,6 @@ async function initDb() {
       message TEXT NOT NULL,
       status TEXT DEFAULT 'Pending',
       createdAt TEXT NOT NULL
->>>>>>> origin/shivam
     )
   `);
 
@@ -221,7 +221,6 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
   }
 });
 
-<<<<<<< HEAD
 // Forgot Password Endpoint
 app.post('/api/auth/forgot-password', async (req: Request, res: Response) => {
   const { mobile } = req.body;
@@ -354,7 +353,6 @@ app.post('/api/auth/reset-password', async (req: Request, res: Response) => {
   }
 });
 
-=======
 // Bookings Endpoints
 
 // Helper to send email confirmation
@@ -662,10 +660,6 @@ app.post('/api/support', async (req: Request, res: Response) => {
   }
 });
 
-
-
-
->>>>>>> origin/shivam
 // Start Server
 initDb().then(() => {
   app.listen(PORT, () => {
