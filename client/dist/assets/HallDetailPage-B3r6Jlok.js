@@ -1,1 +1,0 @@
-import{j as e}from"./index-BFQUU-Ml.js";const a=()=>e.jsx("div",{className:"text-center p-8 font-bold text-primary-800",children:"Hall Detail Page Placeholder"});export{a as HallDetailPage,a as default};
