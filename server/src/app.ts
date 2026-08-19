@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import path from 'path';
 import sqlite3 from 'sqlite3';
@@ -7,6 +7,16 @@ import { open, Database } from 'sqlite';
 import bcrypt from 'bcryptjs';
 import nodemailer from 'nodemailer';
 import fs from 'fs';
+import jwt from 'jsonwebtoken';
+
+// Extend express Request type to include user
+declare global {
+  namespace Express {
+    interface Request {
+      user?: { id: string; role: string };
+    }
+  }
+}
 
 const app = express();
 const PORT = process.env.PORT || 5050;
@@ -144,6 +154,38 @@ async function initDb() {
   console.log('Database initialized and seeded.');
 }
 
+// JWT Helpers & Middlewares
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key';
+
+function generateToken(user: { id: string; role: string }) {
+  return jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+}
+
+function authMiddleware(req: Request, res: Response, next: NextFunction) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ message: 'Authorization token missing or invalid' });
+  }
+
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as { id: string; role: string };
+    req.user = decoded;
+    next();
+  } catch (error) {
+    return res.status(401).json({ message: 'Token is invalid or expired' });
+  }
+}
+
+function roleMiddleware(allowedRoles: string[]) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user || !allowedRoles.includes(req.user.role)) {
+      return res.status(403).json({ message: 'Forbidden - Access denied' });
+    }
+    next();
+  };
+}
+
 // Signup Endpoint
 app.post('/api/auth/signup', async (req: Request, res: Response) => {
   const { name, email, mobile, password, referralCode } = req.body;
@@ -176,8 +218,11 @@ app.post('/api/auth/signup', async (req: Request, res: Response) => {
       [userId, name, email, mobile, hashedPassword, referralCode || null, 'Customer', registrationDate]
     );
 
+    const token = generateToken({ id: userId, role: 'Customer' });
+
     return res.status(201).json({
       message: 'User registered successfully',
+      token,
       user: { id: userId, name, email, mobile, role: 'Customer' }
     });
   } catch (error: any) {
@@ -205,8 +250,11 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Incorrect password' });
     }
 
+    const token = generateToken({ id: user.id, role: user.role });
+
     return res.status(200).json({
       message: 'Login successful',
+      token,
       user: {
         id: user.id,
         name: user.name,
@@ -218,6 +266,27 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Login error:', error);
     return res.status(500).json({ message: 'Internal server error during login' });
+  }
+});
+
+// Get Logged-In User Profile Endpoint (Protected)
+app.get('/api/auth/me', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const user = await db.get('SELECT id, name, email, mobile, role, registrationDate FROM users WHERE id = ?', [req.user.id]);
+    if (!user) {
+      return res.status(404).json({ message: 'User profile not found' });
+    }
+
+    return res.status(200).json({
+      user
+    });
+  } catch (error: any) {
+    console.error('Verify session error:', error);
+    return res.status(500).json({ message: 'Internal server error verifying session' });
   }
 });
 

@@ -1,52 +1,62 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router';
 import { useNotifications } from '../../contexts/NotificationContext';
-import { Mail, ArrowLeft, Send } from 'lucide-react';
+import { Phone, ArrowLeft, Send } from 'lucide-react';
+import { forgotPassword } from '../../api/authApi';
 
 export const ForgotPasswordPage: React.FC = () => {
   const navigate = useNavigate();
   const { addToast } = useNotifications();
-  const [email, setEmail] = useState('');
+  const [mobile, setMobile] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !email.includes('@')) {
-      addToast('Please enter a valid email address.', 'warning');
+    if (!mobile.trim() || mobile.length !== 10 || isNaN(Number(mobile))) {
+      addToast('Please enter a valid 10-digit mobile number.', 'warning');
       return;
     }
 
     setSubmitting(true);
-    setTimeout(() => {
-      addToast('A password reset link has been sent to your email address.', 'success');
+    try {
+      const response = await forgotPassword(mobile);
+      if (response.devOtp) {
+        addToast(`[DEV] OTP sent successfully! Code is: ${response.devOtp}`, 'success');
+      } else {
+        addToast('OTP has been sent to your registered mobile number.', 'success');
+      }
+      navigate(`/otp?mobile=${mobile}`);
+    } catch (err: any) {
+      addToast(err.message || 'Failed to initiate password reset.', 'error');
+    } finally {
       setSubmitting(false);
-      navigate('/login');
-    }, 800);
+    }
   };
 
   return (
     <div className="space-y-6 font-sans">
       <div className="text-center">
         <h3 className="text-2xl font-bold font-serif text-primary-800">Forgot Password</h3>
-        <p className="text-xs text-neutral-400 mt-1">Enter your registered email to receive a reset link</p>
+        <p className="text-xs text-neutral-400 mt-1">Enter your registered mobile number to receive an OTP</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-xs font-bold text-primary-800 uppercase tracking-wider mb-1">
-            Email Address
+            Mobile Number
           </label>
           <div className="relative">
             <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gold-500">
-              <Mail size={16} />
+              <Phone size={16} />
             </span>
             <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="tel"
+              value={mobile}
+              onChange={(e) => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
               className="w-full pl-10 pr-4 py-2.5 border border-cream-200 rounded-luxury focus:outline-none focus:ring-1 focus:ring-gold-500 focus:border-gold-500 text-sm"
-              placeholder="e.g. user@gkevent.com"
+              placeholder="e.g. 9876543210"
               disabled={submitting}
+              maxLength={10}
             />
           </div>
         </div>
@@ -61,7 +71,7 @@ export const ForgotPasswordPage: React.FC = () => {
           ) : (
             <>
               <Send size={16} />
-              <span>Send Reset Link</span>
+              <span>Send OTP</span>
             </>
           )}
         </button>
