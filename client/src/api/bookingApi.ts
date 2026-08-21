@@ -1,4 +1,5 @@
-const BASE_URL = 'http://localhost:5050/api/bookings/hall';
+import { API_HOST } from './httpClient';
+const BASE_URL = `${API_HOST}/api/bookings/hall`;
 
 export interface HallBookingPayload {
   userId: string;

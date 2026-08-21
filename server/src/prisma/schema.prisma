@@ -1,0 +1,703 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ----------------------------------------------------
+// Enums
+// ----------------------------------------------------
+
+enum Role {
+  ADMIN
+  EMPLOYEE
+  USER
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+  ON_LEAVE
+  TERMINATED
+}
+
+enum EventStatus {
+  DRAFT
+  PLANNING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum PlanningStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum TimelineStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum VendorStatus {
+  ACTIVE
+  INACTIVE
+  BLACKLISTED
+}
+
+enum InventoryTransactionType {
+  PURCHASE
+  USAGE
+  RETURN
+  ADJUSTMENT
+  DAMAGE
+}
+
+enum QuotationStatus {
+  DRAFT
+  SENT
+  VIEWED
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  ONLINE
+  BANK_TRANSFER
+  UPI
+  CARD
+  OTHER
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum HallStatus {
+  AVAILABLE
+  MAINTENANCE
+  INACTIVE
+}
+
+enum TravelStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+// ----------------------------------------------------
+// Models
+// ----------------------------------------------------
+
+model User {
+  id              String            @id @default(uuid())
+  name            String
+  email           String            @unique
+  mobile          String            @unique
+  password        String
+  referralCode    String?
+  role            String            @default("Customer") // Custom role string to match existing SQLite roles "Admin" / "Employee" / "Customer"
+  isActive        Boolean           @default(true)
+  isVerified      Boolean           @default(false)
+  lastLoginAt     DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  deletedAt       DateTime?
+
+  customer        Customer?
+  employee        Employee?
+  auditLogs       AuditLog[]
+  otpVerifications OtpVerification[]
+
+  @@index([email])
+  @@index([mobile])
+  @@index([role])
+  @@index([isActive])
+}
+
+model OtpVerification {
+  id           String    @id @default(uuid())
+  userId       String?
+  phoneOrEmail String
+  otpHash      String
+  purpose      String?
+  expiresAt    DateTime
+  verifiedAt   DateTime?
+  attempts     Int       @default(0)
+  createdAt    DateTime  @default(now())
+
+  user         User?     @relation(fields: [userId], references: [id])
+}
+
+model Customer {
+  id             String          @id @default(uuid())
+  userId         String?         @unique
+  fullName       String
+  email          String
+  phone          String
+  alternatePhone String?
+  address        String?
+  city           String?
+  state          String?
+  postalCode     String?
+  notes          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  deletedAt      DateTime?
+
+  user           User?           @relation(fields: [userId], references: [id])
+  events         Event[]
+  bookings       Booking[]
+  quotations     Quotation[]
+  payments       Payment[]
+  invoices       Invoice[]
+  travelBookings TravelBooking[]
+
+  @@index([userId])
+  @@index([phone])
+  @@index([email])
+}
+
+model Employee {
+  id               String         @id @default(uuid())
+  userId           String?        @unique
+  employeeCode     String         @unique
+  department       String?
+  designation      String?
+  joiningDate      DateTime?
+  salary           Decimal?       @db.Decimal(12, 2)
+  status           EmployeeStatus @default(ACTIVE)
+  emergencyContact String?
+  address          String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  deletedAt        DateTime?
+
+  user             User?          @relation(fields: [userId], references: [id])
+  tasks            Task[]
+  eventPlans       EventPlan[]
+  calendarEvents   CalendarEvent[]
+
+  @@index([userId])
+  @@index([employeeCode])
+}
+
+model Event {
+  id                 String          @id @default(uuid())
+  eventCode          String          @unique
+  customerId         String
+  eventName          String
+  eventType          String
+  description        String?
+  eventDate          DateTime
+  startTime          String?
+  endTime            String?
+  expectedGuestCount Int?
+  status             EventStatus     @default(PLANNING)
+  budget             Decimal?        @db.Decimal(12, 2)
+  notes              String?
+  createdBy          String?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  deletedAt          DateTime?
+
+  customer           Customer        @relation(fields: [customerId], references: [id])
+  booking            Booking?
+  eventPlans         EventPlan[]
+  eventTimelines     EventTimeline[]
+  tasks              Task[]
+  hallBookings       HallBooking[]
+  travelBookings     TravelBooking[]
+  calendarEvents     CalendarEvent[]
+  quotations         Quotation[]
+
+  @@index([eventCode])
+  @@index([customerId])
+  @@index([eventDate])
+  @@index([status])
+}
+
+model Booking {
+  id            String        @id @default(uuid())
+  bookingNumber String        @unique
+  eventId       String        @unique
+  customerId    String
+  bookingDate   DateTime      @default(now())
+  status        BookingStatus @default(PENDING)
+  totalAmount   Decimal       @db.Decimal(12, 2)
+  advanceAmount Decimal?      @db.Decimal(12, 2)
+  balanceAmount Decimal?      @db.Decimal(12, 2)
+  notes         String?
+  createdBy     String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  cancelledAt   DateTime?
+
+  event         Event         @relation(fields: [eventId], references: [id])
+  customer      Customer      @relation(fields: [customerId], references: [id])
+  payments      Payment[]
+  invoices      Invoice[]
+
+  @@index([bookingNumber])
+  @@index([customerId])
+  @@index([eventId])
+  @@index([status])
+  @@index([bookingDate])
+}
+
+model EventPlan {
+  id                    String         @id @default(uuid())
+  eventId               String
+  category              String
+  title                 String
+  description           String?
+  estimatedCost         Decimal?       @db.Decimal(12, 2)
+  actualCost            Decimal?       @db.Decimal(12, 2)
+  status                PlanningStatus @default(PLANNED)
+  responsibleEmployeeId String?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+
+  event                 Event          @relation(fields: [eventId], references: [id])
+  responsibleEmployee   Employee?      @relation(fields: [responsibleEmployeeId], references: [id])
+
+  @@index([eventId])
+}
+
+model EventTimeline {
+  id          String         @id @default(uuid())
+  eventId     String
+  title       String
+  description String?
+  startAt     DateTime
+  endAt       DateTime
+  status      TimelineStatus @default(PENDING)
+  createdBy   String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  event       Event          @relation(fields: [eventId], references: [id])
+
+  @@index([eventId])
+  @@index([startAt])
+}
+
+model Task {
+  id          String        @id @default(uuid())
+  eventId     String?
+  assignedTo  String?
+  title       String
+  description String?
+  priority    Priority      @default(MEDIUM)
+  status      TaskStatus    @default(TODO)
+  dueDate     DateTime?
+  completedAt DateTime?
+  createdBy   String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  event       Event?        @relation(fields: [eventId], references: [id])
+  assigned    Employee?     @relation(fields: [assignedTo], references: [id])
+  calendarEvents CalendarEvent[]
+
+  @@index([assignedTo])
+  @@index([eventId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+model Vendor {
+  id          String         @id @default(uuid())
+  vendorCode  String         @unique
+  name        String
+  companyName String?
+  phone       String?
+  email       String?
+  address     String?
+  city        String?
+  state       String?
+  status      VendorStatus   @default(ACTIVE)
+  notes       String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  deletedAt   DateTime?
+
+  services    VendorService[]
+  quotationItems QuotationItem[]
+
+  @@index([vendorCode])
+  @@index([status])
+}
+
+model VendorService {
+  id          String    @id @default(uuid())
+  vendorId    String
+  name        String
+  description String?
+  basePrice   Decimal?  @db.Decimal(12, 2)
+  status      String    @default("ACTIVE")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  vendor      Vendor    @relation(fields: [vendorId], references: [id])
+}
+
+model InventoryItem {
+  id           String                 @id @default(uuid())
+  itemCode     String                 @unique
+  name         String
+  category     String?
+  description  String?
+  quantity     Int                    @default(0)
+  unit         String?
+  minimumStock Int                    @default(0)
+  unitCost     Decimal?               @db.Decimal(12, 2)
+  status       String                 @default("ACTIVE")
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+
+  transactions InventoryTransaction[]
+}
+
+model InventoryTransaction {
+  id            String                   @id @default(uuid())
+  itemId        String
+  type          InventoryTransactionType
+  quantity      Int
+  referenceType String?
+  referenceId   String?
+  notes         String?
+  createdBy     String?
+  createdAt     DateTime                 @default(now())
+
+  item          InventoryItem            @relation(fields: [itemId], references: [id])
+}
+
+model Quotation {
+  id              String          @id @default(uuid())
+  quotationNumber String          @unique
+  eventId         String?
+  customerId      String
+  validUntil      DateTime?
+  subtotal        Decimal         @db.Decimal(12, 2)
+  discount        Decimal         @default(0) @db.Decimal(12, 2)
+  tax             Decimal         @default(0) @db.Decimal(12, 2)
+  totalAmount     Decimal         @db.Decimal(12, 2)
+  status          QuotationStatus @default(DRAFT)
+  notes           String?
+  createdBy       String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  event           Event?          @relation(fields: [eventId], references: [id])
+  customer        Customer        @relation(fields: [customerId], references: [id])
+  items           QuotationItem[]
+
+  @@index([quotationNumber])
+}
+
+model QuotationItem {
+  id          String    @id @default(uuid())
+  quotationId String
+  description String
+  quantity    Int       @default(1)
+  unitPrice   Decimal   @db.Decimal(12, 2)
+  amount      Decimal   @db.Decimal(12, 2)
+  serviceType String?
+  vendorId    String?
+  createdAt   DateTime  @default(now())
+
+  quotation   Quotation @relation(fields: [quotationId], references: [id])
+  vendor      Vendor?   @relation(fields: [vendorId], references: [id])
+}
+
+model Payment {
+  id                   String        @id @default(uuid())
+  paymentNumber        String        @unique
+  bookingId            String?
+  customerId           String
+  amount               Decimal       @db.Decimal(12, 2)
+  paymentMethod        PaymentMethod
+  transactionReference String?
+  status               PaymentStatus @default(PENDING)
+  paymentDate          DateTime      @default(now())
+  notes                String?
+  createdBy            String?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  booking              Booking?      @relation(fields: [bookingId], references: [id])
+  customer             Customer      @relation(fields: [customerId], references: [id])
+
+  @@index([bookingId])
+  @@index([customerId])
+  @@index([paymentDate])
+  @@index([status])
+}
+
+model Invoice {
+  id            String        @id @default(uuid())
+  invoiceNumber String        @unique
+  bookingId     String?
+  customerId    String
+  issueDate     DateTime      @default(now())
+  dueDate       DateTime?
+  subtotal      Decimal       @db.Decimal(12, 2)
+  discount      Decimal       @default(0) @db.Decimal(12, 2)
+  tax           Decimal       @default(0) @db.Decimal(12, 2)
+  totalAmount   Decimal       @db.Decimal(12, 2)
+  paidAmount    Decimal       @default(0) @db.Decimal(12, 2)
+  balanceAmount Decimal       @db.Decimal(12, 2)
+  status        InvoiceStatus @default(DRAFT)
+  notes         String?
+  createdBy     String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  booking       Booking?      @relation(fields: [bookingId], references: [id])
+  customer      Customer      @relation(fields: [customerId], references: [id])
+  items         InvoiceItem[]
+
+  @@index([invoiceNumber])
+  @@index([bookingId])
+  @@index([customerId])
+  @@index([status])
+}
+
+model InvoiceItem {
+  id          String   @id @default(uuid())
+  invoiceId   String
+  description String
+  quantity    Int      @default(1)
+  unitPrice   Decimal  @db.Decimal(12, 2)
+  amount      Decimal  @db.Decimal(12, 2)
+
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id])
+}
+
+model Hall {
+  id          String     @id @default(uuid())
+  hallCode    String     @unique
+  name        String
+  description String?
+  location    String?
+  capacity    Int?
+  basePrice   Decimal    @db.Decimal(12, 2)
+  status      HallStatus @default(AVAILABLE)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  deletedAt   DateTime?
+
+  bookings    HallBooking[]
+}
+
+model HallBooking {
+  id            String   @id @default(uuid())
+  userId        String
+  customerName  String
+  email         String
+  mobile        String
+  state         String
+  district      String
+  mandal        String
+  hallId        String
+  hallName      String
+  hallAddress   String
+  eventDate     String
+  bookingDate   String
+  costPerDay    Float
+  totalAmount   Float
+  status        String   @default("Confirmed")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime? @updatedAt
+  eventType     String?  @default("General Event")
+  guestsCount   Int?     @default(100)
+  eventSession  String?  @default("Full Day")
+  foodItems     String?  // JSON string
+  paymentStatus String?  @default("Paid")
+  specialNotes  String?
+  startTime     String?  @default("09:00")
+  endTime       String?  @default("18:00")
+  eventId       String?
+
+  hall          Hall     @relation(fields: [hallId], references: [id])
+  event         Event?   @relation(fields: [eventId], references: [id])
+
+  @@index([hallId])
+  @@index([eventId])
+  @@index([eventDate])
+}
+
+model TravelBooking {
+  id                String       @id @default(uuid())
+  eventId           String?
+  customerId        String
+  travelType        String
+  provider          String?
+  bookingReference  String?
+  departureLocation String?
+  destination       String?
+  departureAt       DateTime?
+  arrivalAt         DateTime?
+  passengerCount    Int          @default(1)
+  amount            Decimal?     @db.Decimal(12, 2)
+  status            TravelStatus @default(PENDING)
+  notes             String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  event             Event?       @relation(fields: [eventId], references: [id])
+  customer          Customer     @relation(fields: [customerId], references: [id])
+}
+
+model CalendarEvent {
+  id          String    @id @default(uuid())
+  title       String
+  description String?
+  eventId     String?
+  taskId      String?
+  employeeId  String?
+  startAt     DateTime
+  endAt       DateTime
+  type        String?
+  status      String    @default("PENDING")
+  createdBy   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  event       Event?    @relation(fields: [eventId], references: [id])
+  task        Task?     @relation(fields: [taskId], references: [id])
+  employee    Employee? @relation(fields: [employeeId], references: [id])
+}
+
+model Settings {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  type        String?
+  description String?
+  updatedBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  oldValues Json?
+  newValues Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([entity])
+  @@index([entityId])
+  @@index([createdAt])
+}
+
+// ----------------------------------------------------
+// Legacy tables for backward compatibility
+// ----------------------------------------------------
+
+model Otp {
+  mobile    String @id
+  code      String
+  expiresAt String
+}
+
+model BookingHistory {
+  id        String @id @default(uuid())
+  bookingId String
+  fieldName String
+  oldValue  String?
+  newValue  String?
+  changedAt String
+  changedBy String
+}
+
+model FoodItem {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  category  String
+  price     Float
+  active    Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ContactMessage {
+  id        String   @id @default(uuid())
+  userId    String?
+  name      String
+  email     String
+  mobile    String
+  subject   String
+  message   String
+  status    String?  @default("Pending")
+  createdAt DateTime @default(now())
+}
+
+model SupportRequest {
+  id        String   @id @default(uuid())
+  userId    String?
+  name      String
+  email     String
+  mobile    String
+  category  String
+  message   String
+  status    String?  @default("Pending")
+  createdAt DateTime @default(now())
+}
