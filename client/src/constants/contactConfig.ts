@@ -29,23 +29,23 @@ export interface ContactDetails {
 
 export const contactConfig: ContactDetails = {
   phone: {
-    display: '+91 12345 67890',
-    value: 'tel:+911234567890'
+    display: '7842884158',
+    value: 'tel:7842884158'
   },
   whatsapp: {
-    display: '+91 12345 67890',
-    link: 'https://wa.me/911234567890?text=Hi%20GK%2520Booking,%20I%20have%20an%20enquiry'
+    display: '7842884158',
+    link: 'https://wa.me/917842884158?text=Hi%20GK%2520BOOKING,%20I%20have%20an%20enquiry'
   },
   email: {
-    display: 'support@gkbooking.com',
-    value: 'mailto:support@gkbooking.com?subject=Enquiry%20from%20GK%20Booking'
+    display: 'gkbooking26@gmail.com',
+    value: 'mailto:gkbooking26@gmail.com'
   },
   address: {
-    display: 'GK Event Management, Plot No. 12, Golden Plaza, Jubilee Hills, Road No. 36, Hyderabad, Telangana, 500033',
-    mapsLink: 'https://maps.google.com/?q=GK+Event+Management+Jubilee+Hills+Hyderabad'
+    display: 'GK BOOKING, Plot No. 12, Golden Plaza, Jubilee Hills, Road No. 36, Hyderabad, Telangana, 500033',
+    mapsLink: 'https://maps.google.com/?q=GK+BOOKING+Jubilee+Hills+Hyderabad'
   },
   socials: {
-    instagram: 'https://instagram.com/gkbooking_official',
+    instagram: 'https://www.instagram.com/gkbooking26?igsh=MWpqa3J5MXl1NTk3cA==',
     facebook: 'https://facebook.com/gkbooking',
     youtube: 'https://youtube.com/c/gkbooking'
   },
@@ -58,7 +58,7 @@ export const contactConfig: ContactDetails = {
     {
       id: 'faq-2',
       question: 'How can I contact customer care?',
-      answer: 'You can instantly dial customer care at +91 12345 67890, initiate a WhatsApp chat, send an email to support@gkbooking.com, or submit a message using the Contact Form on this page.'
+      answer: 'You can instantly dial customer care at 7842884158, initiate a WhatsApp chat, send an email to gkbooking26@gmail.com, or submit a message using the Contact Form on this page.'
     },
     {
       id: 'faq-3',

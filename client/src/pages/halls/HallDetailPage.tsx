@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router';
 import { MapPin, Users, IndianRupee, ArrowRight, ExternalLink, ShieldCheck, Info, ChevronRight, Home } from 'lucide-react';
 import { sampleHalls } from '../../constants/hallsData';
@@ -8,6 +8,9 @@ export const HallDetailPage: React.FC = () => {
   const navigate = useNavigate();
 
   const hall = sampleHalls.find((h) => h.id === id);
+
+  // Active image state for gallery carousel
+  const [activeImage, setActiveImage] = useState<string>(hall?.image || '');
 
   if (!hall) {
     return (
@@ -52,18 +55,35 @@ export const HallDetailPage: React.FC = () => {
           
           {/* Main Info Columns (Left 2/3) */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Image card */}
+            {/* Image card & gallery */}
             <div className="bg-white border border-cream-200 rounded-luxury overflow-hidden shadow-luxury">
               <div className="h-64 sm:h-96 w-full relative">
                 <img
-                  src={hall.image}
+                  src={activeImage}
                   alt={hall.name}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover transition-all duration-300"
                 />
                 <div className="absolute bottom-4 left-4 bg-primary-800/90 text-white text-xs font-bold px-3 py-1 rounded tracking-wide uppercase">
                   ✨ Verified Venue
                 </div>
               </div>
+
+              {/* Thumbnails Gallery */}
+              {hall.images && hall.images.length > 0 && (
+                <div className="flex gap-2 p-4 bg-cream-50/50 border-t border-cream-100 overflow-x-auto">
+                  {hall.images.map((img, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setActiveImage(img)}
+                      className={`w-20 h-14 rounded overflow-hidden border-2 shrink-0 transition-all ${
+                        activeImage === img ? 'border-gold-500 scale-95 shadow-sm' : 'border-transparent hover:border-cream-300'
+                      }`}
+                    >
+                      <img src={img} alt={`${hall.name} view ${idx + 1}`} className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {/* Title & Basic info */}
               <div className="p-6">
@@ -84,6 +104,31 @@ export const HallDetailPage: React.FC = () => {
                 >
                   View Google Maps Location <ExternalLink size={12} />
                 </a>
+              </div>
+            </div>
+
+            {/* Venue Description */}
+            <div className="bg-white border border-cream-200 rounded-luxury p-6 shadow-luxury">
+              <h3 className="font-bold text-sm text-primary-800 tracking-wide mb-3 border-b border-cream-100 pb-3">
+                Full Description
+              </h3>
+              <p className="text-xs text-neutral-500 leading-relaxed font-medium">
+                {hall.description}
+              </p>
+            </div>
+
+            {/* Facilities Panel */}
+            <div className="bg-white border border-cream-200 rounded-luxury p-6 shadow-luxury">
+              <h3 className="font-bold text-sm text-primary-800 tracking-wide mb-4 border-b border-cream-100 pb-3">
+                Available Facilities
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {hall.facilities.map((fac, idx) => (
+                  <div key={idx} className="flex items-center gap-2 text-xs text-neutral-500 bg-cream-50/30 p-2.5 rounded border border-cream-100">
+                    <div className="w-1.5 h-1.5 rounded-full bg-gold-500 shrink-0" />
+                    <span className="font-semibold">{fac}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -135,6 +180,22 @@ export const HallDetailPage: React.FC = () => {
               </div>
             </div>
 
+            {/* Availability Status */}
+            <div className="bg-white border border-cream-200 rounded-luxury p-6 shadow-luxury">
+              <h3 className="font-bold text-sm text-primary-800 tracking-wide mb-3 border-b border-cream-100 pb-3">
+                Availability Status
+              </h3>
+              <div className="flex items-start gap-3 bg-emerald-50/50 p-4 rounded-lg border border-emerald-100">
+                <div className="bg-emerald-100 text-emerald-700 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">✓</div>
+                <div>
+                  <span className="text-xs font-bold text-emerald-800 block">Available for Online Booking</span>
+                  <span className="text-[10px] text-emerald-600 leading-relaxed block mt-0.5">
+                    Live schedule availability is validated automatically during checkout. Bookings can be made up to 30 days in advance.
+                  </span>
+                </div>
+              </div>
+            </div>
+
             {/* General Information Panel */}
             <div className="bg-white border border-cream-200 rounded-luxury p-6 shadow-luxury">
               <h3 className="font-bold text-sm text-primary-800 tracking-wide mb-3 border-b border-cream-100 pb-3">
@@ -179,9 +240,9 @@ export const HallDetailPage: React.FC = () => {
 
               <button
                 onClick={() => navigate(`/halls/${hall.id}/book`)}
-                className="w-full bg-gold-500 text-white font-bold text-xs py-3 rounded-lg hover:bg-gold-600 transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg group"
+                className="w-full bg-gold-500 text-white font-bold text-xs py-3 rounded-lg hover:bg-gold-600 transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg group animate-pulse hover:animate-none"
               >
-                Proceed to Booking
+                Book Now
                 <ArrowRight size={14} className="group-hover:translate-x-1 transition-all" />
               </button>
 

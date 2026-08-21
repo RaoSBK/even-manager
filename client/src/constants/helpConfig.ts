@@ -21,8 +21,8 @@ export const helpFAQs: HelpFAQ[] = [
   {
     id: 'gen-1',
     category: 'General',
-    question: 'What is GK Booking?',
-    answer: 'GK Booking is a premium event planning and venue booking platform. We specialize in managing and organizing marriage celebrations, birthday functions, sarees, dawaths, and general events.'
+    question: 'What is GK BOOKING?',
+    answer: 'GK BOOKING is a premium event planning and venue booking platform. We specialize in managing and organizing marriage celebrations, birthday functions, sarees, dawaths, and general events.'
   },
   {
     id: 'gen-2',

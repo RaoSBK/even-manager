@@ -50,7 +50,7 @@ export const SignupPage: React.FC = () => {
     <div className="space-y-6 font-sans">
       <div className="text-center">
         <h3 className="text-2xl font-bold font-serif text-primary-800">Create an Account</h3>
-        <p className="text-xs text-neutral-400 mt-1">Join GK Events to organize your dream functions</p>
+        <p className="text-xs text-neutral-400 mt-1">Join GK BOOKING to organize your dream functions</p>
       </div>
 
       <form onSubmit={handleSignup} className="space-y-4">
