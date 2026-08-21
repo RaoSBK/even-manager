@@ -1,4 +1,5 @@
-const BASE_URL = 'http://localhost:5050/api/auth';
+import { API_HOST } from './httpClient';
+const BASE_URL = `${API_HOST}/api/auth`;
 
 export interface SignupData {
   name: string;

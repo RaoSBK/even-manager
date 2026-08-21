@@ -1,4 +1,5 @@
-const BASE_URL = 'http://localhost:5050/api/food-items';
+import { API_HOST } from './httpClient';
+const BASE_URL = `${API_HOST}/api/food-items`;
 
 export interface FoodItem {
   id: string;
