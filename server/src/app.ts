@@ -1,13 +1,15 @@
 import 'dotenv/config';
-import express, { Request, Response, NextFunction } from 'express';
+import express, { Request, Response, NextFunction } from 'react-express'; // Wait, let's make sure we import express correctly
+import expressApp from 'express'; // Wait, in the original it was: import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import path from 'path';
-import sqlite3 from 'sqlite3';
-import { open, Database } from 'sqlite';
 import bcrypt from 'bcryptjs';
 import nodemailer from 'nodemailer';
 import fs from 'fs';
 import jwt from 'jsonwebtoken';
+import prisma, { connectDb } from './config/database';
+
+const express = expressApp;
 
 // Extend express Request type to include user
 declare global {
@@ -24,302 +26,13 @@ const PORT = process.env.PORT || 5050;
 app.use(cors());
 app.use(express.json());
 
-let db: Database<sqlite3.Database, sqlite3.Statement>;
-
-// Initialize Database
-async function initDb() {
-  const dbPath = path.resolve(__dirname, '../../database/database.sqlite');
-
-  db = await open({
-    filename: dbPath,
-    driver: sqlite3.Database
-  });
-
-  // Create Users Table
-  await db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      email TEXT NOT NULL UNIQUE,
-      mobile TEXT NOT NULL UNIQUE,
-      password TEXT NOT NULL,
-      referralCode TEXT,
-      role TEXT DEFAULT 'Customer',
-      registrationDate TEXT NOT NULL
-    )
-  `);
-
-  // Create OTPs Table (fallback for mock development mode)
-  await db.exec(`
-    CREATE TABLE IF NOT EXISTS otps (
-      mobile TEXT PRIMARY KEY,
-      code TEXT NOT NULL,
-      expiresAt TEXT NOT NULL
-    )
-  `);
-
-  // Create Hall Bookings Table
-  await db.exec(`
-    CREATE TABLE IF NOT EXISTS hall_bookings (
-      bookingId TEXT PRIMARY KEY,
-      userId TEXT NOT NULL,
-      customerName TEXT NOT NULL,
-      email TEXT NOT NULL,
-      mobile TEXT NOT NULL,
-      state TEXT NOT NULL,
-      district TEXT NOT NULL,
-      mandal TEXT NOT NULL,
-      hallId TEXT NOT NULL,
-      hallName TEXT NOT NULL,
-      hallAddress TEXT NOT NULL,
-      eventDate TEXT NOT NULL,
-      bookingDate TEXT NOT NULL,
-      costPerDay REAL NOT NULL,
-      totalAmount REAL NOT NULL,
-      status TEXT DEFAULT 'Confirmed',
-      createdAt TEXT NOT NULL
-    )
-  `);
-
-  // Create Booking History (Audit Log) Table
-  await db.exec(`
-    CREATE TABLE IF NOT EXISTS booking_history (
-      id TEXT PRIMARY KEY,
-      bookingId TEXT NOT NULL,
-      fieldName TEXT NOT NULL,
-      oldValue TEXT,
-      newValue TEXT,
-      changedAt TEXT NOT NULL,
-      changedBy TEXT NOT NULL
-    )
-  `);
-
-  // Migrations for Function Halls Module fields
-  try {
-    await db.exec('ALTER TABLE hall_bookings ADD COLUMN eventType TEXT DEFAULT "General Event"');
-  } catch (e) { }
-  try {
-    await db.exec('ALTER TABLE hall_bookings ADD COLUMN guestsCount INTEGER DEFAULT 100');
-  } catch (e) { }
-  try {
-    await db.exec('ALTER TABLE hall_bookings ADD COLUMN eventSession TEXT DEFAULT "Full Day"');
-  } catch (e) { }
-  try {
-    await db.exec('ALTER TABLE hall_bookings ADD COLUMN foodItems TEXT');
-  } catch (e) { }
-  try {
-    await db.exec('ALTER TABLE hall_bookings ADD COLUMN updatedAt TEXT');
-  } catch (e) { }
-  try {
-    await db.exec('ALTER TABLE hall_bookings ADD COLUMN paymentStatus TEXT DEFAULT "Paid"');
-  } catch (e) { }
-  try {
-    await db.exec('ALTER TABLE hall_bookings ADD COLUMN specialNotes TEXT');
-  } catch (e) { }
-  try {
-    await db.exec('ALTER TABLE hall_bookings ADD COLUMN startTime TEXT DEFAULT "09:00"');
-  } catch (e) { }
-  try {
-    await db.exec('ALTER TABLE hall_bookings ADD COLUMN endTime TEXT DEFAULT "18:00"');
-  } catch (e) { }
-
-  // Create Food Items Table
-  await db.exec(`
-    CREATE TABLE IF NOT EXISTS food_items (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      category TEXT NOT NULL,
-      price REAL NOT NULL,
-      active INTEGER DEFAULT 1,
-      createdAt TEXT NOT NULL,
-      updatedAt TEXT NOT NULL
-    )
-  `);
-
-  // Seed Default Food Items
-  try {
-    const defaultFoodItems = [
-      { name: 'Paneer Butter Masala', category: 'VEG', price: 180 },
-      { name: 'Veg Biryani', category: 'VEG', price: 160 },
-      { name: 'Dal Tadka', category: 'VEG', price: 100 },
-      { name: 'Chicken Biryani', category: 'NON-VEG', price: 220 },
-      { name: 'Chicken Curry', category: 'NON-VEG', price: 220 },
-      { name: 'Mutton Curry', category: 'NON-VEG', price: 300 },
-
-      // Veg Starters
-      { name: 'Paneer Tikka', category: 'VEG', price: 180 },
-      { name: 'Hara Bhara Kebab', category: 'VEG', price: 140 },
-      { name: 'Veg Manchurian', category: 'VEG', price: 130 },
-      { name: 'Gobi 65', category: 'VEG', price: 120 },
-      { name: 'Baby Corn Manchurian', category: 'VEG', price: 140 },
-      { name: 'Crispy Corn', category: 'VEG', price: 130 },
-
-      // Veg Main Course
-      { name: 'Kadai Paneer', category: 'VEG', price: 180 },
-      { name: 'Palak Paneer', category: 'VEG', price: 170 },
-      { name: 'Mix Veg Curry', category: 'VEG', price: 140 },
-      { name: 'Veg Kolhapuri', category: 'VEG', price: 150 },
-      { name: 'Dal Makhani', category: 'VEG', price: 130 },
-      { name: 'Chole Masala', category: 'VEG', price: 110 },
-      { name: 'Aloo Gobi', category: 'VEG', price: 100 },
-
-      // Veg Rice
-      { name: 'Jeera Rice', category: 'VEG', price: 90 },
-      { name: 'Veg Pulao', category: 'VEG', price: 120 },
-      { name: 'Plain Rice', category: 'VEG', price: 70 },
-
-      // Veg Breads
-      { name: 'Butter Naan', category: 'VEG', price: 50 },
-      { name: 'Tandoori Roti', category: 'VEG', price: 35 },
-      { name: 'Butter Roti', category: 'VEG', price: 40 },
-      { name: 'Plain Naan', category: 'VEG', price: 45 },
-
-      // Veg Sides
-      { name: 'Veg Raita', category: 'VEG', price: 70 },
-      { name: 'Boondi Raita', category: 'VEG', price: 70 },
-      { name: 'Green Salad', category: 'VEG', price: 60 },
-      { name: 'Papad', category: 'VEG', price: 30 },
-      { name: 'Pickle', category: 'VEG', price: 20 },
-
-      // Veg Desserts
-      { name: 'Gulab Jamun', category: 'VEG', price: 80 },
-      { name: 'Rasmalai', category: 'VEG', price: 100 },
-      { name: 'Gajar Halwa', category: 'VEG', price: 90 },
-      { name: 'Ice Cream', category: 'VEG', price: 100 },
-      { name: 'Kheer', category: 'VEG', price: 80 },
-
-      // Non-Veg Starters
-      { name: 'Chicken 65', category: 'NON-VEG', price: 200 },
-      { name: 'Chicken Tikka', category: 'NON-VEG', price: 220 },
-      { name: 'Chicken Manchurian', category: 'NON-VEG', price: 200 },
-      { name: 'Chicken Seekh Kebab', category: 'NON-VEG', price: 220 },
-      { name: 'Chicken Lollipop', category: 'NON-VEG', price: 230 },
-      { name: 'Fish Fry', category: 'NON-VEG', price: 250 },
-
-      // Non-Veg Main Course
-      { name: 'Butter Chicken', category: 'NON-VEG', price: 240 },
-      { name: 'Chicken Tikka Masala', category: 'NON-VEG', price: 240 },
-      { name: 'Kadai Chicken', category: 'NON-VEG', price: 230 },
-      { name: 'Andhra Chicken Curry', category: 'NON-VEG', price: 220 },
-      { name: 'Mutton Rogan Josh', category: 'NON-VEG', price: 320 },
-      { name: 'Fish Curry', category: 'NON-VEG', price: 260 },
-
-      // Non-Veg Rice
-      { name: 'Mutton Biryani', category: 'NON-VEG', price: 320 },
-      { name: 'Chicken Pulao', category: 'NON-VEG', price: 200 },
-      { name: 'Egg Biryani', category: 'NON-VEG', price: 170 },
-      { name: 'Egg Fried Rice', category: 'NON-VEG', price: 150 },
-
-      // Non-Veg Egg
-      { name: 'Egg Curry', category: 'NON-VEG', price: 130 },
-      { name: 'Egg Masala', category: 'NON-VEG', price: 120 },
-      { name: 'Egg Bhurji', category: 'NON-VEG', price: 100 }
-    ];
-
-    const now = new Date().toISOString();
-    let seededCount = 0;
-    let updatedCount = 0;
-    for (const item of defaultFoodItems) {
-      const existing = await db.get('SELECT * FROM food_items WHERE name = ?', [item.name]);
-      if (!existing) {
-        const id = 'food-' + Math.random().toString(36).substr(2, 9);
-        await db.run(
-          `INSERT INTO food_items (id, name, category, price, active, createdAt, updatedAt)
-           VALUES (?, ?, ?, ?, 1, ?, ?)`,
-          [id, item.name, item.category, item.price, now, now]
-        );
-        seededCount++;
-      } else {
-        await db.run(
-          `UPDATE food_items SET price = ?, category = ?, updatedAt = ? WHERE id = ?`,
-          [item.price, item.category, now, existing.id]
-        );
-        updatedCount++;
-      }
-    }
-    if (seededCount > 0 || updatedCount > 0) {
-      console.log(`Database updated: seeded ${seededCount} items, updated prices for ${updatedCount} items.`);
-    }
-  } catch (err) {
-    console.error('Error seeding/updating food items:', err);
-  }
-
-  // Create Contact Messages Table
-  await db.exec(`
-    CREATE TABLE IF NOT EXISTS contact_messages (
-      id TEXT PRIMARY KEY,
-      userId TEXT,
-      name TEXT NOT NULL,
-      email TEXT NOT NULL,
-      mobile TEXT NOT NULL,
-      subject TEXT NOT NULL,
-      message TEXT NOT NULL,
-      status TEXT DEFAULT 'Pending',
-      createdAt TEXT NOT NULL
-    )
-  `);
-
-  // Create Support Requests Table
-  await db.exec(`
-    CREATE TABLE IF NOT EXISTS support_requests (
-      id TEXT PRIMARY KEY,
-      userId TEXT,
-      name TEXT NOT NULL,
-      email TEXT NOT NULL,
-      mobile TEXT NOT NULL,
-      category TEXT NOT NULL,
-      message TEXT NOT NULL,
-      status TEXT DEFAULT 'Pending',
-      createdAt TEXT NOT NULL
-    )
-  `);
-
-  // Seed Default Users
-  const defaultUsers = [
-    {
-      id: 'admin-seed',
-      name: 'Admin',
-      email: 'admin@gkevents.com',
-      mobile: '9999999999',
-      password: 'admin123',
-      role: 'Admin'
-    },
-    {
-      id: 'employee-seed',
-      name: 'Employee',
-      email: 'employee@gkevents.com',
-      mobile: '8888888888',
-      password: 'employee123',
-      role: 'Employee'
-    },
-    {
-      id: 'customer-seed',
-      name: 'Rao SBK',
-      email: 'customer@gkevents.com',
-      mobile: '9876543210',
-      password: 'password123',
-      role: 'Customer'
-    }
-  ];
-
-  for (const user of defaultUsers) {
-    const existing = await db.get('SELECT * FROM users WHERE mobile = ?', [user.mobile]);
-    const hashedPassword = await bcrypt.hash(user.password, 10);
-    if (!existing) {
-      await db.run(
-        `INSERT INTO users (id, name, email, mobile, password, role, registrationDate)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [user.id, user.name, user.email, user.mobile, hashedPassword, user.role, new Date().toISOString()]
-      );
-    } else {
-      await db.run(
-        `UPDATE users SET name = ?, email = ?, password = ?, role = ? WHERE mobile = ?`,
-        [user.name, user.email, hashedPassword, user.role, user.mobile]
-      );
-    }
-  }
-
-  console.log('Database initialized and seeded.');
+// Helper to map Prisma HallBooking to expected frontend schema
+function mapBookingResponse(b: any) {
+  if (!b) return b;
+  return {
+    ...b,
+    bookingId: b.id,
+  };
 }
 
 // JWT Helpers & Middlewares
@@ -364,12 +77,12 @@ app.post('/api/auth/signup', async (req: Request, res: Response) => {
 
   try {
     // Check duplicates
-    const existingMobile = await db.get('SELECT * FROM users WHERE mobile = ?', [mobile]);
+    const existingMobile = await prisma.user.findUnique({ where: { mobile } });
     if (existingMobile) {
       return res.status(400).json({ message: 'This mobile number is already registered' });
     }
 
-    const existingEmail = await db.get('SELECT * FROM users WHERE email = ?', [email]);
+    const existingEmail = await prisma.user.findUnique({ where: { email } });
     if (existingEmail) {
       return res.status(400).json({ message: 'This email address is already registered' });
     }
@@ -377,14 +90,19 @@ app.post('/api/auth/signup', async (req: Request, res: Response) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
     const userId = 'u-' + Math.random().toString(36).substr(2, 9);
-    const registrationDate = new Date().toISOString();
 
     // Insert user
-    await db.run(
-      `INSERT INTO users (id, name, email, mobile, password, referralCode, role, registrationDate)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [userId, name, email, mobile, hashedPassword, referralCode || null, 'Customer', registrationDate]
-    );
+    await prisma.user.create({
+      data: {
+        id: userId,
+        name,
+        email,
+        mobile,
+        password: hashedPassword,
+        referralCode: referralCode || null,
+        role: 'Customer',
+      }
+    });
 
     const token = generateToken({ id: userId, role: 'Customer' });
 
@@ -409,7 +127,15 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
   }
 
   try {
-    const user = await db.get('SELECT * FROM users WHERE mobile = ? OR email = ?', [identifier, identifier]);
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { mobile: identifier },
+          { email: identifier }
+        ]
+      }
+    });
+
     if (!user) {
       return res.status(400).json({ message: 'This email or mobile number is not registered. Please sign up first.' });
     }
@@ -441,7 +167,12 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
 // Food Items CRUD Endpoints
 app.get('/api/food-items', async (req: Request, res: Response) => {
   try {
-    const items = await db.all('SELECT * FROM food_items ORDER BY category DESC, name ASC');
+    const items = await prisma.foodItem.findMany({
+      orderBy: [
+        { category: 'desc' },
+        { name: 'asc' }
+      ]
+    });
     return res.status(200).json(items);
   } catch (error: any) {
     console.error('Fetch food items error:', error);
@@ -458,22 +189,15 @@ app.post('/api/food-items', async (req: Request, res: Response) => {
 
   try {
     const id = 'food-' + Math.random().toString(36).substr(2, 9);
-    const now = new Date().toISOString();
-    await db.run(
-      `INSERT INTO food_items (id, name, category, price, active, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [id, name, category, Number(price), active ? 1 : 0, now, now]
-    );
-
-    const newItem = {
-      id,
-      name,
-      category,
-      price: Number(price),
-      active: active ? 1 : 0,
-      createdAt: now,
-      updatedAt: now
-    };
+    const newItem = await prisma.foodItem.create({
+      data: {
+        id,
+        name,
+        category,
+        price: Number(price),
+        active: active ? 1 : 0
+      }
+    });
 
     return res.status(201).json(newItem);
   } catch (error: any) {
@@ -491,28 +215,20 @@ app.put('/api/food-items/:id', async (req: Request, res: Response) => {
   }
 
   try {
-    const existing = await db.get('SELECT * FROM food_items WHERE id = ?', [id]);
+    const existing = await prisma.foodItem.findUnique({ where: { id } });
     if (!existing) {
       return res.status(404).json({ message: 'Food item not found' });
     }
 
-    const now = new Date().toISOString();
-    await db.run(
-      `UPDATE food_items 
-       SET name = ?, category = ?, price = ?, active = ?, updatedAt = ? 
-       WHERE id = ?`,
-      [name, category, Number(price), active ? 1 : 0, now, id]
-    );
-
-    const updatedItem = {
-      id,
-      name,
-      category,
-      price: Number(price),
-      active: active ? 1 : 0,
-      createdAt: existing.createdAt,
-      updatedAt: now
-    };
+    const updatedItem = await prisma.foodItem.update({
+      where: { id },
+      data: {
+        name,
+        category,
+        price: Number(price),
+        active: active ? 1 : 0
+      }
+    });
 
     return res.status(200).json(updatedItem);
   } catch (error: any) {
@@ -525,12 +241,12 @@ app.delete('/api/food-items/:id', async (req: Request, res: Response) => {
   const { id } = req.params;
 
   try {
-    const existing = await db.get('SELECT * FROM food_items WHERE id = ?', [id]);
+    const existing = await prisma.foodItem.findUnique({ where: { id } });
     if (!existing) {
       return res.status(404).json({ message: 'Food item not found' });
     }
 
-    await db.run('DELETE FROM food_items WHERE id = ?', [id]);
+    await prisma.foodItem.delete({ where: { id } });
     return res.status(200).json({ message: 'Food item deleted successfully' });
   } catch (error: any) {
     console.error('Delete food item error:', error);
@@ -545,13 +261,33 @@ app.get('/api/auth/me', authMiddleware, async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    const user = await db.get('SELECT id, name, email, mobile, role, registrationDate FROM users WHERE id = ?', [req.user.id]);
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        mobile: true,
+        role: true,
+        createdAt: true
+      }
+    });
+
     if (!user) {
       return res.status(404).json({ message: 'User profile not found' });
     }
 
+    const mappedUser = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      mobile: user.mobile,
+      role: user.role,
+      registrationDate: user.createdAt.toISOString()
+    };
+
     return res.status(200).json({
-      user
+      user: mappedUser
     });
   } catch (error: any) {
     console.error('Verify session error:', error);
@@ -568,7 +304,7 @@ app.post('/api/auth/forgot-password', async (req: Request, res: Response) => {
   }
 
   try {
-    const user = await db.get('SELECT * FROM users WHERE mobile = ?', [mobile]);
+    const user = await prisma.user.findUnique({ where: { mobile } });
     if (!user) {
       return res.status(400).json({ message: 'This mobile number is not registered. Please sign up first.' });
     }
@@ -606,19 +342,26 @@ app.post('/api/auth/forgot-password', async (req: Request, res: Response) => {
       // Mock / Development Fallback Mode
       console.warn('[AUTH] MSG91 credentials missing. Running in mock development mode.');
 
-      const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString(); // random 6 digit OTP
-      const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString(); // 5 minutes expiration
+      const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
 
-      await db.run(
-        `INSERT OR REPLACE INTO otps (mobile, code, expiresAt)
-         VALUES (?, ?, ?)`,
-        [mobile, generatedOtp, expiresAt]
-      );
+      await prisma.otp.upsert({
+        where: { mobile },
+        update: {
+          code: generatedOtp,
+          expiresAt
+        },
+        create: {
+          mobile,
+          code: generatedOtp,
+          expiresAt
+        }
+      });
 
       console.log(`[MOCK OTP] Mobile: ${mobile} | Code: ${generatedOtp} | Expires: ${expiresAt}`);
       return res.status(200).json({
         message: 'OTP sent successfully (Development Mode)',
-        devOtp: generatedOtp // return it so testing is easier
+        devOtp: generatedOtp
       });
     }
   } catch (error: any) {
@@ -652,15 +395,15 @@ app.post('/api/auth/reset-password', async (req: Request, res: Response) => {
 
       const responseData: any = await response.json();
 
-      if (!response.ok || responseData.type !== 'success') {
+      if (!response.ok || responseData.type === 'success') {
         console.error('[MSG91] Verification failure:', responseData);
         return res.status(400).json({ message: 'Invalid or expired OTP' });
       }
 
       console.log(`[MSG91] OTP verified successfully for ${formattedMobile}`);
     } else {
-      // Verify locally via SQLite otps table
-      const storedOtp = await db.get('SELECT * FROM otps WHERE mobile = ?', [mobile]);
+      // Verify locally via Otp model
+      const storedOtp = await prisma.otp.findUnique({ where: { mobile } });
 
       if (!storedOtp) {
         return res.status(400).json({ message: 'No OTP requested for this mobile number' });
@@ -671,18 +414,21 @@ app.post('/api/auth/reset-password', async (req: Request, res: Response) => {
       }
 
       if (new Date() > new Date(storedOtp.expiresAt)) {
-        await db.run('DELETE FROM otps WHERE mobile = ?', [mobile]);
+        await prisma.otp.delete({ where: { mobile } });
         return res.status(400).json({ message: 'OTP has expired' });
       }
 
       // Valid OTP. Delete from DB.
-      await db.run('DELETE FROM otps WHERE mobile = ?', [mobile]);
+      await prisma.otp.delete({ where: { mobile } });
       console.log(`[MOCK OTP] Verified successfully for ${mobile}`);
     }
 
     // Hash new password and update user record
     const hashedPassword = await bcrypt.hash(password, 10);
-    await db.run('UPDATE users SET password = ? WHERE mobile = ?', [hashedPassword, mobile]);
+    await prisma.user.update({
+      where: { mobile },
+      data: { password: hashedPassword }
+    });
 
     return res.status(200).json({ message: 'Password reset successfully' });
   } catch (error: any) {
@@ -876,15 +622,25 @@ app.post('/api/bookings/hall', async (req: Request, res: Response) => {
     // Check session overlapping availability
     let conflict = null;
     if (sessionTime === 'Full Day') {
-      conflict = await db.get(
-        'SELECT * FROM hall_bookings WHERE hallId = ? AND eventDate = ? AND status != ?',
-        [hallId, eventDate, 'Cancelled']
-      );
+      conflict = await prisma.hallBooking.findFirst({
+        where: {
+          hallId,
+          eventDate,
+          status: { not: 'Cancelled' }
+        }
+      });
     } else {
-      conflict = await db.get(
-        'SELECT * FROM hall_bookings WHERE hallId = ? AND eventDate = ? AND status != ? AND (eventSession = ? OR eventSession = ?)',
-        [hallId, eventDate, 'Cancelled', sessionTime, 'Full Day']
-      );
+      conflict = await prisma.hallBooking.findFirst({
+        where: {
+          hallId,
+          eventDate,
+          status: { not: 'Cancelled' },
+          OR: [
+            { eventSession: sessionTime },
+            { eventSession: 'Full Day' }
+          ]
+        }
+      });
     }
 
     if (conflict) {
@@ -899,18 +655,13 @@ app.post('/api/bookings/hall', async (req: Request, res: Response) => {
       month: 'short',
       year: 'numeric'
     });
-    const createdAt = new Date().toISOString();
+    const createdAt = new Date();
 
     const storedFoodItems = foodItems ? JSON.stringify(foodItems) : null;
 
-    await db.run(
-      `INSERT INTO hall_bookings (
-        bookingId, userId, customerName, email, mobile, state, district, mandal,
-        hallId, hallName, hallAddress, eventDate, bookingDate, costPerDay, totalAmount, status, createdAt,
-        eventType, guestsCount, eventSession, foodItems
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        bookingId,
+    const booking = await prisma.hallBooking.create({
+      data: {
+        id: bookingId,
         userId,
         customerName,
         email,
@@ -923,47 +674,27 @@ app.post('/api/bookings/hall', async (req: Request, res: Response) => {
         hallAddress,
         eventDate,
         bookingDate,
-        costPerDay,
-        totalAmount,
-        'Confirmed',
+        costPerDay: Number(costPerDay),
+        totalAmount: Number(totalAmount),
+        status: 'Confirmed',
         createdAt,
-        typeOfEvent,
-        numGuests,
-        sessionTime,
-        storedFoodItems
-      ]
-    );
+        eventType: typeOfEvent,
+        guestsCount: Number(numGuests),
+        eventSession: sessionTime,
+        foodItems: storedFoodItems
+      }
+    });
 
-    const newBooking = {
-      bookingId,
-      userId,
-      customerName,
-      email,
-      mobile,
-      state,
-      district,
-      mandal,
-      hallId,
-      hallName,
-      hallAddress,
-      eventDate,
-      bookingDate,
-      costPerDay,
-      totalAmount,
-      capacity,
-      status: 'Confirmed',
-      createdAt,
-      eventType: typeOfEvent,
-      guestsCount: numGuests,
-      eventSession: sessionTime,
-      foodItems: storedFoodItems
+    const responseBooking = {
+      ...mapBookingResponse(booking),
+      capacity
     };
 
-    sendBookingEmail(newBooking);
+    sendBookingEmail(responseBooking);
 
     return res.status(201).json({
       message: 'Booking completed successfully',
-      booking: newBooking
+      booking: responseBooking
     });
   } catch (error: any) {
     console.error('Hall booking error:', error);
@@ -978,14 +709,16 @@ app.get('/api/bookings/hall', async (req: Request, res: Response) => {
   try {
     let bookings;
     if (userId) {
-      bookings = await db.all(
-        'SELECT * FROM hall_bookings WHERE userId = ? ORDER BY createdAt DESC',
-        [userId]
-      );
+      bookings = await prisma.hallBooking.findMany({
+        where: { userId: String(userId) },
+        orderBy: { createdAt: 'desc' }
+      });
     } else {
-      bookings = await db.all('SELECT * FROM hall_bookings ORDER BY createdAt DESC');
+      bookings = await prisma.hallBooking.findMany({
+        orderBy: { createdAt: 'desc' }
+      });
     }
-    return res.status(200).json(bookings);
+    return res.status(200).json(bookings.map(mapBookingResponse));
   } catch (error: any) {
     console.error('Fetch bookings error:', error);
     return res.status(500).json({ message: 'Internal server error while fetching bookings' });
@@ -997,7 +730,7 @@ app.patch('/api/bookings/hall/:bookingId/cancel', async (req: Request, res: Resp
   const { bookingId } = req.params;
 
   try {
-    const booking = await db.get('SELECT * FROM hall_bookings WHERE bookingId = ?', [bookingId]);
+    const booking = await prisma.hallBooking.findUnique({ where: { id: bookingId } });
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });
     }
@@ -1020,7 +753,10 @@ app.patch('/api/bookings/hall/:bookingId/cancel', async (req: Request, res: Resp
       });
     }
 
-    await db.run('UPDATE hall_bookings SET status = ? WHERE bookingId = ?', ['Cancelled', bookingId]);
+    await prisma.hallBooking.update({
+      where: { id: bookingId },
+      data: { status: 'Cancelled' }
+    });
     console.log(`[Database] Booking ${bookingId} cancelled successfully`);
 
     return res.status(200).json({ message: 'Booking cancelled successfully' });
@@ -1040,7 +776,7 @@ app.put('/api/bookings/hall/:bookingId/food', async (req: Request, res: Response
   }
 
   try {
-    const booking = await db.get('SELECT * FROM hall_bookings WHERE bookingId = ?', [bookingId]);
+    const booking = await prisma.hallBooking.findUnique({ where: { id: bookingId } });
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });
     }
@@ -1058,21 +794,20 @@ app.put('/api/bookings/hall/:bookingId/food', async (req: Request, res: Response
     }
 
     const newTotalAmount = booking.costPerDay + foodTotal;
-    const now = new Date().toISOString();
 
-    await db.run(
-      `UPDATE hall_bookings 
-       SET foodItems = ?, totalAmount = ?, updatedAt = ? 
-       WHERE bookingId = ?`,
-      [JSON.stringify(foodItems), newTotalAmount, now, bookingId]
-    );
+    const updatedBooking = await prisma.hallBooking.update({
+      where: { id: bookingId },
+      data: {
+        foodItems: JSON.stringify(foodItems),
+        totalAmount: newTotalAmount
+      }
+    });
 
     console.log(`[Database] Booking ${bookingId} food items updated successfully. New total: ₹${newTotalAmount}`);
 
-    const updatedBooking = await db.get('SELECT * FROM hall_bookings WHERE bookingId = ?', [bookingId]);
     return res.status(200).json({
       message: 'Food items updated successfully',
-      booking: updatedBooking
+      booking: mapBookingResponse(updatedBooking)
     });
   } catch (error: any) {
     console.error('Update booking food error:', error);
@@ -1090,7 +825,7 @@ app.put('/api/bookings/hall/:bookingId', async (req: Request, res: Response) => 
   } = req.body;
 
   try {
-    const original = await db.get('SELECT * FROM hall_bookings WHERE bookingId = ?', [bookingId]);
+    const original = await prisma.hallBooking.findUnique({ where: { id: bookingId } });
     if (!original) {
       return res.status(404).json({ message: 'Booking not found' });
     }
@@ -1120,15 +855,27 @@ app.put('/api/bookings/hall/:bookingId', async (req: Request, res: Response) => 
 
       let conflict = null;
       if (finalEventSession === 'Full Day') {
-        conflict = await db.get(
-          'SELECT * FROM hall_bookings WHERE hallId = ? AND eventDate = ? AND status != ? AND bookingId != ?',
-          [finalHallId, finalEventDate, 'Cancelled', bookingId]
-        );
+        conflict = await prisma.hallBooking.findFirst({
+          where: {
+            hallId: finalHallId,
+            eventDate: finalEventDate,
+            status: { not: 'Cancelled' },
+            id: { not: bookingId }
+          }
+        });
       } else {
-        conflict = await db.get(
-          'SELECT * FROM hall_bookings WHERE hallId = ? AND eventDate = ? AND status != ? AND bookingId != ? AND (eventSession = ? OR eventSession = ?)',
-          [finalHallId, finalEventDate, 'Cancelled', bookingId, finalEventSession, 'Full Day']
-        );
+        conflict = await prisma.hallBooking.findFirst({
+          where: {
+            hallId: finalHallId,
+            eventDate: finalEventDate,
+            status: { not: 'Cancelled' },
+            id: { not: bookingId },
+            OR: [
+              { eventSession: finalEventSession },
+              { eventSession: 'Full Day' }
+            ]
+          }
+        });
       }
 
       if (conflict) {
@@ -1147,11 +894,17 @@ app.put('/api/bookings/hall/:bookingId', async (req: Request, res: Response) => 
       const newStr = newVal === null || newVal === undefined ? '' : String(newVal);
       if (oldStr !== newStr) {
         const histId = 'hist-' + Math.random().toString(36).substr(2, 9);
-        await db.run(
-          `INSERT INTO booking_history (id, bookingId, fieldName, oldValue, newValue, changedAt, changedBy)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [histId, bookingId, fieldName, oldStr, newStr, nowStr, adminUser]
-        );
+        await prisma.bookingHistory.create({
+          data: {
+            id: histId,
+            bookingId,
+            fieldName,
+            oldValue: oldStr,
+            newValue: newStr,
+            changedAt: nowStr,
+            changedBy: adminUser
+          }
+        });
       }
     };
 
@@ -1176,24 +929,32 @@ app.put('/api/bookings/hall/:bookingId', async (req: Request, res: Response) => 
     await logDiff('Food Items', originalFoodStr, incomingFoodStr);
 
     // Save changes
-    await db.run(
-      `UPDATE hall_bookings 
-       SET customerName = ?, email = ?, mobile = ?, hallId = ?, hallName = ?, hallAddress = ?,
-           eventDate = ?, eventSession = ?, startTime = ?, endTime = ?, eventType = ?, guestsCount = ?,
-           foodItems = ?, totalAmount = ?, paymentStatus = ?, status = ?, specialNotes = ?, updatedAt = ?
-       WHERE bookingId = ?`,
-      [
-        finalCustomerName, finalEmail, finalMobile, finalHallId, finalHallName, finalHallAddress,
-        finalEventDate, finalEventSession, finalStartTime, finalEndTime, finalEventType, finalGuestsCount,
-        JSON.stringify(finalFoodItems), finalTotalAmount, finalPaymentStatus, finalStatus, finalSpecialNotes, nowStr,
-        bookingId
-      ]
-    );
+    const updatedBooking = await prisma.hallBooking.update({
+      where: { id: bookingId },
+      data: {
+        customerName: finalCustomerName,
+        email: finalEmail,
+        mobile: finalMobile,
+        hallId: finalHallId,
+        hallName: finalHallName,
+        hallAddress: finalHallAddress,
+        eventDate: finalEventDate,
+        eventSession: finalEventSession,
+        startTime: finalStartTime,
+        endTime: finalEndTime,
+        eventType: finalEventType,
+        guestsCount: Number(finalGuestsCount),
+        foodItems: JSON.stringify(finalFoodItems),
+        totalAmount: Number(finalTotalAmount),
+        paymentStatus: finalPaymentStatus,
+        status: finalStatus,
+        specialNotes: finalSpecialNotes
+      }
+    });
 
-    const updatedBooking = await db.get('SELECT * FROM hall_bookings WHERE bookingId = ?', [bookingId]);
     return res.status(200).json({
       message: 'Booking updated successfully',
-      booking: updatedBooking
+      booking: mapBookingResponse(updatedBooking)
     });
   } catch (error: any) {
     console.error('Update booking details error:', error);
@@ -1205,10 +966,10 @@ app.put('/api/bookings/hall/:bookingId', async (req: Request, res: Response) => 
 app.get('/api/bookings/hall/:bookingId/history', async (req: Request, res: Response) => {
   const { bookingId } = req.params;
   try {
-    const history = await db.all(
-      'SELECT * FROM booking_history WHERE bookingId = ? ORDER BY changedAt DESC',
-      [bookingId]
-    );
+    const history = await prisma.bookingHistory.findMany({
+      where: { bookingId },
+      orderBy: { changedAt: 'desc' }
+    });
     return res.status(200).json(history);
   } catch (error: any) {
     console.error('Fetch booking history error:', error);
@@ -1226,17 +987,22 @@ app.post('/api/contact', async (req: Request, res: Response) => {
 
   try {
     const id = 'msg-' + Math.random().toString(36).substr(2, 9);
-    const createdAt = new Date().toISOString();
-
-    await db.run(
-      `INSERT INTO contact_messages (id, userId, name, email, mobile, subject, message, status, createdAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, userId || null, name, email, mobile, subject, message, 'Pending', createdAt]
-    );
+    const enquiry = await prisma.contactMessage.create({
+      data: {
+        id,
+        userId: userId || null,
+        name,
+        email,
+        mobile,
+        subject,
+        message,
+        status: 'Pending'
+      }
+    });
 
     return res.status(201).json({
       message: 'Message sent successfully!',
-      enquiry: { id, userId, name, email, mobile, subject, message, status: 'Pending', createdAt }
+      enquiry
     });
   } catch (error: any) {
     console.error('Contact message submit error:', error);
@@ -1254,17 +1020,22 @@ app.post('/api/support', async (req: Request, res: Response) => {
 
   try {
     const id = 'req-' + Math.random().toString(36).substr(2, 9);
-    const createdAt = new Date().toISOString();
-
-    await db.run(
-      `INSERT INTO support_requests (id, userId, name, email, mobile, category, message, status, createdAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, userId || null, name, email, mobile, category, message, 'Pending', createdAt]
-    );
+    const request = await prisma.supportRequest.create({
+      data: {
+        id,
+        userId: userId || null,
+        name,
+        email,
+        mobile,
+        category,
+        message,
+        status: 'Pending'
+      }
+    });
 
     return res.status(201).json({
       message: 'Support request submitted successfully!',
-      request: { id, userId, name, email, mobile, category, message, status: 'Pending', createdAt }
+      request
     });
   } catch (error: any) {
     console.error('Support request submit error:', error);
@@ -1273,7 +1044,7 @@ app.post('/api/support', async (req: Request, res: Response) => {
 });
 
 // Start Server
-initDb().then(() => {
+connectDb().then(() => {
   app.listen(PORT, () => {
     console.log(`Backend server running on http://localhost:${PORT}`);
   });
