@@ -127,7 +127,7 @@ async function initDb() {
       email: 'employee@gkevents.com',
       mobile: '8888888888',
       password: 'employee123',
-      role: 'Customer' // using Customer since no employee page is in router
+      role: 'Employee'
     },
     {
       id: 'customer-seed',
@@ -141,12 +141,17 @@ async function initDb() {
 
   for (const user of defaultUsers) {
     const existing = await db.get('SELECT * FROM users WHERE mobile = ?', [user.mobile]);
+    const hashedPassword = await bcrypt.hash(user.password, 10);
     if (!existing) {
-      const hashedPassword = await bcrypt.hash(user.password, 10);
       await db.run(
         `INSERT INTO users (id, name, email, mobile, password, role, registrationDate)
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [user.id, user.name, user.email, user.mobile, hashedPassword, user.role, new Date().toISOString()]
+      );
+    } else {
+      await db.run(
+        `UPDATE users SET name = ?, email = ?, password = ?, role = ? WHERE mobile = ?`,
+        [user.name, user.email, hashedPassword, user.role, user.mobile]
       );
     }
   }
@@ -233,16 +238,17 @@ app.post('/api/auth/signup', async (req: Request, res: Response) => {
 
 // Login Endpoint
 app.post('/api/auth/login', async (req: Request, res: Response) => {
-  const { mobile, password } = req.body;
+  const { emailOrMobile, mobile, password } = req.body;
+  const identifier = emailOrMobile || mobile;
 
-  if (!mobile || !password) {
-    return res.status(400).json({ message: 'Mobile number and password are required' });
+  if (!identifier || !password) {
+    return res.status(400).json({ message: 'Email or Mobile number and password are required' });
   }
 
   try {
-    const user = await db.get('SELECT * FROM users WHERE mobile = ?', [mobile]);
+    const user = await db.get('SELECT * FROM users WHERE mobile = ? OR email = ?', [identifier, identifier]);
     if (!user) {
-      return res.status(400).json({ message: 'This mobile number is not registered. Please sign up first.' });
+      return res.status(400).json({ message: 'This email or mobile number is not registered. Please sign up first.' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);

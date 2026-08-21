@@ -9,7 +9,8 @@ export interface SignupData {
 }
 
 export interface LoginCredentials {
-  mobile: string;
+  emailOrMobile: string;
+  mobile?: string;
   password: string;
 }
 

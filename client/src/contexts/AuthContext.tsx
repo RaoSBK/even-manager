@@ -76,7 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (emailOrMobile: string, password: string): Promise<User> => {
     setLoading(true);
     try {
-      const response = await loginUser({ mobile: emailOrMobile, password });
+      const response = await loginUser({ emailOrMobile, password });
       const { token, user: backendUser } = response;
 
       const mappedUser: User = {
