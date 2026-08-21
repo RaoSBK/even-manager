@@ -1,4 +1,5 @@
-import express, { Request, Response } from 'express';
+import 'dotenv/config';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import path from 'path';
 import sqlite3 from 'sqlite3';
@@ -6,6 +7,16 @@ import { open, Database } from 'sqlite';
 import bcrypt from 'bcryptjs';
 import nodemailer from 'nodemailer';
 import fs from 'fs';
+import jwt from 'jsonwebtoken';
+
+// Extend express Request type to include user
+declare global {
+  namespace Express {
+    interface Request {
+      user?: { id: string; role: string };
+    }
+  }
+}
 
 const app = express();
 const PORT = process.env.PORT || 5050;
@@ -18,7 +29,7 @@ let db: Database<sqlite3.Database, sqlite3.Statement>;
 // Initialize Database
 async function initDb() {
   const dbPath = path.resolve(__dirname, '../../database/database.sqlite');
-  
+
   db = await open({
     filename: dbPath,
     driver: sqlite3.Database
@@ -35,6 +46,15 @@ async function initDb() {
       referralCode TEXT,
       role TEXT DEFAULT 'Customer',
       registrationDate TEXT NOT NULL
+    )
+  `);
+
+  // Create OTPs Table (fallback for mock development mode)
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS otps (
+      mobile TEXT PRIMARY KEY,
+      code TEXT NOT NULL,
+      expiresAt TEXT NOT NULL
     )
   `);
 
@@ -77,31 +97,31 @@ async function initDb() {
   // Migrations for Function Halls Module fields
   try {
     await db.exec('ALTER TABLE hall_bookings ADD COLUMN eventType TEXT DEFAULT "General Event"');
-  } catch (e) {}
+  } catch (e) { }
   try {
     await db.exec('ALTER TABLE hall_bookings ADD COLUMN guestsCount INTEGER DEFAULT 100');
-  } catch (e) {}
+  } catch (e) { }
   try {
     await db.exec('ALTER TABLE hall_bookings ADD COLUMN eventSession TEXT DEFAULT "Full Day"');
-  } catch (e) {}
+  } catch (e) { }
   try {
     await db.exec('ALTER TABLE hall_bookings ADD COLUMN foodItems TEXT');
-  } catch (e) {}
+  } catch (e) { }
   try {
     await db.exec('ALTER TABLE hall_bookings ADD COLUMN updatedAt TEXT');
-  } catch (e) {}
+  } catch (e) { }
   try {
     await db.exec('ALTER TABLE hall_bookings ADD COLUMN paymentStatus TEXT DEFAULT "Paid"');
-  } catch (e) {}
+  } catch (e) { }
   try {
     await db.exec('ALTER TABLE hall_bookings ADD COLUMN specialNotes TEXT');
-  } catch (e) {}
+  } catch (e) { }
   try {
     await db.exec('ALTER TABLE hall_bookings ADD COLUMN startTime TEXT DEFAULT "09:00"');
-  } catch (e) {}
+  } catch (e) { }
   try {
     await db.exec('ALTER TABLE hall_bookings ADD COLUMN endTime TEXT DEFAULT "18:00"');
-  } catch (e) {}
+  } catch (e) { }
 
   // Create Food Items Table
   await db.exec(`
@@ -125,7 +145,7 @@ async function initDb() {
       { name: 'Chicken Biryani', category: 'NON-VEG', price: 220 },
       { name: 'Chicken Curry', category: 'NON-VEG', price: 220 },
       { name: 'Mutton Curry', category: 'NON-VEG', price: 300 },
-      
+
       // Veg Starters
       { name: 'Paneer Tikka', category: 'VEG', price: 180 },
       { name: 'Hara Bhara Kebab', category: 'VEG', price: 140 },
@@ -133,7 +153,7 @@ async function initDb() {
       { name: 'Gobi 65', category: 'VEG', price: 120 },
       { name: 'Baby Corn Manchurian', category: 'VEG', price: 140 },
       { name: 'Crispy Corn', category: 'VEG', price: 130 },
-      
+
       // Veg Main Course
       { name: 'Kadai Paneer', category: 'VEG', price: 180 },
       { name: 'Palak Paneer', category: 'VEG', price: 170 },
@@ -142,32 +162,32 @@ async function initDb() {
       { name: 'Dal Makhani', category: 'VEG', price: 130 },
       { name: 'Chole Masala', category: 'VEG', price: 110 },
       { name: 'Aloo Gobi', category: 'VEG', price: 100 },
-      
+
       // Veg Rice
       { name: 'Jeera Rice', category: 'VEG', price: 90 },
       { name: 'Veg Pulao', category: 'VEG', price: 120 },
       { name: 'Plain Rice', category: 'VEG', price: 70 },
-      
+
       // Veg Breads
       { name: 'Butter Naan', category: 'VEG', price: 50 },
       { name: 'Tandoori Roti', category: 'VEG', price: 35 },
       { name: 'Butter Roti', category: 'VEG', price: 40 },
       { name: 'Plain Naan', category: 'VEG', price: 45 },
-      
+
       // Veg Sides
       { name: 'Veg Raita', category: 'VEG', price: 70 },
       { name: 'Boondi Raita', category: 'VEG', price: 70 },
       { name: 'Green Salad', category: 'VEG', price: 60 },
       { name: 'Papad', category: 'VEG', price: 30 },
       { name: 'Pickle', category: 'VEG', price: 20 },
-      
+
       // Veg Desserts
       { name: 'Gulab Jamun', category: 'VEG', price: 80 },
       { name: 'Rasmalai', category: 'VEG', price: 100 },
       { name: 'Gajar Halwa', category: 'VEG', price: 90 },
       { name: 'Ice Cream', category: 'VEG', price: 100 },
       { name: 'Kheer', category: 'VEG', price: 80 },
-      
+
       // Non-Veg Starters
       { name: 'Chicken 65', category: 'NON-VEG', price: 200 },
       { name: 'Chicken Tikka', category: 'NON-VEG', price: 220 },
@@ -175,7 +195,7 @@ async function initDb() {
       { name: 'Chicken Seekh Kebab', category: 'NON-VEG', price: 220 },
       { name: 'Chicken Lollipop', category: 'NON-VEG', price: 230 },
       { name: 'Fish Fry', category: 'NON-VEG', price: 250 },
-      
+
       // Non-Veg Main Course
       { name: 'Butter Chicken', category: 'NON-VEG', price: 240 },
       { name: 'Chicken Tikka Masala', category: 'NON-VEG', price: 240 },
@@ -183,13 +203,13 @@ async function initDb() {
       { name: 'Andhra Chicken Curry', category: 'NON-VEG', price: 220 },
       { name: 'Mutton Rogan Josh', category: 'NON-VEG', price: 320 },
       { name: 'Fish Curry', category: 'NON-VEG', price: 260 },
-      
+
       // Non-Veg Rice
       { name: 'Mutton Biryani', category: 'NON-VEG', price: 320 },
       { name: 'Chicken Pulao', category: 'NON-VEG', price: 200 },
       { name: 'Egg Biryani', category: 'NON-VEG', price: 170 },
       { name: 'Egg Fried Rice', category: 'NON-VEG', price: 150 },
-      
+
       // Non-Veg Egg
       { name: 'Egg Curry', category: 'NON-VEG', price: 130 },
       { name: 'Egg Masala', category: 'NON-VEG', price: 120 },
@@ -297,6 +317,38 @@ async function initDb() {
   console.log('Database initialized and seeded.');
 }
 
+// JWT Helpers & Middlewares
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key';
+
+function generateToken(user: { id: string; role: string }) {
+  return jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+}
+
+function authMiddleware(req: Request, res: Response, next: NextFunction) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ message: 'Authorization token missing or invalid' });
+  }
+
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as { id: string; role: string };
+    req.user = decoded;
+    next();
+  } catch (error) {
+    return res.status(401).json({ message: 'Token is invalid or expired' });
+  }
+}
+
+function roleMiddleware(allowedRoles: string[]) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user || !allowedRoles.includes(req.user.role)) {
+      return res.status(403).json({ message: 'Forbidden - Access denied' });
+    }
+    next();
+  };
+}
+
 // Signup Endpoint
 app.post('/api/auth/signup', async (req: Request, res: Response) => {
   const { name, email, mobile, password, referralCode } = req.body;
@@ -329,8 +381,11 @@ app.post('/api/auth/signup', async (req: Request, res: Response) => {
       [userId, name, email, mobile, hashedPassword, referralCode || null, 'Customer', registrationDate]
     );
 
+    const token = generateToken({ id: userId, role: 'Customer' });
+
     return res.status(201).json({
       message: 'User registered successfully',
+      token,
       user: { id: userId, name, email, mobile, role: 'Customer' }
     });
   } catch (error: any) {
@@ -358,8 +413,11 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Incorrect password' });
     }
 
+    const token = generateToken({ id: user.id, role: user.role });
+
     return res.status(200).json({
       message: 'Login successful',
+      token,
       user: {
         id: user.id,
         name: user.name,
@@ -471,6 +529,159 @@ app.delete('/api/food-items/:id', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Delete food item error:', error);
     return res.status(500).json({ message: 'Internal server error while deleting food item' });
+  }
+});
+
+// Get Logged-In User Profile Endpoint (Protected)
+app.get('/api/auth/me', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const user = await db.get('SELECT id, name, email, mobile, role, registrationDate FROM users WHERE id = ?', [req.user.id]);
+    if (!user) {
+      return res.status(404).json({ message: 'User profile not found' });
+    }
+
+    return res.status(200).json({
+      user
+    });
+  } catch (error: any) {
+    console.error('Verify session error:', error);
+    return res.status(500).json({ message: 'Internal server error verifying session' });
+  }
+});
+
+// Forgot Password Endpoint
+app.post('/api/auth/forgot-password', async (req: Request, res: Response) => {
+  const { mobile } = req.body;
+
+  if (!mobile) {
+    return res.status(400).json({ message: 'Mobile number is required' });
+  }
+
+  try {
+    const user = await db.get('SELECT * FROM users WHERE mobile = ?', [mobile]);
+    if (!user) {
+      return res.status(400).json({ message: 'This mobile number is not registered. Please sign up first.' });
+    }
+
+    const authKey = process.env.MSG91_AUTH_KEY;
+    const templateId = process.env.MSG91_TEMPLATE_ID;
+
+    // Check if running in MSG91 mode or Mock mode
+    if (authKey && templateId) {
+      // MSG91 Integration
+      const formattedMobile = mobile.length === 10 ? `91${mobile}` : mobile;
+      const url = `https://control.msg91.com/api/v5/otp?template_id=${templateId}&mobile=${formattedMobile}`;
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'authkey': authKey,
+          'content-type': 'application/json'
+        }
+      });
+
+      const responseData: any = await response.json();
+
+      if (response.ok && responseData.type === 'success') {
+        console.log(`[MSG91] OTP sent successfully to ${formattedMobile}`);
+        return res.status(200).json({ message: 'OTP sent successfully via SMS' });
+      } else {
+        console.error('[MSG91] Error response:', responseData);
+        return res.status(500).json({
+          message: 'Failed to send OTP via SMS platform. Please try again later.',
+          error: responseData
+        });
+      }
+    } else {
+      // Mock / Development Fallback Mode
+      console.warn('[AUTH] MSG91 credentials missing. Running in mock development mode.');
+
+      const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString(); // random 6 digit OTP
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString(); // 5 minutes expiration
+
+      await db.run(
+        `INSERT OR REPLACE INTO otps (mobile, code, expiresAt)
+         VALUES (?, ?, ?)`,
+        [mobile, generatedOtp, expiresAt]
+      );
+
+      console.log(`[MOCK OTP] Mobile: ${mobile} | Code: ${generatedOtp} | Expires: ${expiresAt}`);
+      return res.status(200).json({
+        message: 'OTP sent successfully (Development Mode)',
+        devOtp: generatedOtp // return it so testing is easier
+      });
+    }
+  } catch (error: any) {
+    console.error('Forgot password error:', error);
+    return res.status(500).json({ message: 'Internal server error during password recovery' });
+  }
+});
+
+// Reset Password Endpoint
+app.post('/api/auth/reset-password', async (req: Request, res: Response) => {
+  const { mobile, otp, password } = req.body;
+
+  if (!mobile || !otp || !password) {
+    return res.status(400).json({ message: 'Mobile number, OTP and new password are required' });
+  }
+
+  try {
+    const authKey = process.env.MSG91_AUTH_KEY;
+
+    if (authKey) {
+      // Verify via MSG91
+      const formattedMobile = mobile.length === 10 ? `91${mobile}` : mobile;
+      const url = `https://control.msg91.com/api/v5/otp/verify?otp=${otp}&mobile=${formattedMobile}`;
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'authkey': authKey
+        }
+      });
+
+      const responseData: any = await response.json();
+
+      if (!response.ok || responseData.type !== 'success') {
+        console.error('[MSG91] Verification failure:', responseData);
+        return res.status(400).json({ message: 'Invalid or expired OTP' });
+      }
+
+      console.log(`[MSG91] OTP verified successfully for ${formattedMobile}`);
+    } else {
+      // Verify locally via SQLite otps table
+      const storedOtp = await db.get('SELECT * FROM otps WHERE mobile = ?', [mobile]);
+
+      if (!storedOtp) {
+        return res.status(400).json({ message: 'No OTP requested for this mobile number' });
+      }
+
+      if (storedOtp.code !== otp) {
+        return res.status(400).json({ message: 'Incorrect OTP entered' });
+      }
+
+      if (new Date() > new Date(storedOtp.expiresAt)) {
+        await db.run('DELETE FROM otps WHERE mobile = ?', [mobile]);
+        return res.status(400).json({ message: 'OTP has expired' });
+      }
+
+      // Valid OTP. Delete from DB.
+      await db.run('DELETE FROM otps WHERE mobile = ?', [mobile]);
+      console.log(`[MOCK OTP] Verified successfully for ${mobile}`);
+    }
+
+    // Hash new password and update user record
+    const hashedPassword = await bcrypt.hash(password, 10);
+    await db.run('UPDATE users SET password = ? WHERE mobile = ?', [hashedPassword, mobile]);
+
+    return res.status(200).json({ message: 'Password reset successfully' });
+  } catch (error: any) {
+    console.error('Reset password error:', error);
+    return res.status(500).json({ message: 'Internal server error during password reset' });
   }
 });
 
@@ -866,10 +1077,10 @@ app.put('/api/bookings/hall/:bookingId/food', async (req: Request, res: Response
 // PUT Update Full Hall Booking Details
 app.put('/api/bookings/hall/:bookingId', async (req: Request, res: Response) => {
   const { bookingId } = req.params;
-  const { 
-    customerName, email, mobile, hallId, hallName, hallAddress, 
+  const {
+    customerName, email, mobile, hallId, hallName, hallAddress,
     eventDate, eventSession, startTime, endTime, eventType, guestsCount,
-    foodItems, totalAmount, paymentStatus, status, specialNotes, changedBy 
+    foodItems, totalAmount, paymentStatus, status, specialNotes, changedBy
   } = req.body;
 
   try {
@@ -898,9 +1109,9 @@ app.put('/api/bookings/hall/:bookingId', async (req: Request, res: Response) => 
     const finalSpecialNotes = specialNotes !== undefined ? specialNotes : original.specialNotes;
 
     // Check availability only if hall, date, or session changed, and status is not Cancelled
-    if (finalStatus !== 'Cancelled' && 
-        (finalHallId !== original.hallId || finalEventDate !== original.eventDate || finalEventSession !== original.eventSession)) {
-      
+    if (finalStatus !== 'Cancelled' &&
+      (finalHallId !== original.hallId || finalEventDate !== original.eventDate || finalEventSession !== original.eventSession)) {
+
       let conflict = null;
       if (finalEventSession === 'Full Day') {
         conflict = await db.get(
@@ -1054,9 +1265,6 @@ app.post('/api/support', async (req: Request, res: Response) => {
     return res.status(500).json({ message: 'Internal server error during support request submission' });
   }
 });
-
-
-
 
 // Start Server
 initDb().then(() => {

@@ -37,8 +37,8 @@ export const SignupPage: React.FC = () => {
     setSubmitting(true);
     try {
       await signup({ name, email, mobile, password });
-      addToast('OTP sent to your mobile number/email. Use demo code 123456.', 'success');
-      navigate('/otp');
+      addToast('Account created successfully! Please sign in.', 'success');
+      navigate('/login');
     } catch (err: any) {
       addToast(err.message || 'Signup failed. Please try again.', 'error');
     } finally {
