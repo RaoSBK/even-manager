@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import DashboardCard from '../../components/dashboard/DashboardCard';
 import { useAuth } from '../../contexts/AuthContext';
-import { getHallBookings, HallBookingResponse } from '../../api/bookingApi';
+import { getHallBookings, cancelHallBooking, HallBookingResponse } from '../../api/bookingApi';
 import { generateHallBookingPDF } from '../../services/pdfService';
 import { useNotifications } from '../../contexts/NotificationContext';
-import { Loader2, Download } from 'lucide-react';
+import { Loader2, Download, AlertTriangle } from 'lucide-react';
 
 export const BookingsPage: React.FC = () => {
   const { user } = useAuth();
@@ -14,8 +14,8 @@ export const BookingsPage: React.FC = () => {
   const [liveBookings, setLiveBookings] = useState<HallBookingResponse[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Static sample mock bookings to combine/display alongside
-  const mockBookings = [
+  // Convert static mock bookings to local state
+  const [mockBookings, setMockBookings] = useState([
     {
       id: 'BK8923',
       type: 'Marriage Function',
@@ -26,7 +26,16 @@ export const BookingsPage: React.FC = () => {
       due: '₹1,00,000',
       status: 'Partially Paid'
     }
-  ];
+  ]);
+
+  // Cancellation modal states
+  const [showCancelModal, setShowCancelModal] = useState<boolean>(false);
+  const [selectedBooking, setSelectedBooking] = useState<{
+    id: string;
+    eventDate: string;
+    isMock: boolean;
+  } | null>(null);
+  const [isCancelling, setIsCancelling] = useState<boolean>(false);
 
   useEffect(() => {
     async function fetchBookings() {
@@ -43,6 +52,53 @@ export const BookingsPage: React.FC = () => {
     }
     fetchBookings();
   }, [user]);
+
+  const handleCancelInitiate = (id: string, eventDate: string, isMock: boolean) => {
+    // 15 days check
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const eventDateTime = new Date(eventDate);
+    eventDateTime.setHours(0, 0, 0, 0);
+
+    const diffTime = eventDateTime.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 15) {
+      addToast('Cancellations must be requested at least 15 days before the event. Please contact customer care.', 'warning');
+      return;
+    }
+
+    setSelectedBooking({ id, eventDate, isMock });
+    setShowCancelModal(true);
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!selectedBooking) return;
+    setIsCancelling(true);
+
+    try {
+      if (selectedBooking.isMock) {
+        setMockBookings(prev =>
+          prev.map(b => b.id === selectedBooking.id ? { ...b, status: 'Cancelled' } : b)
+        );
+        addToast('Mock booking cancelled successfully!', 'success');
+      } else {
+        await cancelHallBooking(selectedBooking.id);
+        if (user) {
+          const bookings = await getHallBookings(user.id);
+          setLiveBookings(bookings);
+        }
+        addToast('Booking cancelled successfully!', 'success');
+      }
+    } catch (err: any) {
+      addToast(err.message || 'Failed to cancel booking. Please try again.', 'error');
+    } finally {
+      setIsCancelling(false);
+      setShowCancelModal(false);
+      setSelectedBooking(null);
+    }
+  };
 
   // Trigger PDF Generation for live SQLite bookings
   const handleDownloadPDF = (b: HallBookingResponse) => {
@@ -61,7 +117,10 @@ export const BookingsPage: React.FC = () => {
         bookingDate: b.bookingDate,
         costPerDay: b.costPerDay,
         totalAmount: b.totalAmount,
-        status: b.status
+        status: b.status,
+        eventType: b.eventType,
+        guestsCount: b.guestsCount,
+        eventSession: b.eventSession
       });
       addToast('Download started successfully.', 'success');
     } catch (err) {
@@ -122,23 +181,112 @@ export const BookingsPage: React.FC = () => {
                     <p className="text-neutral-400 font-bold uppercase text-[9px] tracking-wider">Location</p>
                     <p className="font-bold text-primary-800 mt-1 truncate">{b.mandal}, {b.district}</p>
                   </div>
+                  
+                  {/* Additional details */}
+                  <div>
+                    <p className="text-neutral-400 font-bold uppercase text-[9px] tracking-wider">Event Details</p>
+                    <p className="font-bold text-primary-800 mt-1">{b.eventType || 'General Event'}</p>
+                  </div>
+                  <div>
+                    <p className="text-neutral-400 font-bold uppercase text-[9px] tracking-wider">Session & Guests</p>
+                    <p className="font-bold text-primary-800 mt-1">
+                      {b.eventSession || 'Full Day'}
+                      {b.startTime && ` (${b.startTime} - ${b.endTime})`}
+                      <span className="block text-[10px] text-neutral-500 font-medium">({b.guestsCount || 100} Guests)</span>
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-neutral-400 font-bold uppercase text-[9px] tracking-wider">Payment Status</p>
+                    <span className={`inline-block mt-1 px-2.5 py-0.5 rounded text-[10px] font-bold border ${
+                      b.paymentStatus === 'Refunded' || b.status === 'Cancelled'
+                        ? 'bg-rose-50 text-rose-700 border-rose-250'
+                        : b.paymentStatus === 'Pending'
+                        ? 'bg-yellow-50 text-yellow-750 border-yellow-250'
+                        : 'bg-emerald-50 text-emerald-700 border-emerald-250'
+                    }`}>
+                      {b.paymentStatus || (b.status === 'Cancelled' ? 'Refunded' : 'Paid')}
+                    </span>
+                  </div>
+
+                  {b.foodItems && (() => {
+                    try {
+                      const foodList = typeof b.foodItems === 'string' ? JSON.parse(b.foodItems) : b.foodItems;
+                      if (foodList && foodList.length > 0) {
+                        return (
+                          <div className="col-span-2 sm:col-span-4 mt-2 pt-3 border-t border-cream-100">
+                            <p className="text-neutral-400 font-bold uppercase text-[9px] tracking-wider">Catering Selection</p>
+                            <div className="flex flex-wrap gap-2.5 mt-1.5">
+                              {foodList.map((item: any, idx: number) => {
+                                const isUnavailable = item.status === 'Unavailable';
+                                const isReplaced = item.status === 'Unavailable' && item.replacedWith;
+                                return (
+                                  <div key={idx} className="bg-white border border-cream-200 p-2.5 rounded-luxury shadow-sm flex flex-col gap-1 text-[10px] min-w-[140px]">
+                                    <div className="flex items-center justify-between gap-3">
+                                      <span className={isUnavailable ? "text-neutral-400 line-through" : "text-primary-800 font-bold"}>
+                                        {item.name}
+                                      </span>
+                                      {isUnavailable ? (
+                                        <span className="text-red-650 text-[8px] font-extrabold uppercase bg-red-50 px-1 py-0.5 rounded border border-red-100">
+                                          Unavailable
+                                        </span>
+                                      ) : (
+                                        <span className="text-neutral-500 font-bold">₹{item.price}</span>
+                                      )}
+                                    </div>
+                                    {isReplaced && (
+                                      <div className="mt-1 pt-1.5 border-t border-cream-100/50 flex items-center justify-between gap-2 text-[9px] text-gold-600 font-extrabold">
+                                        <span>↳ {item.replacedWith.name} (Replacement)</span>
+                                        <span>₹{item.replacedWith.price}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      }
+                    } catch (e) {}
+                    return null;
+                  })()}
+
+                  {b.specialNotes && (
+                    <div className="col-span-2 sm:col-span-4 mt-2 pt-3 border-t border-cream-100/60 text-xs">
+                      <p className="text-neutral-450 font-bold uppercase text-[9px] tracking-wider">Special Requirements / Notes</p>
+                      <p className="text-primary-850 font-medium mt-1 whitespace-pre-line">{b.specialNotes}</p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex justify-between items-center pt-3 border-t border-cream-100 text-xs">
                   <div className="flex items-center gap-2">
                     <span className="text-neutral-400">Status:</span>
-                    <span className="bg-emerald-50 text-emerald-700 border border-emerald-250 px-2.5 py-0.5 rounded text-[10px] font-bold">
+                    <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold border ${
+                      b.status === 'Cancelled'
+                        ? 'bg-rose-50 text-rose-700 border-rose-200'
+                        : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    }`}>
                       {b.status}
                     </span>
                   </div>
 
-                  <button
-                    onClick={() => handleDownloadPDF(b)}
-                    className="flex items-center gap-1.5 bg-gold-500 hover:bg-gold-600 text-white text-[11px] font-bold px-4 py-2 rounded-lg transition-all shadow"
-                  >
-                    <Download size={12} />
-                    Download Receipt PDF
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {b.status !== 'Cancelled' && (
+                      <button
+                        onClick={() => handleCancelInitiate(b.bookingId, b.eventDate, false)}
+                        className="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-[11px] font-bold px-3.5 py-2 rounded-lg transition-all shadow-sm"
+                      >
+                        Cancel Booking
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDownloadPDF(b)}
+                      className="flex items-center gap-1.5 bg-gold-500 hover:bg-gold-600 text-white text-[11px] font-bold px-4 py-2 rounded-lg transition-all shadow"
+                    >
+                      <Download size={12} />
+                      Download Receipt PDF
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -178,10 +326,25 @@ export const BookingsPage: React.FC = () => {
                 <div className="flex justify-between items-center pt-3 border-t border-cream-100 text-xs">
                   <div className="flex items-center gap-2">
                     <span className="text-neutral-400">Status:</span>
-                    <span className="bg-yellow-50 text-yellow-700 border border-yellow-250 px-2 py-0.5 rounded text-[10px] font-bold">
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                      b.status === 'Cancelled'
+                        ? 'bg-rose-50 text-rose-700 border-rose-200'
+                        : b.status === 'Confirmed'
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        : 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                    }`}>
                       {b.status}
                     </span>
                   </div>
+
+                  {b.status !== 'Cancelled' && (
+                    <button
+                      onClick={() => handleCancelInitiate(b.id, b.date, true)}
+                      className="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-[11px] font-bold px-3.5 py-2 rounded-lg transition-all shadow-sm"
+                    >
+                      Cancel Booking
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -189,6 +352,46 @@ export const BookingsPage: React.FC = () => {
           </div>
         )}
       </DashboardCard>
+
+      {/* Confirmation Modal */}
+      {showCancelModal && selectedBooking && (
+        <div className="fixed inset-0 bg-primary-950/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white border border-cream-200 rounded-luxury-lg max-w-sm w-full p-8 text-center shadow-luxury-lg relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-rose-500"></div>
+            
+            <div className="w-14 h-14 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-4 border border-rose-100">
+              <AlertTriangle size={24} />
+            </div>
+
+            <h3 className="text-lg font-bold font-serif text-primary-800 mb-2">
+              Cancel Booking?
+            </h3>
+            <p className="text-xs text-neutral-400 leading-relaxed mb-6">
+              Are you sure you want to cancel booking <span className="font-mono font-bold text-rose-600">#{selectedBooking.id}</span>? This action cannot be undone.
+            </p>
+
+            <div className="flex items-center gap-3">
+              <button
+                disabled={isCancelling}
+                onClick={() => {
+                  setShowCancelModal(false);
+                  setSelectedBooking(null);
+                }}
+                className="w-1/2 bg-cream-100 hover:bg-cream-200 text-primary-800 font-bold text-xs py-2.5 rounded-lg transition-all"
+              >
+                No, Keep
+              </button>
+              <button
+                disabled={isCancelling}
+                onClick={handleConfirmCancel}
+                className="w-1/2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs py-2.5 rounded-lg transition-all shadow flex items-center justify-center gap-1.5"
+              >
+                {isCancelling ? 'Cancelling...' : 'Yes, Cancel'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { MapPin, Users, IndianRupee, ArrowRight, Search, Building, ExternalLink, RefreshCw } from 'lucide-react';
+import { MapPin, Users, IndianRupee, Search, Building, ExternalLink, RefreshCw } from 'lucide-react';
 import { locationsData, sampleHalls, FunctionHall } from '../../constants/hallsData';
 
 export const HallListingPage: React.FC = () => {
@@ -284,6 +284,25 @@ export const HallListingPage: React.FC = () => {
                         View on Google Maps <ExternalLink size={10} />
                       </a>
 
+                      {/* Short Description */}
+                      <p className="text-xs text-neutral-500 mb-3 line-clamp-2 leading-relaxed">
+                        {hall.description}
+                      </p>
+
+                      {/* Facilities list */}
+                      <div className="flex flex-wrap gap-1 mb-4">
+                        {hall.facilities.slice(0, 3).map((f, i) => (
+                          <span key={i} className="bg-cream-100 text-primary-800 text-[9px] font-semibold px-2 py-0.5 rounded">
+                            {f}
+                          </span>
+                        ))}
+                        {hall.facilities.length > 3 && (
+                          <span className="text-[9px] text-neutral-400 font-bold self-center ml-1">
+                            +{hall.facilities.length - 3} more
+                          </span>
+                        )}
+                      </div>
+
                       {/* Capacity and cost per day */}
                       <div className="grid grid-cols-2 gap-3 border-t border-b border-cream-100 py-3 mb-5 text-xs">
                         <div className="flex items-center gap-2">
@@ -307,13 +326,20 @@ export const HallListingPage: React.FC = () => {
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => navigate(`/halls/${hall.id}`)}
-                      className="w-full bg-primary-800 text-white font-bold text-xs py-2.5 rounded-lg hover:bg-primary-900 transition-all flex items-center justify-center gap-2 shadow group"
-                    >
-                      View Details & Book
-                      <ArrowRight size={14} className="group-hover:translate-x-1 transition-all" />
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => navigate(`/halls/${hall.id}`)}
+                        className="w-1/2 bg-cream-100 text-primary-800 font-bold text-xs py-2.5 rounded-lg hover:bg-cream-200 border border-cream-200 transition-all text-center"
+                      >
+                        View Details
+                      </button>
+                      <button
+                        onClick={() => navigate(`/halls/${hall.id}/book`)}
+                        className="w-1/2 bg-gold-500 text-white font-bold text-xs py-2.5 rounded-lg hover:bg-gold-600 transition-all text-center shadow-sm"
+                      >
+                        Book Now &rarr;
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}

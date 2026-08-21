@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf';
+import { contactConfig } from '../constants/contactConfig';
 
 export interface HallBookingPDFData {
   bookingId: string;
@@ -15,6 +16,10 @@ export interface HallBookingPDFData {
   costPerDay: number;
   totalAmount: number;
   status: string;
+  eventType?: string;
+  guestsCount?: number;
+  eventSession?: string;
+  foodItems?: Array<{ id: string; name: string; price: number }>;
 }
 
 export function generateHallBookingPDF(booking: HallBookingPDFData) {
@@ -29,7 +34,6 @@ export function generateHallBookingPDF(booking: HallBookingPDFData) {
   const secondaryColor = [197, 160, 89]; // Antique Gold (#c5a059)
   const textColor = [55, 65, 81]; // Charcoal Gray (#374151)
   const lightBg = [249, 250, 251]; // Cool gray background (#f9fafb)
-  const borderLight = [229, 231, 235]; // Light border (#e5e7eb)
 
   // Header Banner Background
   doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
@@ -43,58 +47,32 @@ export function generateHallBookingPDF(booking: HallBookingPDFData) {
   doc.setTextColor(255, 255, 255);
   doc.setFont('Helvetica', 'bold');
   doc.setFontSize(20);
-  doc.text('GK EVENT MANAGEMENT', 15, 18);
+  doc.text('GK BOOKING', 15, 18);
 
   doc.setFont('Helvetica', 'oblique');
   doc.setFontSize(10);
   doc.text('Making Memories, Celebrating Moments', 15, 24);
 
   // Invoice Label right side
+  doc.setTextColor(255, 255, 255);
   doc.setFont('Helvetica', 'bold');
   doc.setFontSize(14);
-  doc.text('BOOKING RECEIPT', 195, 18, { align: 'right' });
+  doc.text('BOOKING INVOICE', 140, 18);
 
   doc.setFont('Helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.text('Status: CONFIRMED', 195, 24, { align: 'right' });
+  doc.setFontSize(8);
+  doc.text(`Reference ID: #${booking.bookingId}`, 140, 24);
+  doc.text(`Issued Date: ${booking.bookingDate}`, 140, 29);
 
-  // Body content starting at Y = 50
   let y = 50;
-
-  // Booking details card header
-  doc.setDrawColor(borderLight[0], borderLight[1], borderLight[2]);
-  doc.setFillColor(lightBg[0], lightBg[1], lightBg[2]);
-  doc.roundedRect(15, y, 180, 24, 2, 2, 'FD');
-
-  // Card Content
-  doc.setTextColor(textColor[0], textColor[1], textColor[2]);
-  doc.setFont('Helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.text('Booking Reference ID:', 20, y + 8);
-  doc.setFont('Helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-  doc.text(booking.bookingId, 20, y + 16);
-
-  doc.setTextColor(textColor[0], textColor[1], textColor[2]);
-  doc.setFont('Helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.text('Booking Date:', 120, y + 8);
-  doc.setFont('Helvetica', 'bold');
-  doc.text(booking.bookingDate, 120, y + 16);
-
-  y += 34;
 
   // Customer Details Block
   doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
   doc.setFont('Helvetica', 'bold');
   doc.setFontSize(12);
   doc.text('CUSTOMER INFORMATION', 15, y);
-  
-  // Underline
-  doc.setDrawColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
   doc.line(15, y + 2, 195, y + 2);
-  
+
   y += 8;
   doc.setTextColor(textColor[0], textColor[1], textColor[2]);
   doc.setFont('Helvetica', 'normal');
@@ -154,53 +132,108 @@ export function generateHallBookingPDF(booking: HallBookingPDFData) {
   doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
   doc.text(booking.eventDate, 55, y);
 
+  if (booking.eventSession) {
+    y += 6;
+    doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+    doc.setFont('Helvetica', 'normal');
+    doc.text('Event Session:', 20, y);
+    doc.setFont('Helvetica', 'bold');
+    doc.text(booking.eventSession, 55, y);
+  }
+
+  if (booking.eventType) {
+    y += 6;
+    doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+    doc.setFont('Helvetica', 'normal');
+    doc.text('Event Type:', 20, y);
+    doc.setFont('Helvetica', 'bold');
+    doc.text(booking.eventType, 55, y);
+  }
+
+  if (booking.guestsCount) {
+    y += 6;
+    doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+    doc.setFont('Helvetica', 'normal');
+    doc.text('Total Guests:', 20, y);
+    doc.setFont('Helvetica', 'bold');
+    doc.text(`${booking.guestsCount} Guests`, 55, y);
+  }
+
   y += 16;
 
   // Pricing Block
   doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
   doc.setFont('Helvetica', 'bold');
   doc.setFontSize(12);
-  doc.text('PAYMENT SUMMARY', 15, y);
+  doc.text('PAYMENT DETAILS', 15, y);
   doc.line(15, y + 2, 195, y + 2);
 
   y += 8;
+  const hasFood = booking.foodItems && booking.foodItems.length > 0;
+  const foodItems = booking.foodItems || [];
+  const foodTotal = foodItems.reduce((s, item) => s + item.price, 0);
+
+  // Dynamic height calculation
+  const baseHeight = 20;
+  const foodHeight = hasFood ? (foodItems.length * 6 + 8) : 0;
+  const rectHeight = baseHeight + foodHeight;
+
+  // Box Container for charges
+  doc.setFillColor(lightBg[0], lightBg[1], lightBg[2]);
+  doc.rect(15, y, 180, rectHeight, 'F');
+  
+  let drawY = y + 6;
   doc.setTextColor(textColor[0], textColor[1], textColor[2]);
   doc.setFont('Helvetica', 'normal');
   doc.setFontSize(10);
-  
-  doc.text('Hall Rental Cost (per day):', 20, y);
+  doc.text('Base Rental Charge:', 20, drawY);
   doc.setFont('Helvetica', 'bold');
-  doc.text(`INR ${booking.costPerDay.toLocaleString('en-IN')}.00`, 140, y);
+  doc.text(`INR ${booking.costPerDay.toLocaleString('en-IN')}.00`, 140, drawY);
 
-  doc.setDrawColor(borderLight[0], borderLight[1], borderLight[2]);
-  doc.line(15, y + 4, 195, y + 4);
+  if (hasFood) {
+    foodItems.forEach((item) => {
+      drawY += 6;
+      doc.setFont('Helvetica', 'normal');
+      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+      doc.text(`Food: ${item.name}:`, 20, drawY);
+      doc.setFont('Helvetica', 'bold');
+      doc.text(`INR ${item.price.toLocaleString('en-IN')}.00`, 140, drawY);
+    });
 
-  y += 10;
-  
-  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    drawY += 6;
+    doc.setFont('Helvetica', 'normal');
+    doc.text('Food Selection Subtotal:', 20, drawY);
+    doc.setFont('Helvetica', 'bold');
+    doc.text(`INR ${foodTotal.toLocaleString('en-IN')}.00`, 140, drawY);
+  }
+
+  drawY += 6;
+  doc.setFont('Helvetica', 'normal');
+  doc.text('Taxes & GST (Inclusive):', 20, drawY);
   doc.setFont('Helvetica', 'bold');
-  doc.text('Total Amount (Paid):', 20, y);
-  doc.setFontSize(12);
-  doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-  doc.text(`INR ${booking.totalAmount.toLocaleString('en-IN')}.00`, 140, y);
+  doc.text('INR 0.00', 140, drawY);
 
-  doc.setDrawColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-  doc.line(15, y + 4, 195, y + 4);
+  drawY += 3;
+  doc.line(15, drawY, 195, drawY);
 
-  // Terms and conditions / Footer
-  y = 250;
-  doc.setDrawColor(borderLight[0], borderLight[1], borderLight[2]);
+  drawY += 5;
+  doc.setFont('Helvetica', 'bold');
+  doc.text('Total Contract Value:', 20, drawY);
+  doc.text(`INR ${booking.totalAmount.toLocaleString('en-IN')}.00`, 140, drawY);
+
+  y += (rectHeight + 12);
+
+  // Terms and Footer
   doc.line(15, y, 195, y);
-
   doc.setTextColor(115, 115, 115);
   doc.setFont('Helvetica', 'normal');
   doc.setFontSize(8);
   doc.text('Important Notice: Online booking cancellation must be made at least 15 days before the event.', 15, y + 5);
-  doc.text('For assistance, contact Customer Care at +91 12345 67890 or email support@gkevents.com.', 15, y + 9);
+  doc.text(`For assistance, contact Customer Care at ${contactConfig.phone.display} or email ${contactConfig.email.display}.`, 15, y + 9);
 
   doc.setFont('Helvetica', 'bold');
   doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  doc.text('Thank you for booking with GK Event Management!', 105, y + 16, { align: 'center' });
+  doc.text('Thank you for booking with GK BOOKING!', 105, y + 16, { align: 'center' });
 
   // Save the PDF
   doc.save(`GK-Booking-${booking.bookingId}.pdf`);

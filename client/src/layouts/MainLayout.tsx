@@ -1,7 +1,8 @@
 import React from 'react';
 import { Outlet } from 'react-router';
 import Navbar from '../components/common/Navbar';
-import { ShieldCheck, Percent, HelpCircle, Lock } from 'lucide-react';
+import { ShieldCheck, Percent, HelpCircle, Lock, Instagram, Mail } from 'lucide-react';
+import { contactConfig } from '../constants/contactConfig';
 
 export const MainLayout: React.FC = () => {
   return (
@@ -59,8 +60,28 @@ export const MainLayout: React.FC = () => {
             </div>
           </div>
           
-          <div className="mt-8 pt-6 border-t border-white/10 text-center text-xs text-gray-400">
-            <p>&copy; {new Date().getFullYear()} GK Event Management. All rights reserved. Designed for Premium Events.</p>
+          <div className="mt-8 pt-6 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-gray-400">
+            <p>&copy; {new Date().getFullYear()} GK BOOKING. All rights reserved. Designed for Premium Events.</p>
+            <div className="flex flex-wrap items-center justify-center gap-6">
+              <a 
+                href={contactConfig.email.value} 
+                className="flex items-center gap-2 hover:text-gold-400 transition-colors"
+                title="Send Email"
+              >
+                <Mail size={14} className="text-gold-400" />
+                <span>{contactConfig.email.display}</span>
+              </a>
+              <a 
+                href={contactConfig.socials.instagram} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="flex items-center gap-2 hover:text-gold-400 transition-colors"
+                title="Follow us on Instagram"
+              >
+                <Instagram size={14} className="text-gold-400" />
+                <span>@gkbooking26</span>
+              </a>
+            </div>
           </div>
         </div>
       </footer>

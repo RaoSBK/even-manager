@@ -150,7 +150,7 @@ export const HelpPage: React.FC = () => {
         
         {/* Help Header */}
         <div className="text-center mb-12 animate-fadeIn">
-          <img src={logoImg} alt="GK Booking Logo" className="w-16 h-16 object-contain mx-auto mb-4" />
+          <img src={logoImg} alt="GK BOOKING Logo" className="w-16 h-16 object-contain mx-auto mb-4" />
           <h1 className="text-3xl sm:text-4xl font-bold font-serif text-primary-800 tracking-wide uppercase">
             Help & Support
           </h1>

@@ -122,7 +122,7 @@ export const ContactPage: React.FC = () => {
         
         {/* Page Header */}
         <div className="text-center mb-12 animate-fadeIn">
-          <img src={logoImg} alt="GK Booking Logo" className="w-16 h-16 object-contain mx-auto mb-4" />
+          <img src={logoImg} alt="GK BOOKING Logo" className="w-16 h-16 object-contain mx-auto mb-4" />
           <h1 className="text-3xl sm:text-4xl font-bold font-serif text-primary-800 tracking-wide uppercase">
             Contact Us
           </h1>
@@ -404,7 +404,7 @@ export const ContactPage: React.FC = () => {
                     <span className="text-pink-600 p-1 bg-pink-50 rounded-full"><Instagram size={14} /></span>
                     <span>Instagram</span>
                   </div>
-                  <span className="text-[10px] text-gray-400">@gkbooking_official &rarr;</span>
+                  <span className="text-[10px] text-gray-400">@gkbooking26 &rarr;</span>
                 </a>
 
                 {/* Facebook */}
@@ -432,7 +432,7 @@ export const ContactPage: React.FC = () => {
                     <span className="text-red-600 p-1 bg-red-50 rounded-full"><Youtube size={14} /></span>
                     <span>YouTube</span>
                   </div>
-                  <span className="text-[10px] text-gray-400">GK Booking Channel &rarr;</span>
+                  <span className="text-[10px] text-gray-400">GK BOOKING Channel &rarr;</span>
                 </a>
               </div>
             </div>
@@ -497,7 +497,7 @@ export const ContactPage: React.FC = () => {
               Message Sent Successfully!
             </h3>
             <p className="text-xs text-neutral-400 leading-relaxed mb-6">
-              Thank you for contacting GK Booking. Our customer care team will get back to you soon.
+              Thank you for contacting GK BOOKING. Our customer care team will get back to you soon.
             </p>
 
             <button
