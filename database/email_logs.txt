@@ -1,0 +1,118 @@
+
+=============================================
+Timestamp: 2026-08-08T18:16:35.480Z
+To: user@gkevent.com
+Subject: Booking Confirmed! ID: GK-HALL-856969 - GK Grand Convention Hall
+Content:
+
+      Booking Confirmation - GK Event Management
+      Dear Rahul Kumar,
+      Thank you for choosing GK Event Management. Your booking has been successfully confirmed!
+      
+      
+        
+          Booking Invoice / Details
+        
+        
+          Booking ID
+          GK-HALL-856969
+        
+        
+          Function Hall
+          GK Grand Convention Hall
+        
+        
+          Address
+          Near NH-44 Bypass Road, Jadcherla, Telangana 509301, Jadcherla, Mahabubnagar, Telangana
+        
+        
+          Event Date
+          2026-09-12
+        
+        
+          Booking Date
+          8 Aug 2026
+        
+        
+          Capacity
+          1500 Guests
+        
+        
+          Cost per Day
+          ₹1,50,000
+        
+        
+          Total Paid / Amount
+          ₹1,50,000
+        
+      
+      
+      For any changes or queries, please contact our Customer Care at +91 12345 67890 or reply to this email.
+      
+      Best Regards,GK Event Management Team
+    
+=============================================
+
+=============================================
+Timestamp: 2026-08-19T19:53:39.670Z
+To: user@gkevent.com
+Subject: Booking Confirmed! ID: GK-HALL-156712 - GK Grand Convention Hall
+Content:
+
+      Booking Confirmation - GK BOOKING
+      Dear harsh,
+      Thank you for choosing GK BOOKING. Your booking has been successfully confirmed!
+      
+      
+        
+          Booking Invoice / Details
+        
+        
+          Booking ID
+          GK-HALL-156712
+        
+        
+          Function Hall
+          GK Grand Convention Hall
+        
+        
+          Address
+          Near NH-44 Bypass Road, Jadcherla, Telangana 509301, Jadcherla, Mahabubnagar, Telangana
+        
+        
+          Event Date
+          2026-10-08
+        
+        
+          Booking Date
+          20 Aug 2026
+        
+        
+          Capacity
+          1500 Guests
+        
+        
+          Cost per Day
+          ₹1,50,000
+        
+        
+            
+              Catering Selection
+              
+                
+                  Chicken Biryani — ₹220Chicken 65 — ₹200Chicken Lollipop — ₹230Chicken Manchurian — ₹200Chicken Seekh Kebab — ₹220Boondi Raita — ₹70Butter Naan — ₹50Crispy Corn — ₹130Dal Makhani — ₹130Mutton Curry — ₹300Mutton Rogan Josh — ₹320
+                
+              
+            
+          
+        
+          Total Paid / Amount
+          ₹1,52,070
+        
+      
+      
+      For any changes or queries, please contact our Customer Care at +91 12345 67890 or reply to this email.
+      
+      Best Regards,GK BOOKING Team
+    
+=============================================

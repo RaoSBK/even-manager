@@ -1,12 +1,30 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { User, UserRole, SignupData, demoAuthService } from '../services/demoAuthService';
+import { signupUser, loginUser, verifySession } from '../api/authApi';
+
+export type UserRole = 'ADMIN' | 'EMPLOYEE' | 'USER';
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  mobile: string;
+  role: UserRole;
+  avatar?: string;
+  status: string;
+}
+
+export interface SignupData {
+  name: string;
+  email: string;
+  mobile: string;
+  password?: string;
+}
 
 export interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (emailOrMobile: string, password: string) => Promise<User>;
   signup: (data: SignupData) => Promise<void>;
-  verifyOTP: (otp: string) => Promise<User>;
   logout: () => Promise<void>;
   getCurrentUser: () => User | null;
   isAuthenticated: () => boolean;
@@ -15,25 +33,64 @@ export interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function mapBackendRoleToFrontend(role: string): UserRole {
+  const norm = role.toUpperCase();
+  if (norm === 'ADMIN' || norm === 'SUPER ADMIN') return 'ADMIN';
+  if (norm === 'EMPLOYEE') return 'EMPLOYEE';
+  return 'USER';
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Load persistent session on mount
+  // Restore session on mount
   useEffect(() => {
-    const sessionUser = demoAuthService.getCurrentUser();
-    if (sessionUser) {
-      setUser(sessionUser);
-    }
-    setLoading(false);
+    const restoreSession = async () => {
+      const token = localStorage.getItem('gk_events_token');
+      if (token) {
+        try {
+          const response = await verifySession(token);
+          const backendUser = response.user;
+          const mappedUser: User = {
+            id: backendUser.id,
+            name: backendUser.name,
+            email: backendUser.email,
+            mobile: backendUser.mobile,
+            role: mapBackendRoleToFrontend(backendUser.role),
+            status: 'active'
+          };
+          setUser(mappedUser);
+        } catch (error) {
+          console.error('Session restoration failed:', error);
+          localStorage.removeItem('gk_events_token');
+          setUser(null);
+        }
+      }
+      setLoading(false);
+    };
+
+    restoreSession();
   }, []);
 
   const login = async (emailOrMobile: string, password: string): Promise<User> => {
     setLoading(true);
     try {
-      const loggedUser = await demoAuthService.login(emailOrMobile, password);
-      setUser(loggedUser);
-      return loggedUser;
+      const response = await loginUser({ emailOrMobile, password });
+      const { token, user: backendUser } = response;
+
+      const mappedUser: User = {
+        id: backendUser.id,
+        name: backendUser.name,
+        email: backendUser.email,
+        mobile: backendUser.mobile,
+        role: mapBackendRoleToFrontend(backendUser.role),
+        status: 'active'
+      };
+
+      localStorage.setItem('gk_events_token', token);
+      setUser(mappedUser);
+      return mappedUser;
     } finally {
       setLoading(false);
     }
@@ -42,18 +99,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signup = async (data: SignupData): Promise<void> => {
     setLoading(true);
     try {
-      await demoAuthService.signup(data);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const verifyOTP = async (otp: string): Promise<User> => {
-    setLoading(true);
-    try {
-      const verifiedUser = await demoAuthService.verifyOTP(otp);
-      setUser(verifiedUser);
-      return verifiedUser;
+      await signupUser({
+        name: data.name,
+        email: data.email,
+        mobile: data.mobile,
+        password: data.password || ''
+      });
     } finally {
       setLoading(false);
     }
@@ -62,7 +113,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async (): Promise<void> => {
     setLoading(true);
     try {
-      await demoAuthService.logout();
+      localStorage.removeItem('gk_events_token');
       setUser(null);
     } finally {
       setLoading(false);
@@ -88,7 +139,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loading,
         login,
         signup,
-        verifyOTP,
         logout,
         getCurrentUser,
         isAuthenticated,

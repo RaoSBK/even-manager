@@ -3,7 +3,28 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "node --watch src/app.js",
-    "start": "node src/app.js"
+    "dev": "tsx watch src/app.ts",
+    "start": "tsx src/app.ts"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.3",
+    "nodemailer": "^9.0.5",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^6.0.1"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/nodemailer": "^8.0.1",
+    "nodemon": "^3.1.14",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.23.11",
+    "typescript": "^7.0.2"
   }
 }

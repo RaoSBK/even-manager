@@ -115,40 +115,34 @@ export const LoginPage: React.FC = () => {
         <p className="font-bold text-gold-600 uppercase tracking-wider mb-2">Demo Accounts (Click to Fill):</p>
         <div className="space-y-1.5 font-mono">
           <button
+            type="button"
             onClick={() => {
-              setEmailOrMobile('admin@gkevent.com');
-              setPassword('Admin@123');
+              setEmailOrMobile('admin@gkevents.com');
+              setPassword('admin123');
             }}
             className="block text-left w-full hover:bg-cream-100 p-1 rounded"
           >
-            🔑 <span className="font-bold">ADMIN:</span> admin@gkevent.com / Admin@123
+            🔑 <span className="font-bold">ADMIN:</span> admin@gkevents.com / admin123
           </button>
           <button
+            type="button"
             onClick={() => {
-              setEmailOrMobile('employee@gkevent.com');
-              setPassword('Employee@123');
+              setEmailOrMobile('employee@gkevents.com');
+              setPassword('employee123');
             }}
             className="block text-left w-full hover:bg-cream-100 p-1 rounded"
           >
-            🔑 <span className="font-bold">EMPLOYEE:</span> employee@gkevent.com / Employee@123
+            🔑 <span className="font-bold">EMPLOYEE:</span> employee@gkevents.com / employee123
           </button>
           <button
+            type="button"
             onClick={() => {
-              setEmailOrMobile('user@gkevent.com');
-              setPassword('User@123');
+              setEmailOrMobile('customer@gkevents.com');
+              setPassword('password123');
             }}
             className="block text-left w-full hover:bg-cream-100 p-1 rounded"
           >
-            🔑 <span className="font-bold">USER:</span> user@gkevent.com / User@123
-          </button>
-          <button
-            onClick={() => {
-              setEmailOrMobile('disabled@gkevent.com');
-              setPassword('Disabled@123');
-            }}
-            className="block text-left w-full hover:bg-cream-100 p-1 rounded text-red-600"
-          >
-            🔒 <span className="font-bold">DISABLED:</span> disabled@gkevent.com (Test block)
+            🔑 <span className="font-bold">USER:</span> customer@gkevents.com / password123
           </button>
         </div>
       </div>
