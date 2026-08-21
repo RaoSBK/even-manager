@@ -1,97 +1,19 @@
 import React from 'react';
 import { useNavigate } from 'react-router';
 import { 
-  Sparkles, Calendar, Landmark, Phone, 
+  Calendar, Landmark, Map, Phone, 
   MessageSquare, Instagram, Facebook, Youtube, Mail,
-  Users, Award
+  Users
 } from 'lucide-react';
-import { contactConfig } from '../../constants/contactConfig';
+import EventHero from '../../components/home/EventHero';
 
 export const EventListingPage: React.FC = () => {
   const navigate = useNavigate();
 
   return (
     <div className="bg-cream-50 font-sans pb-16">
-      {/* 1. Hero Section (Image 2 Top) */}
-      <section className="relative w-full px-4 sm:px-6 lg:px-8 pt-8 pb-12">
-        <div className="luxury-card overflow-hidden bg-white relative flex flex-col lg:flex-row items-center border border-cream-200">
-          
-          {/* Hero Left Content */}
-          <div className="w-full lg:w-1/2 p-8 sm:p-12 lg:p-16 z-10">
-            <span className="inline-block bg-cream-100 text-gold-600 text-xs font-semibold px-3.5 py-1.5 rounded-full tracking-wider uppercase mb-4">
-              Welcome To
-            </span>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-primary-800 tracking-tight leading-none font-serif">
-              GK
-              <span className="block text-gold-500 mt-2">BOOKING</span>
-            </h1>
-            <div className="flex items-center gap-1.5 mt-3 mb-6">
-              <div className="h-[2px] w-12 bg-gold-400"></div>
-              <div className="w-1.5 h-1.5 rounded-full bg-gold-500"></div>
-              <div className="h-[2px] w-12 bg-gold-400"></div>
-            </div>
-            <p className="text-sm sm:text-base text-neutral-600 leading-relaxed max-w-md mb-8">
-              From dream events to perfect celebrations - We handle every detail with creativity & perfection.
-            </p>
-
-            {/* Feature Pills */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
-              <div className="flex items-center gap-2 border border-cream-100 bg-cream-50/50 p-2.5 rounded-luxury">
-                <Sparkles size={16} className="text-gold-500 shrink-0" />
-                <div className="text-[10px]">
-                  <p className="font-bold text-primary-800">Best Planning</p>
-                  <p className="text-gray-400">Every Detail</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 border border-cream-100 bg-cream-50/50 p-2.5 rounded-luxury">
-                <Award size={16} className="text-gold-500 shrink-0" />
-                <div className="text-[10px]">
-                  <p className="font-bold text-primary-800">Premium</p>
-                  <p className="text-gray-400">Services</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 border border-cream-100 bg-cream-50/50 p-2.5 rounded-luxury">
-                <Users size={16} className="text-gold-500 shrink-0" />
-                <div className="text-[10px]">
-                  <p className="font-bold text-primary-800">Memorable</p>
-                  <p className="text-gray-400">Experiences</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Buttons */}
-            <div className="flex flex-wrap gap-4">
-              <button 
-                onClick={() => navigate('/events/book/marriage')} 
-                className="luxury-button-primary"
-              >
-                Book Now &rarr;
-              </button>
-              <button 
-                onClick={() => navigate('/events')} 
-                className="luxury-button-secondary"
-              >
-                Explore Services &rarr;
-              </button>
-            </div>
-          </div>
-
-          {/* Hero Right Visual (Warm Stage Scene Mockup with gradients) */}
-          <div className="w-full lg:w-1/2 h-[350px] lg:h-[520px] relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-white via-transparent to-transparent z-10 hidden lg:block"></div>
-            {/* Visual elements representing premium wedding layout */}
-            <div className="w-full h-full bg-cover bg-center flex flex-col justify-end p-8 relative" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1519167758481-83f550bb49b3?q=80&w=1000&auto=format&fit=crop')` }}>
-              <div className="absolute inset-0 bg-gradient-to-t from-primary-950/80 via-primary-950/20 to-transparent"></div>
-              <div className="z-10 text-white max-w-sm">
-                <span className="text-gold-400 text-xs font-bold tracking-widest uppercase">Premium Venues</span>
-                <h3 className="text-xl font-serif font-bold mt-1 text-white">Grand Stage & Decoration Decor</h3>
-                <p className="text-xs text-gray-300 mt-1">Stunning flower setups and crystal lighting customized to your specifications.</p>
-              </div>
-            </div>
-          </div>
-
-        </div>
-      </section>
+      {/* 1. Hero Section (Dynamic Banner) */}
+      <EventHero />
 
       {/* 2. Main Services Category section (Image 2 Middle) */}
       <section className="w-full px-4 sm:px-6 lg:px-8 py-8">
