@@ -28,7 +28,7 @@ export const EventListingPage: React.FC = () => {
         <div className="flex flex-col lg:flex-row gap-8">
           
           {/* Left Cards Grid */}
-          <div className="w-full lg:w-3/4 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="w-full lg:w-3/4 grid grid-cols-1 md:grid-cols-2 gap-6">
             
             {/* Card 1: Event Management */}
             <div className="luxury-card flex flex-col justify-between p-6 hover:shadow-luxury-lg hover:border-gold-300 transition-all duration-300">
@@ -68,25 +68,6 @@ export const EventListingPage: React.FC = () => {
               </button>
             </div>
 
-            {/* Card 3: Travel Booking */}
-            <div className="luxury-card flex flex-col justify-between p-6 hover:shadow-luxury-lg hover:border-gold-300 transition-all duration-300">
-              <div>
-                <div className="bg-primary-50 text-primary-800 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-5 border border-primary-100">
-                  <Map size={22} />
-                </div>
-                <h3 className="text-lg font-bold font-serif text-primary-800 mb-2">Travel Booking</h3>
-                <p className="text-xs text-neutral-500 leading-relaxed mb-6">
-                  Explore exciting destinations and book your perfect travel packages.
-                </p>
-              </div>
-              <button 
-                onClick={() => navigate('/travel')} 
-                className="w-full py-2.5 bg-primary-800 text-white font-medium text-xs rounded-lg hover:bg-primary-900 transition-all flex items-center justify-center gap-1.5"
-              >
-                Start Booking &rarr;
-              </button>
-            </div>
-
           </div>
 
           {/* Right Customer Care Card (Image 2 Right) */}
@@ -99,15 +80,15 @@ export const EventListingPage: React.FC = () => {
                 </div>
 
                 <div className="mt-6 space-y-4">
-                  <a href="tel:+911234567890" className="flex items-center gap-3 text-xs text-neutral-700 hover:text-gold-600 transition-all">
+                  <a href={contactConfig.phone.value} className="flex items-center gap-3 text-xs text-neutral-700 hover:text-gold-600 transition-all">
                     <div className="bg-gold-50 text-gold-600 p-2 rounded-full"><Phone size={14} /></div>
                     <div>
                       <p className="text-[10px] text-gray-400 font-medium">Call Support</p>
-                      <p className="font-semibold text-primary-800">+91 12345 67890</p>
+                      <p className="font-semibold text-primary-800">{contactConfig.phone.display}</p>
                     </div>
                   </a>
 
-                  <a href="https://wa.me/911234567890" className="flex items-center gap-3 text-xs text-neutral-700 hover:text-gold-600 transition-all">
+                  <a href={contactConfig.whatsapp.link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-xs text-neutral-700 hover:text-gold-600 transition-all">
                     <div className="bg-green-50 text-green-600 p-2 rounded-full"><MessageSquare size={14} /></div>
                     <div>
                       <p className="text-[10px] text-gray-400 font-medium">WhatsApp</p>
@@ -159,7 +140,7 @@ export const EventListingPage: React.FC = () => {
       {/* 3. Numbers / Stats Bar (Image 2 Bottom middle) */}
       <section className="w-full px-4 sm:px-6 lg:px-8 py-6">
         <div className="luxury-card bg-white border border-cream-200 p-6 shadow-luxury rounded-luxury">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 justify-items-center text-center">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 justify-items-center text-center">
             
             <div className="flex flex-col items-center">
               <div className="bg-gold-50 text-gold-500 p-3 rounded-full mb-2">
@@ -183,14 +164,6 @@ export const EventListingPage: React.FC = () => {
               </div>
               <p className="text-xl sm:text-2xl font-bold text-primary-800">120+</p>
               <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">Function Halls</p>
-            </div>
-
-            <div className="flex flex-col items-center">
-              <div className="bg-gold-50 text-gold-500 p-3 rounded-full mb-2">
-                <Map size={22} />
-              </div>
-              <p className="text-xl sm:text-2xl font-bold text-primary-800">50+</p>
-              <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">Travel Destinations</p>
             </div>
 
           </div>

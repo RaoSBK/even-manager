@@ -8,7 +8,7 @@ export const ProfilePage: React.FC = () => {
     <div className="space-y-6 font-sans">
       <div>
         <h3 className="text-2xl font-bold text-primary-800 font-serif">My Profile</h3>
-        <p className="text-xs text-neutral-400 mt-1">Review and manage your contact credentials with GK Events</p>
+        <p className="text-xs text-neutral-400 mt-1">Review and manage your contact credentials with GK BOOKING</p>
       </div>
 
       <DashboardCard title="Personal Information" subtitle="Your profile card details">

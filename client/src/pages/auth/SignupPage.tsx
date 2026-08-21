@@ -37,8 +37,8 @@ export const SignupPage: React.FC = () => {
     setSubmitting(true);
     try {
       await signup({ name, email, mobile, password });
-      addToast('OTP sent to your mobile number/email. Use demo code 123456.', 'success');
-      navigate('/otp');
+      addToast('Account created successfully! Please sign in.', 'success');
+      navigate('/login');
     } catch (err: any) {
       addToast(err.message || 'Signup failed. Please try again.', 'error');
     } finally {
@@ -50,7 +50,7 @@ export const SignupPage: React.FC = () => {
     <div className="space-y-6 font-sans">
       <div className="text-center">
         <h3 className="text-2xl font-bold font-serif text-primary-800">Create an Account</h3>
-        <p className="text-xs text-neutral-400 mt-1">Join GK Events to organize your dream functions</p>
+        <p className="text-xs text-neutral-400 mt-1">Join GK BOOKING to organize your dream functions</p>
       </div>
 
       <form onSubmit={handleSignup} className="space-y-4">

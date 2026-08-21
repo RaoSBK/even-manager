@@ -12,14 +12,14 @@ import {
   CreditCard,
   Receipt,
   Landmark,
-  Plane,
   CheckSquare,
   Calendar,
   BarChart3,
   Settings,
   Bell,
   User,
-  X
+  X,
+  Utensils
 } from 'lucide-react';
 import logoImg from '../../assets/images/logo.png';
 
@@ -51,11 +51,12 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ isOpen, onCl
     { path: '/admin/payments', name: 'Payments', icon: <CreditCard size={18} /> },
     { path: '/admin/invoices', name: 'Invoices', icon: <Receipt size={18} /> },
     { path: '/admin/halls', name: 'Function Halls', icon: <Landmark size={18} /> },
-    { path: '/admin/travel', name: 'Travel Packages', icon: <Plane size={18} /> },
+    { path: '/admin/bookings', name: 'Bookings', icon: <Calendar size={18} /> },
     { path: '/admin/tasks', name: 'Tasks', icon: <CheckSquare size={18} /> },
     { path: '/admin/calendar', name: 'Calendar', icon: <Calendar size={18} /> },
     { path: '/admin/reports', name: 'Reports', icon: <BarChart3 size={18} /> },
-    { path: '/admin/settings', name: 'Settings', icon: <Settings size={18} /> }
+    { path: '/admin/settings', name: 'Settings', icon: <Settings size={18} /> },
+    { path: '/admin/food-items', name: 'Food Menu', icon: <Utensils size={18} /> }
   ];
 
   const employeeLinks: SidebarLink[] = [
@@ -72,7 +73,6 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ isOpen, onCl
     { path: '/user/dashboard', name: 'Dashboard', icon: <LayoutDashboard size={18} /> },
     { path: '/user/events', name: 'Book Event', icon: <Sparkles size={18} /> },
     { path: '/user/halls', name: 'Function Halls', icon: <Landmark size={18} /> },
-    { path: '/user/travel', name: 'Travel Packages', icon: <Plane size={18} /> },
     { path: '/user/bookings', name: 'My Bookings', icon: <Calendar size={18} /> },
     { path: '/user/payments', name: 'Payments', icon: <CreditCard size={18} /> },
     { path: '/user/invoices', name: 'Invoices', icon: <Receipt size={18} /> },
@@ -114,9 +114,9 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ isOpen, onCl
           {/* Header/Logo */}
           <div className="h-16 flex items-center justify-between px-4 border-b border-white/10 bg-primary-950/20">
             <Link to="/" className="flex items-center gap-2">
-              <img src={logoImg} alt="GK Events Logo" className="w-9 h-9 object-contain" />
+              <img src={logoImg} alt="GK BOOKING Logo" className="w-9 h-9 object-contain" />
               <div className="flex flex-col">
-                <span className="text-xs font-bold tracking-wider leading-none uppercase font-serif">GK EVENTS</span>
+                <span className="text-xs font-bold tracking-wider leading-none uppercase font-serif">GK BOOKING</span>
                 <span className="text-[8px] text-gold-400 font-mono tracking-widest leading-none mt-0.5">{getTitle()}</span>
               </div>
             </Link>
@@ -152,7 +152,7 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ isOpen, onCl
 
         {/* Footer info inside sidebar */}
         <div className="p-4 border-t border-white/10 text-center text-[10px] text-gray-400 bg-primary-950/10">
-          <p className="font-semibold text-gold-500">GK Event Management</p>
+          <p className="font-semibold text-gold-500">GK BOOKING</p>
           <p className="mt-0.5">&copy; {new Date().getFullYear()} v1.0.0 (Demo Mode)</p>
         </div>
       </aside>
