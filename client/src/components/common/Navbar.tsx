@@ -111,11 +111,19 @@ export const Navbar: React.FC = () => {
           <div className="hidden sm:flex items-center gap-4">
             {/* Phone */}
             <a
+<<<<<<< HEAD
+              href="tel:+919889612904"
+              className="flex items-center gap-2 border border-cream-200 bg-cream-50/50 hover:bg-cream-50 px-4 py-2 rounded-full text-xs font-semibold text-primary-800 transition-all"
+            >
+              <Phone size={14} className="text-gold-500" />
+              <span>+91 98896 12904</span>
+=======
               href={contactConfig.phone.value}
               className="flex items-center gap-2 border border-cream-200 bg-cream-50/50 hover:bg-cream-50 px-4 py-2 rounded-full text-xs font-semibold text-primary-800 transition-all"
             >
               <Phone size={14} className="text-gold-500" />
               <span>{contactConfig.phone.display}</span>
+>>>>>>> fa8656813720633b236edc0d179e86f2eb7f79b7
             </a>
 
             {/* Profile Dropdown / Login button */}

@@ -6,6 +6,7 @@ import {
   Users
 } from 'lucide-react';
 import EventHero from '../../components/home/EventHero';
+import { contactConfig } from '../../constants/contactConfig';
 
 export const EventListingPage: React.FC = () => {
   const navigate = useNavigate();
@@ -96,7 +97,7 @@ export const EventListingPage: React.FC = () => {
                     </div>
                   </a>
 
-                  <a href="#" className="flex items-center gap-3 text-xs text-neutral-700 hover:text-gold-600 transition-all">
+                  <a href={contactConfig.socials.instagram} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-xs text-neutral-700 hover:text-gold-600 transition-all">
                     <div className="bg-pink-50 text-pink-600 p-2 rounded-full"><Instagram size={14} /></div>
                     <div>
                       <p className="text-[10px] text-gray-400 font-medium">Instagram</p>
@@ -104,7 +105,7 @@ export const EventListingPage: React.FC = () => {
                     </div>
                   </a>
 
-                  <a href="#" className="flex items-center gap-3 text-xs text-neutral-700 hover:text-gold-600 transition-all">
+                  <a href={contactConfig.socials.facebook} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-xs text-neutral-700 hover:text-gold-600 transition-all">
                     <div className="bg-blue-50 text-blue-600 p-2 rounded-full"><Facebook size={14} /></div>
                     <div>
                       <p className="text-[10px] text-gray-400 font-medium">Facebook</p>
@@ -112,7 +113,7 @@ export const EventListingPage: React.FC = () => {
                     </div>
                   </a>
 
-                  <a href="#" className="flex items-center gap-3 text-xs text-neutral-700 hover:text-gold-600 transition-all">
+                  <a href={contactConfig.socials.youtube} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-xs text-neutral-700 hover:text-gold-600 transition-all">
                     <div className="bg-red-50 text-red-600 p-2 rounded-full"><Youtube size={14} /></div>
                     <div>
                       <p className="text-[10px] text-gray-400 font-medium">YouTube</p>

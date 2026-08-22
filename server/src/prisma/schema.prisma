@@ -39,6 +39,10 @@ enum BookingStatus {
   IN_PROGRESS
   COMPLETED
   CANCELLED
+<<<<<<< HEAD
+  REJECTED
+=======
+>>>>>>> fa8656813720633b236edc0d179e86f2eb7f79b7
 }
 
 enum PlanningStatus {
@@ -155,6 +159,10 @@ model User {
   employee        Employee?
   auditLogs       AuditLog[]
   otpVerifications OtpVerification[]
+<<<<<<< HEAD
+  bookings        Booking[]
+=======
+>>>>>>> fa8656813720633b236edc0d179e86f2eb7f79b7
 
   @@index([email])
   @@index([mobile])
@@ -267,8 +275,20 @@ model Event {
 model Booking {
   id            String        @id @default(uuid())
   bookingNumber String        @unique
+<<<<<<< HEAD
+  eventId       String?       @unique
+  customerId    String?
+  userId        String?
+  hallId        String?
+  eventType     String?
+  eventDate     DateTime?
+  startTime     String?
+  endTime       String?
+  guestCount    Int?
+=======
   eventId       String        @unique
   customerId    String
+>>>>>>> fa8656813720633b236edc0d179e86f2eb7f79b7
   bookingDate   DateTime      @default(now())
   status        BookingStatus @default(PENDING)
   totalAmount   Decimal       @db.Decimal(12, 2)
@@ -280,13 +300,25 @@ model Booking {
   updatedAt     DateTime      @updatedAt
   cancelledAt   DateTime?
 
+<<<<<<< HEAD
+  event         Event?        @relation(fields: [eventId], references: [id])
+  customer      Customer?     @relation(fields: [customerId], references: [id])
+  user          User?         @relation(fields: [userId], references: [id])
+  hall          Hall?         @relation(fields: [hallId], references: [id])
+=======
   event         Event         @relation(fields: [eventId], references: [id])
   customer      Customer      @relation(fields: [customerId], references: [id])
+>>>>>>> fa8656813720633b236edc0d179e86f2eb7f79b7
   payments      Payment[]
   invoices      Invoice[]
 
   @@index([bookingNumber])
   @@index([customerId])
+<<<<<<< HEAD
+  @@index([userId])
+  @@index([hallId])
+=======
+>>>>>>> fa8656813720633b236edc0d179e86f2eb7f79b7
   @@index([eventId])
   @@index([status])
   @@index([bookingDate])
@@ -536,6 +568,10 @@ model Hall {
   deletedAt   DateTime?
 
   bookings    HallBooking[]
+<<<<<<< HEAD
+  eventBookings Booking[]
+=======
+>>>>>>> fa8656813720633b236edc0d179e86f2eb7f79b7
 }
 
 model HallBooking {
