@@ -13,6 +13,10 @@ const DashboardLayout = lazy(() => import('../components/dashboard/DashboardLayo
 
 // Public Pages
 const HomePage = lazy(() => import('../pages/events/EventListingPage'));
+const ContactPage = lazy(() => import('../pages/contact/ContactPage'));
+const HelpPage = lazy(() => import('../pages/help/HelpPage'));
+
+
 
 // Auth Pages
 const LoginPage = lazy(() => import('../pages/auth/LoginPage'));
@@ -26,9 +30,6 @@ const EventBookingPage = lazy(() => import('../pages/events/EventBookingPage'));
 const HallListingPage = lazy(() => import('../pages/halls/HallListingPage'));
 const HallDetailPage = lazy(() => import('../pages/halls/HallDetailPage'));
 const HallBookingPage = lazy(() => import('../pages/halls/HallBookingPage'));
-const TravelListingPage = lazy(() => import('../pages/travel/TravelListingPage'));
-const PackageDetailPage = lazy(() => import('../pages/travel/PackageDetailPage'));
-const TravelBookingPage = lazy(() => import('../pages/travel/TravelBookingPage'));
 
 // Admin Pages
 const AdminDashboardPage = lazy(() => import('../pages/admin/DashboardPage'));
@@ -42,11 +43,12 @@ const AdminQuotationsPage = lazy(() => import('../pages/admin/QuotationsPage'));
 const AdminPaymentsPage = lazy(() => import('../pages/admin/PaymentsPage'));
 const AdminInvoicesPage = lazy(() => import('../pages/admin/InvoicesPage'));
 const AdminHallsPage = lazy(() => import('../pages/admin/HallsPage'));
-const AdminPackagesPage = lazy(() => import('../pages/admin/PackagesPage'));
 const AdminTasksPage = lazy(() => import('../pages/admin/TasksPage'));
 const AdminCalendarPage = lazy(() => import('../pages/admin/CalendarPage'));
 const AdminReportsPage = lazy(() => import('../pages/admin/ReportsPage'));
 const AdminSettingsPage = lazy(() => import('../pages/admin/SettingsPage'));
+const AdminFoodMenuPage = lazy(() => import('../pages/admin/FoodMenuPage'));
+const AdminBookingsPage = lazy(() => import('../pages/admin/BookingsPage'));
 
 // Employee Pages
 const EmployeeDashboardPage = lazy(() => import('../pages/employee/DashboardPage'));
@@ -88,10 +90,12 @@ export const router = createBrowserRouter([
       { path: 'events', element: <EventListingPage /> },
       { path: 'halls', element: <HallListingPage /> },
       { path: 'halls/:id', element: <HallDetailPage /> },
-      { path: 'travel', element: <TravelListingPage /> },
-      { path: 'travel/:id', element: <PackageDetailPage /> },
+      { path: 'contact', element: <ContactPage /> },
+      { path: 'help', element: <HelpPage /> },
     ],
   },
+
+
 
   // Auth Routes (Public Only - redirect authenticated users)
   {
@@ -118,7 +122,6 @@ export const router = createBrowserRouter([
         children: [
           { path: 'events/book/:type', element: <EventBookingPage /> },
           { path: 'halls/:id/book', element: <HallBookingPage /> },
-          { path: 'travel/:id/book', element: <TravelBookingPage /> },
         ],
       },
     ],
@@ -156,11 +159,12 @@ export const router = createBrowserRouter([
               { path: 'payments', element: <AdminPaymentsPage /> },
               { path: 'invoices', element: <AdminInvoicesPage /> },
               { path: 'halls', element: <AdminHallsPage /> },
-              { path: 'travel', element: <AdminPackagesPage /> },
               { path: 'tasks', element: <AdminTasksPage /> },
               { path: 'calendar', element: <AdminCalendarPage /> },
               { path: 'reports', element: <AdminReportsPage /> },
               { path: 'settings', element: <AdminSettingsPage /> },
+              { path: 'food-items', element: <AdminFoodMenuPage /> },
+              { path: 'bookings', element: <AdminBookingsPage /> },
             ],
           },
         ],

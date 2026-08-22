@@ -13,7 +13,6 @@ export const AdminLayout: React.FC = () => {
           <div className="block py-2 px-3 rounded hover:bg-primary-900 cursor-pointer">Users</div>
           <div className="block py-2 px-3 rounded hover:bg-primary-900 cursor-pointer">Events</div>
           <div className="block py-2 px-3 rounded hover:bg-primary-900 cursor-pointer">Halls</div>
-          <div className="block py-2 px-3 rounded hover:bg-primary-900 cursor-pointer">Travel Packages</div>
         </nav>
       </aside>
       

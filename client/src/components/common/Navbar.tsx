@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { Phone, User, ChevronDown, Menu, X, LogOut, Settings, Calendar } from 'lucide-react';
 import logoImg from '../../assets/images/logo.png';
+import { contactConfig } from '../../constants/contactConfig';
 
 export const Navbar: React.FC = () => {
   const { isAuthenticated, user, logout } = useAuth();
@@ -25,10 +26,10 @@ export const Navbar: React.FC = () => {
         <div className="flex h-20 items-center justify-between">
           {/* Logo Section */}
           <Link to="/" className="flex items-center gap-3">
-            <img src={logoImg} alt="GK Events Logo" className="w-14 h-14 object-contain shrink-0" />
+            <img src={logoImg} alt="GK BOOKING Logo" className="w-14 h-14 object-contain shrink-0" />
             <div className="flex flex-col">
               <h1 className="text-lg sm:text-xl font-bold text-primary-800 tracking-wide uppercase leading-tight font-serif">
-                GK Event Management
+                GK BOOKING
               </h1>
               <p className="text-[9px] sm:text-[10px] text-gold-600 tracking-widest leading-none font-serif italic">
                 Making Memories, Celebrating Moments
@@ -74,14 +75,7 @@ export const Navbar: React.FC = () => {
               Function Halls
             </Link>
 
-            <Link
-              to="/travel"
-              className={`text-sm font-medium tracking-wide transition-all py-1 border-b-2 ${
-                isActive('/travel') ? 'text-gold-500 border-gold-500' : 'text-primary-800 border-transparent hover:text-gold-500'
-              }`}
-            >
-              Travel
-            </Link>
+
 
             <Link
               to="/dashboard"
@@ -92,30 +86,44 @@ export const Navbar: React.FC = () => {
               My Bookings
             </Link>
 
-            <a
-              href="#contact"
-              className="text-sm font-medium text-primary-800 hover:text-gold-500 transition-all tracking-wide py-1"
+            <Link
+              to="/contact"
+              className={`text-sm font-medium tracking-wide transition-all py-1 border-b-2 ${
+                isActive('/contact') ? 'text-gold-500 border-gold-500' : 'text-primary-800 border-transparent hover:text-gold-500'
+              }`}
             >
               Contact
-            </a>
+            </Link>
 
-            <a
-              href="#help"
-              className="text-sm font-medium text-primary-800 hover:text-gold-500 transition-all tracking-wide py-1"
+
+            <Link
+              to="/help"
+              className={`text-sm font-medium tracking-wide transition-all py-1 border-b-2 ${
+                isActive('/help') ? 'text-gold-500 border-gold-500' : 'text-primary-800 border-transparent hover:text-gold-500'
+              }`}
             >
               Help
-            </a>
+            </Link>
+
           </nav>
 
           {/* Contact Details & User profile */}
           <div className="hidden sm:flex items-center gap-4">
             {/* Phone */}
             <a
+<<<<<<< HEAD
               href="tel:+919889612904"
               className="flex items-center gap-2 border border-cream-200 bg-cream-50/50 hover:bg-cream-50 px-4 py-2 rounded-full text-xs font-semibold text-primary-800 transition-all"
             >
               <Phone size={14} className="text-gold-500" />
               <span>+91 98896 12904</span>
+=======
+              href={contactConfig.phone.value}
+              className="flex items-center gap-2 border border-cream-200 bg-cream-50/50 hover:bg-cream-50 px-4 py-2 rounded-full text-xs font-semibold text-primary-800 transition-all"
+            >
+              <Phone size={14} className="text-gold-500" />
+              <span>{contactConfig.phone.display}</span>
+>>>>>>> fa8656813720633b236edc0d179e86f2eb7f79b7
             </a>
 
             {/* Profile Dropdown / Login button */}
@@ -249,13 +257,7 @@ export const Navbar: React.FC = () => {
           >
             Function Halls
           </Link>
-          <Link
-            to="/travel"
-            onClick={() => setIsMenuOpen(false)}
-            className="block text-sm font-medium text-primary-800 hover:text-gold-500 py-1"
-          >
-            Travel
-          </Link>
+
           <Link
             to="/dashboard"
             onClick={() => setIsMenuOpen(false)}
@@ -263,13 +265,29 @@ export const Navbar: React.FC = () => {
           >
             My Bookings
           </Link>
+          <Link
+            to="/contact"
+            onClick={() => setIsMenuOpen(false)}
+            className="block text-sm font-medium text-primary-800 hover:text-gold-500 py-1"
+          >
+            Contact
+          </Link>
+          <Link
+            to="/help"
+            onClick={() => setIsMenuOpen(false)}
+            className="block text-sm font-medium text-primary-800 hover:text-gold-500 py-1"
+          >
+            Help
+          </Link>
+
+
           <div className="border-t border-cream-100 pt-3 flex flex-col gap-2">
             <a
-              href="tel:+911234567890"
+              href={contactConfig.phone.value}
               className="flex items-center justify-center gap-2 border border-cream-200 bg-cream-50 px-4 py-2.5 rounded-full text-xs font-semibold text-primary-800"
             >
               <Phone size={14} className="text-gold-500" />
-              <span>+91 12345 67890</span>
+              <span>{contactConfig.phone.display}</span>
             </a>
             {!isAuthenticated() ? (
               <Link

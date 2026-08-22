@@ -11,7 +11,7 @@ export const ProfilePage: React.FC = () => {
         <p className="text-xs text-neutral-400 mt-1">Manage your staff credentials and contact details</p>
       </div>
 
-      <DashboardCard title="Personal Information" subtitle="Official contact info registered with GK Events HR">
+      <DashboardCard title="Personal Information" subtitle="Official contact info registered with GK BOOKING HR">
         <div className="space-y-3 text-sm">
           <p><span className="font-bold text-neutral-500">Name:</span> {user?.name}</p>
           <p><span className="font-bold text-neutral-500">Email:</span> {user?.email}</p>

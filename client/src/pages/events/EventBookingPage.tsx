@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+<<<<<<< HEAD
 import { Link, useNavigate, useParams } from 'react-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
@@ -7,7 +8,14 @@ import { bookingApi, BookingDetails } from '../../api/bookingApi';
 import { 
   Home, Camera, Gift, Heart, Check, X, ShieldAlert, ChevronRight, ChevronLeft,
   Calendar, AlertTriangle, CheckCircle2
+=======
+import { Link } from 'react-router';
+import { 
+  Home, Camera, Gift, Heart, Check, X, ShieldAlert, ChevronRight, Calendar,
+  ChevronDown, ChevronUp, Utensils
+>>>>>>> fa8656813720633b236edc0d179e86f2eb7f79b7
 } from 'lucide-react';
+import { getFoodItems, FoodItem } from '../../api/foodApi';
 
 interface Service {
   id: string;
@@ -66,10 +74,6 @@ export const EventBookingPage: React.FC = () => {
     { id: 'wedding-shoot', name: 'Wedding Shoot', price: 50000, category: 'photography', iconName: 'couple' },
     { id: 'photography', name: 'Photography', price: 15000, category: 'photography', iconName: 'dslr' },
     
-    // Food
-    { id: 'veg', name: 'Veg', price: 300, category: 'food', iconName: 'veg', perPlate: true },
-    { id: 'non-veg', name: 'Non-Veg', price: 500, category: 'food', iconName: 'non-veg', perPlate: true },
-    { id: 'both-veg-nonveg', name: 'Both (Veg + Non Veg)', price: 400, category: 'food', iconName: 'both', perPlate: true },
   ];
 
   // Stepper state
@@ -84,9 +88,9 @@ export const EventBookingPage: React.FC = () => {
   const [selectedIds, setSelectedIds] = useState<string[]>([
     'sangeet',
     'mehndi',
-    'wedding-shoot',
-    'both-veg-nonveg'
+    'wedding-shoot'
   ]);
+<<<<<<< HEAD
   const [platesCount, setPlatesCount] = useState<number>(100);
 
   // Step 2 states (Event details & coordinator info)
@@ -193,6 +197,42 @@ export const EventBookingPage: React.FC = () => {
   // ----------------------------------------------------
   // Selection Logic
   // ----------------------------------------------------
+=======
+
+  const [platesCount, setPlatesCount] = useState<number>(100);
+
+  // Food items state
+  const [foodMenu, setFoodMenu] = useState<FoodItem[]>([]);
+  const [selectedFood, setSelectedFood] = useState<FoodItem[]>([]);
+  const [isVegExpanded, setIsVegExpanded] = useState<boolean>(false);
+  const [isNonVegExpanded, setIsNonVegExpanded] = useState<boolean>(false);
+
+  // Load active food items from backend
+  useEffect(() => {
+    async function loadFoodItems() {
+      try {
+        const data = await getFoodItems();
+        setFoodMenu(data.filter(item => item.active));
+      } catch (err: any) {
+        console.error('Failed to load food menu:', err);
+      }
+    }
+    loadFoodItems();
+  }, []);
+
+  const handleFoodItemToggle = (item: FoodItem) => {
+    setSelectedFood(prev => {
+      const exists = prev.some(f => f.id === item.id);
+      if (exists) {
+        return prev.filter(f => f.id !== item.id);
+      } else {
+        return [...prev, item];
+      }
+    });
+  };
+
+  // Handle card selection
+>>>>>>> fa8656813720633b236edc0d179e86f2eb7f79b7
   const handleToggleService = (id: string, category: string) => {
     if (category === 'food') {
       setSelectedIds((prev) => {
@@ -215,10 +255,16 @@ export const EventBookingPage: React.FC = () => {
   const selectedServices = services.filter((s) => selectedIds.includes(s.id));
 
   // Calculations
+<<<<<<< HEAD
   const foodServiceSelected = selectedServices.find((s) => s.perPlate);
   const foodCost = foodServiceSelected ? foodServiceSelected.price * platesCount : 0;
+=======
+  const hasFood = selectedFood.length > 0;
+  const foodPricePerPlate = selectedFood.reduce((sum, item) => sum + item.price, 0);
+  const foodCost = foodPricePerPlate * platesCount;
+  
+>>>>>>> fa8656813720633b236edc0d179e86f2eb7f79b7
   const nonFoodCost = selectedServices
-    .filter((s) => !s.perPlate)
     .reduce((sum, s) => sum + s.price, 0);
 
   const servicesSubtotal = nonFoodCost + foodCost;
@@ -707,6 +753,7 @@ export const EventBookingPage: React.FC = () => {
                             <p className="text-[10px] font-semibold text-gold-600 mt-0.5">₹{service.price} / Plate</p>
                           </div>
                         </div>
+<<<<<<< HEAD
                       );
                     })}
                 </div>
@@ -722,6 +769,120 @@ export const EventBookingPage: React.FC = () => {
                   <p className="text-[11px] text-amber-700 leading-relaxed mt-1">
                     Event date must be at least 30 days from the current date. If the event date is within 30 days, online booking is closed. Please contact customer care support.
                   </p>
+=======
+                        
+                        <div className="mt-3">
+                          <p className="text-[11px] font-bold text-primary-800 leading-tight truncate">{service.name}</p>
+                          <p className="text-[10px] font-semibold text-gold-600 mt-0.5">₹{service.price.toLocaleString('en-IN')}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+
+            {/* Food Services category */}
+            <div className="bg-white border border-cream-200 rounded-luxury-lg p-6 shadow-luxury">
+              <div className="flex items-center gap-3 border-b border-cream-100 pb-4 mb-6">
+                <div className="bg-gold-50 text-gold-600 p-2.5 rounded-full"><Utensils size={18} /></div>
+                <div>
+                  <h3 className="font-bold text-sm text-primary-800 tracking-wide">Food Services</h3>
+                  <p className="text-[10px] text-gray-400 mt-0.5">Select multiple food items for Veg and Non-Veg categories</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {/* VEG Category */}
+                <div className="border border-cream-200 rounded-lg overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setIsVegExpanded(!isVegExpanded)}
+                    className="w-full flex items-center justify-between p-3.5 bg-emerald-50 text-emerald-800 font-bold text-xs uppercase tracking-wider outline-none hover:bg-emerald-100/70 transition-all text-left"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                      VEG MENU
+                    </span>
+                    {isVegExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  </button>
+
+                  {isVegExpanded && (
+                    <div className="p-4 bg-white divide-y divide-cream-100 space-y-3">
+                      {foodMenu.filter(item => item.category === 'VEG').length === 0 ? (
+                        <p className="text-xs text-neutral-400 italic">No vegetarian items available.</p>
+                      ) : (
+                        foodMenu.filter(item => item.category === 'VEG').map(item => (
+                          <label
+                            key={item.id}
+                            className="flex items-center justify-between py-2 cursor-pointer group"
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="checkbox"
+                                checked={selectedFood.some(f => f.id === item.id)}
+                                onChange={() => handleFoodItemToggle(item)}
+                                className="w-4 h-4 rounded border-cream-300 text-gold-500 focus:ring-gold-500 cursor-pointer accent-gold-500"
+                              />
+                              <span className="text-xs font-semibold text-primary-800 group-hover:text-gold-600 transition-all">
+                                {item.name}
+                              </span>
+                            </div>
+                            <span className="text-xs font-bold text-gold-600">₹{item.price}</span>
+                          </label>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* NON-VEG Category */}
+                <div className="border border-cream-200 rounded-lg overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setIsNonVegExpanded(!isNonVegExpanded)}
+                    className="w-full flex items-center justify-between p-3.5 bg-rose-50 text-rose-800 font-bold text-xs uppercase tracking-wider outline-none hover:bg-rose-100/70 transition-all text-left"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+                      NON-VEG MENU
+                    </span>
+                    {isNonVegExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  </button>
+
+                  {isNonVegExpanded && (
+                    <div className="p-4 bg-white divide-y divide-cream-100 space-y-3">
+                      {foodMenu.filter(item => item.category === 'NON-VEG').length === 0 ? (
+                        <p className="text-xs text-neutral-400 italic">No non-vegetarian items available.</p>
+                      ) : (
+                        foodMenu.filter(item => item.category === 'NON-VEG').map(item => (
+                          <label
+                            key={item.id}
+                            className="flex items-center justify-between py-2 cursor-pointer group"
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="checkbox"
+                                checked={selectedFood.some(f => f.id === item.id)}
+                                onChange={() => handleFoodItemToggle(item)}
+                                className="w-4 h-4 rounded border-cream-300 text-gold-500 focus:ring-gold-500 cursor-pointer accent-gold-500"
+                              />
+                              <span className="text-xs font-semibold text-primary-800 group-hover:text-gold-600 transition-all">
+                                {item.name}
+                              </span>
+                            </div>
+                            <span className="text-xs font-bold text-gold-600">₹{item.price}</span>
+                          </label>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Subtotal Display */}
+                <div className="mt-4 pt-3 border-t border-cream-100 flex justify-between items-center bg-cream-50/50 -mx-6 px-6 py-3 rounded-b-luxury">
+                  <span className="text-xs font-bold text-primary-800 uppercase tracking-wider">Price per Plate:</span>
+                  <span className="text-sm font-extrabold text-gold-600">₹{foodPricePerPlate.toLocaleString('en-IN')}.00</span>
+>>>>>>> fa8656813720633b236edc0d179e86f2eb7f79b7
                 </div>
               </div>
 
@@ -1042,6 +1203,7 @@ export const EventBookingPage: React.FC = () => {
 
               {/* Hall cards */}
               <div className="space-y-4">
+<<<<<<< HEAD
                 <h4 className="font-bold text-sm text-primary-800 font-serif">
                   Select Function Hall for {eventDate}
                 </h4>
@@ -1114,14 +1276,74 @@ export const EventBookingPage: React.FC = () => {
                               )}
                             </div>
                           </div>
+=======
+                <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-widest block">Selected Services</span>
+                
+                {selectedServices.length === 0 && !hasFood ? (
+                  <div className="text-center py-6 text-xs text-gray-400 italic">
+                    No services selected yet. Please select services from the panels.
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                    {/* Non-food services */}
+                    {selectedServices.map((service) => (
+                      <div key={service.id} className="flex items-center justify-between gap-3 text-xs bg-cream-50/50 p-2.5 rounded-lg border border-cream-100/50">
+                        <div className="flex items-center gap-2">
+                          <span className="text-gold-500 font-bold">•</span>
+                          <div>
+                            <p className="font-bold text-primary-800 text-[11px]">{service.name}</p>
+                          </div>
                         </div>
-                      );
-                    })}
+                        
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="font-semibold text-primary-800">₹{service.price.toLocaleString('en-IN')}</span>
+                          <button
+                            onClick={() => handleRemoveService(service.id)}
+                            className="text-gray-400 hover:text-red-500 p-0.5 rounded-full hover:bg-red-50"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Food catering items */}
+                    {hasFood && (
+                      <div className="flex flex-col gap-1.5 text-xs bg-cream-50/50 p-2.5 rounded-lg border border-cream-100/50">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-emerald-600 font-bold">•</span>
+                            <div>
+                              <p className="font-bold text-primary-800 text-[11px]">Catering Selection</p>
+                              <p className="text-[9px] text-gray-400 font-medium">{platesCount} Plates</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="font-semibold text-primary-800">₹{foodCost.toLocaleString('en-IN')}</span>
+                            <button
+                              onClick={() => setSelectedFood([])}
+                              className="text-gray-400 hover:text-red-500 p-0.5 rounded-full hover:bg-red-50"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+>>>>>>> fa8656813720633b236edc0d179e86f2eb7f79b7
+                        </div>
+                        <div className="flex flex-wrap gap-1 mt-1 border-t border-cream-100/50 pt-1.5">
+                          {selectedFood.map(item => (
+                            <span key={item.id} className="bg-white border border-cream-200 text-primary-800 px-1.5 py-0.5 rounded text-[9px]">
+                              {item.name} (₹{item.price})
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             </div>
 
+<<<<<<< HEAD
             {/* Right Summary Sidebar */}
             <div className="w-full">
               <div className="bg-white border border-cream-200 p-5 rounded-luxury shadow-sm space-y-4 text-xs">
@@ -1133,6 +1355,46 @@ export const EventBookingPage: React.FC = () => {
                   <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded text-[11px] font-bold flex items-center gap-1.5">
                     <AlertTriangle size={14} className="shrink-0" />
                     <span>{errorMsg}</span>
+=======
+              {/* Plate count input (Dynamic control matching screenshot) */}
+              {hasFood && (
+                <div className="mt-5 pt-4 border-t border-cream-100 flex items-center justify-between text-xs">
+                  <div>
+                    <label htmlFor="plates" className="font-bold text-[11px] text-primary-800 block">Total Plates</label>
+                    <span className="text-[9px] text-gray-400">Min 50 guests</span>
+                  </div>
+                  <div className="flex items-center gap-1 bg-cream-50 border border-cream-200 rounded-lg p-1">
+                    <button 
+                      onClick={() => setPlatesCount((p) => Math.max(50, p - 10))} 
+                      className="px-2 py-0.5 font-bold hover:bg-cream-100 text-primary-800 rounded"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      id="plates"
+                      min={50}
+                      value={platesCount}
+                      onChange={(e) => setPlatesCount(Math.max(50, parseInt(e.target.value) || 0))}
+                      className="w-12 text-center bg-transparent font-bold text-primary-800 outline-none text-[11px]"
+                    />
+                    <button 
+                      onClick={() => setPlatesCount((p) => p + 10)} 
+                      className="px-2 py-0.5 font-bold hover:bg-cream-100 text-primary-800 rounded"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Price calculations details */}
+              <div className="mt-6 pt-5 border-t border-cream-100 space-y-2 text-xs">
+                {hasFood && (
+                  <div className="flex justify-between text-gray-500">
+                    <span>Price per Plate ({selectedFood.length} items)</span>
+                    <span className="font-medium text-neutral-800">₹{foodPricePerPlate}</span>
+>>>>>>> fa8656813720633b236edc0d179e86f2eb7f79b7
                   </div>
                 )}
 
