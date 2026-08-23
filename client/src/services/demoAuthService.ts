@@ -22,7 +22,7 @@ const SESSION_KEY = 'gk_events_session';
 const TOKEN_KEY = 'gk_events_token';
 const PENDING_SIGNUP_KEY = 'gk_events_pending_signup';
 
-const BACKEND_BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:5050'}/api`;
+const BACKEND_BASE = `${import.meta.env.VITE_API_URL || 'http://127.0.0.1:5050'}/api`;
 
 function mapRole(backendRole: string): UserRole {
   const roleUpper = (backendRole || '').toUpperCase();
