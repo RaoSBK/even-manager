@@ -3,6 +3,7 @@ import { Menu, Bell } from 'lucide-react';
 import { useNotifications } from '../../contexts/NotificationContext';
 import UserProfileMenu from './UserProfileMenu';
 import NotificationPanel, { NotificationItem } from './NotificationPanel';
+import { notificationApi } from '../../api/notificationApi';
 
 interface DashboardHeaderProps {
   title: string;
@@ -10,37 +11,34 @@ interface DashboardHeaderProps {
 }
 
 export const DashboardHeader: React.FC<DashboardHeaderProps> = ({ title, onSidebarToggle }) => {
-  const { clearNotifications } = useNotifications();
+  const { clearNotifications, addToast } = useNotifications();
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
-  // Mock static notifications
-  const [mockNotifications, setMockNotifications] = useState<NotificationItem[]>([
-    {
-      id: 'n1',
-      title: 'New Booking Request',
-      message: 'A new marriage function booking has been requested for Dec 12, 2026.',
-      timestamp: '5m ago',
-      type: 'info',
-      read: false
-    },
-    {
-      id: 'n2',
-      title: 'Payment Confirmed',
-      message: 'Payment of ₹1,50,000 confirmed for Booking ID #BK8923.',
-      timestamp: '2h ago',
-      type: 'success',
-      read: false
-    },
-    {
-      id: 'n3',
-      title: 'Urgent Task Assigned',
-      message: 'Staffing approval required for the upcoming Dawath ceremony.',
-      timestamp: '1d ago',
-      type: 'warning',
-      read: false
+  const fetchAlerts = async () => {
+    try {
+      const data = await notificationApi.getAll();
+      // Map backend schema to notification panel schema
+      const mapped = data.map(n => ({
+        id: n.id,
+        title: n.title,
+        message: n.message,
+        timestamp: new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        type: n.type,
+        read: n.read
+      }));
+      setNotifications(mapped);
+    } catch {
+      console.warn('Failed to load real-time alerts.');
     }
-  ]);
+  };
+
+  useEffect(() => {
+    fetchAlerts();
+    const interval = setInterval(fetchAlerts, 15000); // Poll every 15s
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -52,18 +50,28 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({ title, onSideb
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleMarkRead = (id: string) => {
-    setMockNotifications(prev =>
-      prev.map(n => (n.id === id ? { ...n, read: true } : n))
-    );
+  const handleMarkRead = async (id: string) => {
+    try {
+      await notificationApi.markRead(id);
+      setNotifications(prev =>
+        prev.map(n => (n.id === id ? { ...n, read: true } : n))
+      );
+    } catch {
+      addToast('Failed to mark alert as read.', 'error');
+    }
   };
 
-  const handleClearAll = () => {
-    setMockNotifications([]);
-    clearNotifications();
+  const handleClearAll = async () => {
+    try {
+      await notificationApi.clearAll();
+      setNotifications([]);
+      clearNotifications();
+    } catch {
+      addToast('Failed to clear alerts.', 'error');
+    }
   };
 
-  const displayUnread = mockNotifications.filter(n => !n.read).length;
+  const displayUnread = notifications.filter(n => !n.read).length;
 
   return (
     <header className="bg-white border-b border-cream-200 h-16 flex items-center justify-between px-6 sticky top-0 z-30 font-sans shadow-sm">
@@ -97,7 +105,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({ title, onSideb
           {isNotifOpen && (
             <div className="absolute right-0 mt-2 w-80 sm:w-96 z-50">
               <NotificationPanel
-                notifications={mockNotifications}
+                notifications={notifications}
                 onMarkRead={handleMarkRead}
                 onClearAll={handleClearAll}
               />

@@ -1,493 +1,372 @@
-import React, { useState, useEffect } from 'react';
-import { bookingApi, BookingDetails } from '../../api/bookingApi';
-import { useNotifications } from '../../contexts/NotificationContext';
+import React, { useEffect, useState } from 'react';
 import DashboardCard from '../../components/dashboard/DashboardCard';
+import Table from '../../components/common/Table';
+import Modal from '../../components/common/Modal';
+import Button from '../../components/common/Button';
+import Input from '../../components/common/Input';
+import { bookingApi, BookingDetails } from '../../api/bookingApi';
+import { hallApi, Hall } from '../../api/hallApi';
 import {
   Search,
+  Calendar,
+  Clock,
+  Landmark,
+  User,
   Eye,
-  Check,
-  XCircle,
   X,
-  History
+  Check
 } from 'lucide-react';
+import { useNotifications } from '../../contexts/NotificationContext';
 
 export const BookingsPage: React.FC = () => {
   const { addToast } = useNotifications();
-
-  // Booking states
   const [bookings, setBookings] = useState<BookingDetails[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [filteredBookings, setFilteredBookings] = useState<BookingDetails[]>([]);
+  const [halls, setHalls] = useState<Hall[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Filters State
+  const [search, setSearch] = useState<string>('');
+  const [hallFilter, setHallFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [dateFilter, setDateFilter] = useState<string>('');
+  const [typeFilter, setTypeFilter] = useState<string>('');
+
+  // Modals state
   const [selectedBooking, setSelectedBooking] = useState<BookingDetails | null>(null);
-  const [bookingHistory, setBookingHistory] = useState<any[]>([]);
-  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState<boolean>(false);
 
-  // Filters state
-  const [searchText, setSearchText] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
-  const [selectedHall, setSelectedHall] = useState<string>('ALL');
-  const [filterDate, setFilterDate] = useState('');
-
-  // Load all bookings
-  const loadAllBookings = async () => {
+  const fetchData = async () => {
     setLoading(true);
     try {
-      const data = await bookingApi.getAll();
-      setBookings(data);
+      const bList = await bookingApi.getAll();
+      setBookings(bList);
+      setFilteredBookings(bList);
+
+      const hList = await hallApi.getAll();
+      setHalls(hList);
+      setError(null);
     } catch (err: any) {
       console.error(err);
-      addToast(err.message || 'Failed to fetch bookings.', 'error');
+      setError('Failed to fetch bookings list.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadAllBookings();
+    fetchData();
   }, []);
 
-  // Load history when a booking is selected
+  // Apply filters in frontend locally
   useEffect(() => {
-    const fetchHistory = async () => {
-      if (!selectedBooking) {
-        setBookingHistory([]);
-        return;
-      }
-      setLoadingHistory(true);
-      try {
-        const history = await bookingApi.getHistory(selectedBooking.id);
-        setBookingHistory(history);
-      } catch (err) {
-        console.error('Error fetching booking history logs:', err);
-      } finally {
-        setLoadingHistory(false);
-      }
-    };
-    fetchHistory();
-  }, [selectedBooking]);
+    let result = [...bookings];
 
-  // Update status handler
-  const handleUpdateStatus = async (bookingId: string, status: string) => {
-    const message = `Are you sure you want to update the booking status to ${status}?`;
-    if (!window.confirm(message)) {
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter(
+        b =>
+          b.bookingNumber.toLowerCase().includes(q) ||
+          b.user?.name.toLowerCase().includes(q) ||
+          b.user?.email.toLowerCase().includes(q) ||
+          b.user?.mobile.includes(q)
+      );
+    }
+
+    if (hallFilter) {
+      result = result.filter(b => b.hallId === hallFilter);
+    }
+
+    if (statusFilter) {
+      result = result.filter(b => b.status === statusFilter);
+    }
+
+    if (typeFilter) {
+      result = result.filter(b => b.eventType?.toLowerCase() === typeFilter.toLowerCase());
+    }
+
+    if (dateFilter) {
+      result = result.filter(b => b.eventDate.startsWith(dateFilter));
+    }
+
+    setFilteredBookings(result);
+  }, [search, hallFilter, statusFilter, dateFilter, typeFilter, bookings]);
+
+  const handleOpenDetails = async (booking: BookingDetails) => {
+    setLoading(true);
+    try {
+      const details = await bookingApi.getById(booking.id);
+      setSelectedBooking(details);
+      setIsDetailsOpen(true);
+    } catch (err) {
+      addToast('Failed to load booking specifications.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateStatus = async (id: string, newStatus: string) => {
+    if (!window.confirm(`Are you sure you want to change this booking status to ${newStatus}?`)) {
       return;
     }
+
     try {
-      const res = await bookingApi.updateStatus(bookingId, status);
-      addToast(res.message || `Booking status updated to ${status}.`, 'success');
-      
-      // Update locally selected booking if open
-      if (selectedBooking && selectedBooking.id === bookingId) {
-        setSelectedBooking(res.booking);
-      }
-      loadAllBookings(); // Reload tables
+      await bookingApi.updateStatus(id, newStatus);
+      addToast(`Booking marked as ${newStatus} successfully.`, 'success');
+      setIsDetailsOpen(false);
+      fetchData();
     } catch (err: any) {
-      console.error(err);
       addToast(err.message || 'Failed to update booking status.', 'error');
     }
   };
 
-  // Status Badge Helper
-  const getStatusBadge = (status: BookingDetails['status']) => {
-    switch (status) {
-      case 'CONFIRMED':
-        return <span className="bg-green-100 text-green-800 border border-green-200 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">Confirmed</span>;
-      case 'PENDING':
-        return <span className="bg-yellow-100 text-yellow-800 border border-yellow-250 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">Pending</span>;
-      case 'CANCELLED':
-        return <span className="bg-red-100 text-red-800 border border-red-250 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">Cancelled</span>;
-      case 'REJECTED':
-        return <span className="bg-neutral-100 text-neutral-600 border border-neutral-200 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">Rejected</span>;
-      case 'COMPLETED':
-        return <span className="bg-blue-100 text-blue-800 border border-blue-250 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">Completed</span>;
-      default:
-        return <span className="bg-neutral-100 text-neutral-800 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">{status}</span>;
+  const handleCancelBooking = async (id: string) => {
+    if (!window.confirm('Are you sure you want to cancel this booking?')) {
+      return;
+    }
+
+    try {
+      await bookingApi.cancel(id);
+      addToast('Booking cancelled successfully.', 'success');
+      setIsDetailsOpen(false);
+      fetchData();
+    } catch (err: any) {
+      addToast(err.message || 'Failed to cancel booking.', 'error');
     }
   };
 
-  // Extract unique halls for filtering dropdown
-  const uniqueHalls = Array.from(
-    new Map(
-      bookings
-        .filter((b) => b.hall)
-        .map((b) => [b.hall?.id, b.hall?.name])
-    ).entries()
-  );
-
-  // Filter logic
-  const filteredBookings = bookings.filter((b) => {
-    // Search filter
-    const searchLower = searchText.toLowerCase().trim();
-    const customerMatches =
-      b.user?.name?.toLowerCase().includes(searchLower) ||
-      b.user?.email?.toLowerCase().includes(searchLower) ||
-      b.user?.mobile?.includes(searchLower) ||
-      b.bookingNumber?.toLowerCase().includes(searchLower);
-
-    if (searchLower && !customerMatches) return false;
-
-    // Status filter
-    if (selectedStatus !== 'ALL' && b.status !== selectedStatus) return false;
-
-    // Hall filter
-    if (selectedHall !== 'ALL' && b.hallId !== selectedHall) return false;
-
-    // Date filter
-    if (filterDate) {
-      const bDateStr = b.eventDate.split('T')[0];
-      if (bDateStr !== filterDate) return false;
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'CONFIRMED':
+        return 'bg-green-50 text-green-700 border border-green-150';
+      case 'PENDING':
+        return 'bg-yellow-50 text-yellow-700 border border-yellow-150';
+      case 'COMPLETED':
+        return 'bg-blue-50 text-blue-700 border border-blue-150';
+      case 'CANCELLED':
+      case 'REJECTED':
+        return 'bg-red-50 text-red-700 border border-red-150';
+      default:
+        return 'bg-neutral-50 text-neutral-700';
     }
+  };
 
-    return true;
-  });
+  const columns = [
+    { key: 'bookingNumber', header: 'Booking ID', render: (b: BookingDetails) => <span className="font-bold text-gold-600">{b.bookingNumber}</span> },
+    { key: 'client', header: 'Client', render: (b: BookingDetails) => <span className="font-semibold text-primary-800">{b.user?.name || 'Client'}</span> },
+    { key: 'hall', header: 'Function Hall', render: (b: BookingDetails) => b.hall?.name || 'N/A' },
+    { key: 'eventType', header: 'Event Type' },
+    {
+      key: 'eventDate',
+      header: 'Event Date',
+      render: (b: BookingDetails) => (
+        <span className="text-xs text-neutral-500">
+          {new Date(b.eventDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+          {b.startTime && ` (${b.startTime} - ${b.endTime})`}
+        </span>
+      )
+    },
+    { key: 'totalAmount', header: 'Total Value', render: (b: BookingDetails) => <span className="font-semibold">₹{Number(b.totalAmount).toLocaleString('en-IN')}</span> },
+    { key: 'status', header: 'Status', render: (b: BookingDetails) => <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase ${getStatusBadge(b.status)}`}>{b.status}</span> },
+    {
+      key: 'actions',
+      header: 'Actions',
+      align: 'right' as const,
+      render: (b: BookingDetails) => (
+        <Button variant="secondary" className="!p-1.5 !px-2.5 rounded" onClick={() => handleOpenDetails(b)}>
+          <Eye size={14} /> Details
+        </Button>
+      )
+    }
+  ];
 
   return (
     <div className="space-y-6 font-sans">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h3 className="text-2xl font-bold text-primary-800 font-serif">Manage Bookings</h3>
-          <p className="text-xs text-neutral-400 mt-1">
-            Global view of all function hall reservation requests, customer logs, and booking statuses.
-          </p>
+      <div>
+        <h3 className="text-2xl font-bold text-primary-800 font-serif">Booking Directory</h3>
+        <p className="text-xs text-neutral-400 mt-1">Review customer bookings, dates reservation overlap, and approve/reject bookings</p>
+      </div>
+
+      {/* Filters Bar */}
+      <div className="bg-white border border-cream-150 p-4 rounded-luxury shadow-sm grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+        <Input
+          placeholder="Search client/booking ID..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          leftIcon={<Search size={16} />}
+        />
+        
+        <div className="flex flex-col gap-0.5">
+          <label className="text-[9px] font-bold text-primary-800 uppercase tracking-wide">Hall</label>
+          <select
+            className="w-full bg-cream-50/50 border border-cream-200 rounded-luxury px-3 py-2 text-xs focus:outline-none focus:bg-white"
+            value={hallFilter}
+            onChange={(e) => setHallFilter(e.target.value)}
+          >
+            <option value="">All Halls</option>
+            {halls.map(h => (
+              <option key={h.id} value={h.id}>{h.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-0.5">
+          <label className="text-[9px] font-bold text-primary-800 uppercase tracking-wide">Status</label>
+          <select
+            className="w-full bg-cream-50/50 border border-cream-200 rounded-luxury px-3 py-2 text-xs focus:outline-none focus:bg-white"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="">All Statuses</option>
+            <option value="PENDING">PENDING</option>
+            <option value="CONFIRMED">CONFIRMED</option>
+            <option value="COMPLETED">COMPLETED</option>
+            <option value="CANCELLED">CANCELLED</option>
+            <option value="REJECTED">REJECTED</option>
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-0.5">
+          <label className="text-[9px] font-bold text-primary-800 uppercase tracking-wide">Event Date</label>
+          <input
+            type="date"
+            className="w-full bg-cream-50/50 border border-cream-200 rounded-luxury px-3 py-2 text-xs focus:outline-none focus:bg-white"
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value)}
+          />
+        </div>
+
+        <div className="flex flex-col gap-0.5">
+          <label className="text-[9px] font-bold text-primary-800 uppercase tracking-wide">Event Type</label>
+          <select
+            className="w-full bg-cream-50/50 border border-cream-200 rounded-luxury px-3 py-2 text-xs focus:outline-none focus:bg-white"
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+          >
+            <option value="">All Types</option>
+            <option value="Wedding">Wedding</option>
+            <option value="Reception">Reception</option>
+            <option value="Birthday">Birthday</option>
+            <option value="Conference">Conference</option>
+            <option value="Other">Other Gatherings</option>
+          </select>
         </div>
       </div>
 
-      {/* FILTER PANEL */}
-      <div className="bg-white border border-cream-200 rounded-luxury p-5 shadow-sm space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          
-          {/* Search text input */}
-          <div className="relative">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gold-500">
-              <Search size={16} />
-            </span>
-            <input
-              type="text"
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              placeholder="Search by ID, name, email..."
-              className="w-full pl-10 pr-4 py-2 border border-cream-200 rounded-luxury text-xs focus:outline-none focus:ring-1 focus:ring-gold-500"
-            />
-          </div>
-
-          {/* Status filter select */}
-          <div>
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="w-full border border-cream-200 p-2 rounded-luxury text-xs bg-white focus:outline-none focus:ring-1 focus:ring-gold-500"
-            >
-              <option value="ALL">All Statuses</option>
-              <option value="PENDING">Pending Approval</option>
-              <option value="CONFIRMED">Confirmed</option>
-              <option value="COMPLETED">Completed</option>
-              <option value="CANCELLED">Cancelled</option>
-              <option value="REJECTED">Rejected</option>
-            </select>
-          </div>
-
-          {/* Hall filter select */}
-          <div>
-            <select
-              value={selectedHall}
-              onChange={(e) => setSelectedHall(e.target.value)}
-              className="w-full border border-cream-200 p-2 rounded-luxury text-xs bg-white focus:outline-none focus:ring-1 focus:ring-gold-500"
-            >
-              <option value="ALL">All Halls</option>
-              {uniqueHalls.map(([id, name]) => (
-                <option key={id} value={id}>
-                  {name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Date filter picker */}
-          <div className="relative">
-            <input
-              type="date"
-              value={filterDate}
-              onChange={(e) => setFilterDate(e.target.value)}
-              className="w-full border border-cream-200 p-2 rounded-luxury text-xs focus:outline-none focus:ring-1 focus:ring-gold-500"
-            />
-          </div>
-        </div>
-
-        {/* Reset Filters Option */}
-        {(searchText || selectedStatus !== 'ALL' || selectedHall !== 'ALL' || filterDate) && (
-          <div className="flex justify-end pt-1">
-            <button
-              onClick={() => {
-                setSearchText('');
-                setSelectedStatus('ALL');
-                setSelectedHall('ALL');
-                setFilterDate('');
-              }}
-              className="text-xs text-gold-600 hover:underline font-bold uppercase tracking-wider"
-            >
-              Clear all filters
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* DATA TABLE */}
-      {loading ? (
-        <div className="bg-white border border-cream-200 p-20 rounded-luxury text-center flex flex-col items-center justify-center gap-3">
-          <span className="h-8 w-8 animate-spin rounded-full border-2 border-primary-800 border-t-transparent"></span>
-          <p className="text-xs text-neutral-400 font-bold uppercase tracking-wider">Loading system reservations...</p>
+      {error ? (
+        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-luxury text-sm">
+          {error}
         </div>
       ) : (
-        <DashboardCard title={`Reservations Log (${filteredBookings.length})`} subtitle="Real-time system booking details log">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="border-b border-cream-150 text-primary-800 font-bold uppercase tracking-wider bg-cream-50/50">
-                  <th className="py-3.5 px-4">Ref Number</th>
-                  <th className="py-3.5 px-4">Customer</th>
-                  <th className="py-3.5 px-4">Venue Hall</th>
-                  <th className="py-3.5 px-4">Event Date</th>
-                  <th className="py-3.5 px-4">Invoice Amount</th>
-                  <th className="py-3.5 px-4">Status</th>
-                  <th className="py-3.5 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-cream-100 text-neutral-600">
-                {filteredBookings.map((b) => {
-                  const eventDateStr = new Date(b.eventDate).toLocaleDateString('en-IN', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric'
-                  });
-
-                  return (
-                    <tr key={b.id} className="hover:bg-cream-50/20 transition-all">
-                      <td className="py-3.5 px-4 font-mono font-bold text-gold-600">
-                        #{b.bookingNumber}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <div className="font-semibold text-primary-800">{b.user?.name || 'Walk-in Customer'}</div>
-                        <div className="text-[10px] text-neutral-400 mt-0.5">{b.user?.mobile || 'No Mobile'}</div>
-                      </td>
-                      <td className="py-3.5 px-4 font-medium text-primary-800">
-                        {b.hall?.name || 'Function Hall'}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <span className="font-medium text-neutral-700">{eventDateStr}</span>
-                        <span className="block text-[10px] text-neutral-400 mt-0.5">{b.startTime || '09:00'} - {b.endTime || '18:00'}</span>
-                      </td>
-                      <td className="py-3.5 px-4 font-bold font-mono text-neutral-800">
-                        ₹{Number(b.totalAmount).toLocaleString('en-IN')}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        {getStatusBadge(b.status)}
-                      </td>
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="flex justify-end gap-1.5">
-                          <button
-                            onClick={() => setSelectedBooking(b)}
-                            className="p-1.5 border border-cream-200 hover:bg-cream-50 rounded text-neutral-500 transition-all flex items-center justify-center"
-                            title="View Details"
-                          >
-                            <Eye size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {filteredBookings.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="py-8 text-center text-neutral-400 italic">
-                      No records found matching filters.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+        <DashboardCard title="Client Booking Log" subtitle="List of hall booking records">
+          <Table
+            columns={columns}
+            data={filteredBookings}
+            loading={loading}
+            emptyMessage="No bookings found."
+            onRowClick={handleOpenDetails}
+          />
         </DashboardCard>
       )}
 
-      {/* DETAIL VIEW MODAL WITH ACTION TRIGGERS & AUDIT TRAIL */}
-      {selectedBooking && (
-        <div className="fixed inset-0 bg-neutral-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-cream-200 rounded-luxury max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-luxury animate-in fade-in zoom-in-95 duration-250">
-            {/* Header */}
-            <div className="p-5 border-b border-cream-100 flex justify-between items-center bg-cream-50/20">
+      {/* BOOKING DETAILS MODAL */}
+      <Modal isOpen={isDetailsOpen} onClose={() => setIsDetailsOpen(false)} title="Booking Specification Details" size="lg">
+        {selectedBooking && (
+          <div className="space-y-6">
+            <div className="border-b border-cream-150 pb-4 flex justify-between items-start">
               <div>
-                <h4 className="font-bold text-base text-primary-800 font-serif">Manage Reservation</h4>
-                <p className="text-[10px] text-neutral-400 font-mono">Reference Invoice ID: #{selectedBooking.bookingNumber}</p>
+                <h4 className="text-md font-bold text-primary-800 font-serif">
+                  Booking Reference: {selectedBooking.bookingNumber}
+                </h4>
+                <p className="text-xs text-neutral-400 mt-0.5">Registered on {new Date(selectedBooking.createdAt).toLocaleDateString()}</p>
               </div>
-              <button
-                onClick={() => setSelectedBooking(null)}
-                className="text-neutral-400 hover:text-primary-800 p-1 rounded-full transition-all"
-              >
-                <X size={20} />
-              </button>
+              <span className={`inline-block px-2.5 py-1 rounded text-xs font-bold uppercase ${getStatusBadge(selectedBooking.status)}`}>
+                {selectedBooking.status}
+              </span>
             </div>
 
-            {/* Content Body */}
-            <div className="p-6 space-y-6 text-xs text-neutral-700">
-              {/* Parameters Summary */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-cream-50/10 border border-cream-150 p-4 rounded-luxury">
-                <div>
-                  <p className="text-neutral-400 font-bold uppercase text-[8px] tracking-wider mb-0.5">Occasion Occasion</p>
-                  <p className="font-bold text-primary-800">{selectedBooking.eventType}</p>
-                </div>
-                <div>
-                  <p className="text-neutral-400 font-bold uppercase text-[8px] tracking-wider mb-0.5">Event Date</p>
-                  <p className="font-bold text-primary-800">
-                    {new Date(selectedBooking.eventDate).toLocaleDateString('en-IN', {
-                      day: 'numeric',
-                      month: 'short',
-                      year: 'numeric'
-                    })}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-neutral-400 font-bold uppercase text-[8px] tracking-wider mb-0.5">Reservation Status</p>
-                  <div className="mt-0.5">{getStatusBadge(selectedBooking.status)}</div>
-                </div>
-                <div>
-                  <p className="text-neutral-400 font-bold uppercase text-[8px] tracking-wider mb-0.5">Session Slot</p>
-                  <p className="font-bold text-primary-800">{selectedBooking.startTime} - {selectedBooking.endTime}</p>
-                </div>
-                <div>
-                  <p className="text-neutral-400 font-bold uppercase text-[8px] tracking-wider mb-0.5">Guests Pax</p>
-                  <p className="font-bold text-primary-800">{selectedBooking.guestCount || 100} Pax</p>
-                </div>
-                <div>
-                  <p className="text-neutral-400 font-bold uppercase text-[8px] tracking-wider mb-0.5">Invoice Contract</p>
-                  <p className="font-bold text-gold-600 font-mono">₹{Number(selectedBooking.totalAmount).toLocaleString('en-IN')}</p>
-                </div>
+            {/* Client and Hall */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs border-b border-cream-150 pb-4">
+              <div>
+                <span className="text-neutral-400 block font-bold uppercase mb-1">Customer Info</span>
+                <p className="font-semibold text-primary-800 flex items-center gap-1"><User size={12} /> {selectedBooking.user?.name}</p>
+                <p className="text-neutral-500">Email: {selectedBooking.user?.email}</p>
+                <p className="text-neutral-500">Phone: {selectedBooking.user?.mobile}</p>
               </div>
-
-              {/* Grid: Hall Details vs Customer Profile */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <h5 className="font-bold text-primary-800 font-serif border-b border-cream-100 pb-1.5 mb-2">
-                    Venue Details
-                  </h5>
-                  <div className="space-y-1">
-                    <p className="font-bold text-neutral-800">{selectedBooking.hall?.name}</p>
-                    <p className="text-[11px] text-neutral-500">📍 Location: {selectedBooking.hall?.location}</p>
-                    <p className="text-[11px] text-neutral-500">🏢 Capacity: {selectedBooking.hall?.capacity} guests</p>
-                    <p className="text-[11px] text-neutral-500">💰 Rent per day: ₹{Number(selectedBooking.hall?.basePrice).toLocaleString('en-IN')}</p>
-                  </div>
-                </div>
-
-                <div>
-                  <h5 className="font-bold text-primary-800 font-serif border-b border-cream-100 pb-1.5 mb-2">
-                    Coordinator details
-                  </h5>
-                  <div className="space-y-1">
-                    <p className="font-bold text-neutral-800">🧑 {selectedBooking.user?.name || 'Walk-in Client'}</p>
-                    <p className="text-[11px] text-neutral-500">📞 Phone: {selectedBooking.user?.mobile}</p>
-                    <p className="text-[11px] text-neutral-500">✉️ Email: {selectedBooking.user?.email}</p>
-                  </div>
-                </div>
+              <div>
+                <span className="text-neutral-400 block font-bold uppercase mb-1">Hall Info</span>
+                <p className="font-semibold text-primary-800 flex items-center gap-1"><Landmark size={12} /> {selectedBooking.hall?.name}</p>
+                <p className="text-neutral-500">Code: {selectedBooking.hall?.hallCode}</p>
+                <p className="text-neutral-500">Address: {selectedBooking.hall?.location}</p>
               </div>
+            </div>
 
-              {/* Billing Info Notes */}
+            {/* Event Specs */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs border-b border-cream-150 pb-4">
+              <div>
+                <span className="text-neutral-400 block font-bold uppercase">Event Date</span>
+                <p className="font-semibold text-primary-800 flex items-center gap-1">
+                  <Calendar size={12} /> {new Date(selectedBooking.eventDate).toLocaleDateString()}
+                </p>
+              </div>
+              <div>
+                <span className="text-neutral-400 block font-bold uppercase">Timings</span>
+                <p className="font-semibold text-primary-800 flex items-center gap-1">
+                  <Clock size={12} /> {selectedBooking.startTime || '09:00'} - {selectedBooking.endTime || '18:00'}
+                </p>
+              </div>
+              <div>
+                <span className="text-neutral-400 block font-bold uppercase">Event Type</span>
+                <p className="font-semibold text-primary-800">{selectedBooking.eventType || 'General'}</p>
+              </div>
+              <div>
+                <span className="text-neutral-400 block font-bold uppercase">Guests Count</span>
+                <p className="font-semibold text-primary-800">{selectedBooking.guestCount || 'N/A'} Guests</p>
+              </div>
+            </div>
+
+            {/* Billing breakdown */}
+            <div className="p-4 bg-cream-50/50 border border-cream-150 rounded text-xs space-y-1.5">
+              <span className="text-neutral-400 font-bold block uppercase mb-2">Cost Breakdowns</span>
+              <div className="flex justify-between">
+                <span>Hall Base Cost:</span>
+                <span className="font-semibold">₹{Number(selectedBooking.totalAmount).toLocaleString('en-IN')}</span>
+              </div>
               {selectedBooking.notes && (
-                <div>
-                  <h5 className="font-bold text-primary-800 font-serif border-b border-cream-100 pb-1.5 mb-2">
-                    Billing Notes & Add-on Services details
-                  </h5>
-                  <p className="bg-neutral-50 border border-neutral-200 p-3 rounded-luxury text-neutral-600 leading-relaxed font-sans font-medium">
-                    {selectedBooking.notes}
-                  </p>
+                <div className="pt-2 mt-2 border-t border-cream-100 italic text-neutral-500">
+                  Notes: {selectedBooking.notes}
                 </div>
               )}
-
-              {/* Change History Audit Log */}
-              <div>
-                <h5 className="font-bold text-primary-800 font-serif border-b border-cream-100 pb-1.5 mb-2 flex items-center gap-1.5">
-                  <History size={14} className="text-gold-500" />
-                  <span>Audit Trail (Change History Log)</span>
-                </h5>
-                {loadingHistory ? (
-                  <p className="text-[10px] text-neutral-400 animate-pulse">Loading audit trail...</p>
-                ) : bookingHistory.length === 0 ? (
-                  <p className="text-[10px] text-neutral-400 italic">No modifications have been recorded for this booking.</p>
-                ) : (
-                  <div className="border border-cream-100 rounded-luxury max-h-36 overflow-y-auto divide-y divide-cream-100 bg-cream-50/5 p-2 font-sans">
-                    {bookingHistory.map((hist) => (
-                      <div key={hist.id} className="py-2 text-[10px] text-neutral-600 flex justify-between gap-4">
-                        <div>
-                          <span className="font-bold text-primary-800 uppercase tracking-wide mr-1.5">[{hist.fieldName}]</span>
-                          <span>Changed: </span>
-                          <span className="line-through text-red-500 font-medium">{hist.oldValue || 'none'}</span>
-                          <span className="mx-1">→</span>
-                          <span className="text-green-600 font-bold">{hist.newValue}</span>
-                        </div>
-                        <div className="text-[9px] text-neutral-400 flex-shrink-0 text-right">
-                          <p className="font-bold">{hist.changedBy}</p>
-                          <p>{new Date(hist.changedAt).toLocaleString('en-IN')}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
             </div>
 
-            {/* Footer triggers */}
-            <div className="p-5 border-t border-cream-100 flex flex-wrap gap-2 justify-between items-center bg-cream-50/10">
-              
-              {/* Left hand action options: Status modifications */}
-              <div className="flex gap-2">
-                {selectedBooking.status === 'PENDING' && (
-                  <>
-                    <button
-                      onClick={() => handleUpdateStatus(selectedBooking.id, 'CONFIRMED')}
-                      className="bg-green-600 hover:bg-green-700 text-white font-bold px-3 py-2 rounded-luxury text-[10px] uppercase tracking-wider flex items-center gap-1.5 transition-all shadow"
-                    >
-                      <Check size={12} />
-                      <span>Confirm booking</span>
-                    </button>
-                    <button
-                      onClick={() => handleUpdateStatus(selectedBooking.id, 'REJECTED')}
-                      className="bg-neutral-600 hover:bg-neutral-700 text-white font-bold px-3 py-2 rounded-luxury text-[10px] uppercase tracking-wider flex items-center gap-1.5 transition-all shadow"
-                    >
-                      <XCircle size={12} />
-                      <span>Reject request</span>
-                    </button>
-                  </>
-                )}
-
-                {selectedBooking.status === 'CONFIRMED' && (
-                  <>
-                    <button
-                      onClick={() => handleUpdateStatus(selectedBooking.id, 'COMPLETED')}
-                      className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-2 rounded-luxury text-[10px] uppercase tracking-wider flex items-center gap-1.5 transition-all shadow"
-                    >
-                      <Check size={12} />
-                      <span>Mark Completed</span>
-                    </button>
-                    <button
-                      onClick={() => handleUpdateStatus(selectedBooking.id, 'CANCELLED')}
-                      className="bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-2 rounded-luxury text-[10px] uppercase tracking-wider flex items-center gap-1.5 transition-all shadow"
-                    >
-                      <XCircle size={12} />
-                      <span>Cancel Booking</span>
-                    </button>
-                  </>
-                )}
-              </div>
-
-              {/* Close Button */}
-              <button
-                onClick={() => setSelectedBooking(null)}
-                className="border border-cream-200 hover:bg-cream-50 text-neutral-600 font-bold px-4 py-2 rounded-luxury text-[10px] uppercase tracking-wider transition-all"
-              >
-                Close View
-              </button>
-
+            {/* Action controls */}
+            <div className="flex flex-wrap gap-2 justify-end pt-4 border-t border-cream-100">
+              {selectedBooking.status === 'PENDING' && (
+                <>
+                  <Button variant="secondary" className="text-red-600 hover:bg-red-50" onClick={() => handleUpdateStatus(selectedBooking.id, 'REJECTED')}>
+                    <X size={14} /> Reject Booking
+                  </Button>
+                  <Button variant="gold" onClick={() => handleUpdateStatus(selectedBooking.id, 'CONFIRMED')}>
+                    <Check size={14} /> Confirm Booking
+                  </Button>
+                </>
+              )}
+              {selectedBooking.status === 'CONFIRMED' && (
+                <>
+                  <Button variant="secondary" onClick={() => handleUpdateStatus(selectedBooking.id, 'COMPLETED')}>
+                    Mark Completed
+                  </Button>
+                  <Button variant="danger" onClick={() => handleCancelBooking(selectedBooking.id)}>
+                    Cancel Booking
+                  </Button>
+                </>
+              )}
+              <Button variant="secondary" onClick={() => setIsDetailsOpen(false)}>Close</Button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   );
 };

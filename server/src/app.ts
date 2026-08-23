@@ -9,6 +9,20 @@ import jwt from 'jsonwebtoken';
 import prisma, { connectDb } from './config/database';
 import bookingRoutes from './routes/booking.routes';
 import hallRoutes from './routes/hall.routes';
+import userRoutes from './routes/user.routes';
+import eventRoutes from './routes/event.routes';
+import reportRoutes from './routes/report.routes';
+import calendarRoutes from './routes/calendar.routes';
+import vendorRoutes from './routes/vendor.routes';
+import inventoryRoutes from './routes/inventory.routes';
+import quotationRoutes from './routes/quotation.routes';
+import paymentRoutes from './routes/payment.routes';
+import invoiceRoutes from './routes/invoice.routes';
+import taskRoutes from './routes/task.routes';
+import travelRoutes from './routes/travel.routes';
+import settingsRoutes from './routes/settings.routes';
+import notificationRoutes from './routes/notification.routes';
+import searchRoutes from './routes/search.routes';
 
 // Extend express Request type to include user
 declare global {
@@ -1044,6 +1058,20 @@ app.post('/api/support', async (req: Request, res: Response) => {
 
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/halls', hallRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/events', eventRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/calendar', calendarRoutes);
+app.use('/api/vendors', vendorRoutes);
+app.use('/api/inventory', inventoryRoutes);
+app.use('/api/quotations', quotationRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/invoices', invoiceRoutes);
+app.use('/api/tasks', taskRoutes);
+app.use('/api/travel', travelRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/search', searchRoutes);
 
 // Start Server
 connectDb().then(() => {
