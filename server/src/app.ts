@@ -1,10 +1,5 @@
 import 'dotenv/config';
-<<<<<<< HEAD
 import express, { Request, Response, NextFunction } from 'express';
-=======
-import express, { Request, Response, NextFunction } from 'react-express'; // Wait, let's make sure we import express correctly
-import expressApp from 'express'; // Wait, in the original it was: import express, { Request, Response, NextFunction } from 'express';
->>>>>>> fa8656813720633b236edc0d179e86f2eb7f79b7
 import cors from 'cors';
 import path from 'path';
 import bcrypt from 'bcryptjs';
@@ -12,13 +7,8 @@ import nodemailer from 'nodemailer';
 import fs from 'fs';
 import jwt from 'jsonwebtoken';
 import prisma, { connectDb } from './config/database';
-<<<<<<< HEAD
 import bookingRoutes from './routes/booking.routes';
 import hallRoutes from './routes/hall.routes';
-=======
-
-const express = expressApp;
->>>>>>> fa8656813720633b236edc0d179e86f2eb7f79b7
 
 // Extend express Request type to include user
 declare global {
@@ -51,11 +41,7 @@ function generateToken(user: { id: string; role: string }) {
   return jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
 }
 
-<<<<<<< HEAD
 export function authMiddleware(req: Request, res: Response, next: NextFunction) {
-=======
-function authMiddleware(req: Request, res: Response, next: NextFunction) {
->>>>>>> fa8656813720633b236edc0d179e86f2eb7f79b7
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ message: 'Authorization token missing or invalid' });
@@ -71,11 +57,7 @@ function authMiddleware(req: Request, res: Response, next: NextFunction) {
   }
 }
 
-<<<<<<< HEAD
 export function roleMiddleware(allowedRoles: string[]) {
-=======
-function roleMiddleware(allowedRoles: string[]) {
->>>>>>> fa8656813720633b236edc0d179e86f2eb7f79b7
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user || !allowedRoles.includes(req.user.role)) {
       return res.status(403).json({ message: 'Forbidden - Access denied' });
@@ -224,11 +206,7 @@ app.post('/api/food-items', async (req: Request, res: Response) => {
 });
 
 app.put('/api/food-items/:id', async (req: Request, res: Response) => {
-<<<<<<< HEAD
   const { id } = req.params as { id: string };
-=======
-  const { id } = req.params;
->>>>>>> fa8656813720633b236edc0d179e86f2eb7f79b7
   const { name, category, price, active } = req.body;
 
   if (!name || !category || price === undefined) {
@@ -259,11 +237,7 @@ app.put('/api/food-items/:id', async (req: Request, res: Response) => {
 });
 
 app.delete('/api/food-items/:id', async (req: Request, res: Response) => {
-<<<<<<< HEAD
   const { id } = req.params as { id: string };
-=======
-  const { id } = req.params;
->>>>>>> fa8656813720633b236edc0d179e86f2eb7f79b7
 
   try {
     const existing = await prisma.foodItem.findUnique({ where: { id } });
@@ -752,11 +726,7 @@ app.get('/api/bookings/hall', async (req: Request, res: Response) => {
 
 // PATCH Cancel Hall Booking
 app.patch('/api/bookings/hall/:bookingId/cancel', async (req: Request, res: Response) => {
-<<<<<<< HEAD
   const { bookingId } = req.params as { bookingId: string };
-=======
-  const { bookingId } = req.params;
->>>>>>> fa8656813720633b236edc0d179e86f2eb7f79b7
 
   try {
     const booking = await prisma.hallBooking.findUnique({ where: { id: bookingId } });
@@ -797,11 +767,7 @@ app.patch('/api/bookings/hall/:bookingId/cancel', async (req: Request, res: Resp
 
 // PUT Update Booking Food Items
 app.put('/api/bookings/hall/:bookingId/food', async (req: Request, res: Response) => {
-<<<<<<< HEAD
   const { bookingId } = req.params as { bookingId: string };
-=======
-  const { bookingId } = req.params;
->>>>>>> fa8656813720633b236edc0d179e86f2eb7f79b7
   const { foodItems } = req.body;
 
   if (!Array.isArray(foodItems)) {
@@ -850,11 +816,7 @@ app.put('/api/bookings/hall/:bookingId/food', async (req: Request, res: Response
 
 // PUT Update Full Hall Booking Details
 app.put('/api/bookings/hall/:bookingId', async (req: Request, res: Response) => {
-<<<<<<< HEAD
   const { bookingId } = req.params as { bookingId: string };
-=======
-  const { bookingId } = req.params;
->>>>>>> fa8656813720633b236edc0d179e86f2eb7f79b7
   const {
     customerName, email, mobile, hallId, hallName, hallAddress,
     eventDate, eventSession, startTime, endTime, eventType, guestsCount,
@@ -1001,11 +963,7 @@ app.put('/api/bookings/hall/:bookingId', async (req: Request, res: Response) => 
 
 // GET Booking Change History Audit Trail
 app.get('/api/bookings/hall/:bookingId/history', async (req: Request, res: Response) => {
-<<<<<<< HEAD
   const { bookingId } = req.params as { bookingId: string };
-=======
-  const { bookingId } = req.params;
->>>>>>> fa8656813720633b236edc0d179e86f2eb7f79b7
   try {
     const history = await prisma.bookingHistory.findMany({
       where: { bookingId },
@@ -1084,12 +1042,9 @@ app.post('/api/support', async (req: Request, res: Response) => {
   }
 });
 
-<<<<<<< HEAD
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/halls', hallRoutes);
 
-=======
->>>>>>> fa8656813720633b236edc0d179e86f2eb7f79b7
 // Start Server
 connectDb().then(() => {
   app.listen(PORT, () => {

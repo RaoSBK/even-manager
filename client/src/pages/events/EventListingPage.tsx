@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router';
 import { 
-  Calendar, Landmark, Map, Phone, 
+  Calendar, Landmark, Phone, 
   MessageSquare, Instagram, Facebook, Youtube, Mail,
   Users
 } from 'lucide-react';

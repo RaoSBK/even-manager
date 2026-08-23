@@ -1,7 +1,8 @@
-<<<<<<< HEAD
 import { demoAuthService } from '../services/demoAuthService';
 
 const BASE_URL = 'http://localhost:5050/api';
+
+export const API_HOST = import.meta.env.VITE_API_URL || 'http://localhost:5050';
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, string | number | boolean | undefined>;
@@ -80,6 +81,4 @@ export const httpClient = {
   delete: <T>(endpoint: string, options?: RequestInit) =>
     request<T>(endpoint, { method: 'DELETE', ...options }),
 };
-=======
-export const API_HOST = import.meta.env.VITE_API_URL || 'http://localhost:5050';
->>>>>>> fa8656813720633b236edc0d179e86f2eb7f79b7
+
