@@ -1033,10 +1033,32 @@ export const EventBookingPage: React.FC = () => {
                   Select Function Hall for {eventDate}
                 </h4>
 
+                {/* Requirement 5: Selected Hall details at the top/bottom of the page before the user continues */}
+                {!loading && chosenHall && (
+                  <div className="bg-primary-50 border border-primary-200 p-4 rounded-luxury flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div className="space-y-1">
+                      <p className="text-[9px] text-primary-600 font-bold uppercase tracking-wider">Your Selected Venue</p>
+                      <h4 className="font-bold text-primary-800 font-serif text-sm mt-0.5">{chosenHall.name}</h4>
+                      <p className="text-[10px] text-neutral-500">📍 {chosenHall.location || 'Block A'} | 🧑 Capacity: {chosenHall.capacity || 500} pax</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-[9px] text-neutral-400 uppercase font-bold tracking-wider">Starting Price</p>
+                      <p className="font-bold text-gold-600 font-mono text-sm mt-0.5">₹{Number(chosenHall.basePrice).toLocaleString('en-IN')}</p>
+                    </div>
+                  </div>
+                )}
+
                 {loading ? (
                   <div className="bg-white border border-cream-200 p-12 rounded-luxury text-center flex flex-col items-center justify-center gap-2">
                     <span className="h-6 w-6 animate-spin rounded-full border-2 border-primary-800 border-t-transparent"></span>
                     <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Fetching halls availability...</p>
+                  </div>
+                ) : hallsList.length === 0 ? (
+                  /* Requirement 7: Show "No Function Halls Available" instead of a blank page */
+                  <div className="bg-white border border-cream-200 p-12 rounded-luxury text-center flex flex-col items-center justify-center gap-2">
+                    <AlertTriangle size={24} className="text-gold-600 mb-1" />
+                    <p className="text-xs font-bold text-primary-800 font-serif uppercase tracking-wider">No Function Halls Available</p>
+                    <p className="text-[10px] text-neutral-400">Please try another date or check your connection.</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
