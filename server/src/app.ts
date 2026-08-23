@@ -23,6 +23,7 @@ import travelRoutes from './routes/travel.routes';
 import settingsRoutes from './routes/settings.routes';
 import notificationRoutes from './routes/notification.routes';
 import searchRoutes from './routes/search.routes';
+import employeeRoutes from './routes/employee.routes';
 
 // Extend express Request type to include user
 declare global {
@@ -1072,6 +1073,7 @@ app.use('/api/travel', travelRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/employee', employeeRoutes);
 
 // Start Server
 connectDb().then(() => {
