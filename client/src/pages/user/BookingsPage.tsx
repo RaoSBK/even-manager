@@ -178,6 +178,15 @@ export const BookingsPage: React.FC = () => {
                   </div>
                 </div>
 
+                {b.addressLine1 && (
+                  <div className="bg-cream-50/60 border border-cream-150 p-2.5 rounded-luxury text-xs space-y-0.5">
+                    <p className="text-neutral-400 font-bold uppercase text-[8px] tracking-wider">Event Address</p>
+                    <p className="font-medium text-primary-800 leading-snug text-[11px]">
+                      {[b.addressLine1, b.addressLine2, b.city, b.district, b.state, b.pincode ? `PIN: ${b.pincode}` : ''].filter(Boolean).join(', ')}
+                    </p>
+                  </div>
+                )}
+
                 <div className="flex justify-between items-center pt-3 border-t border-cream-100">
                   <div className="flex items-center gap-1.5">
                     {getStatusBadge(b.status)}
@@ -268,6 +277,19 @@ export const BookingsPage: React.FC = () => {
                   <p>🧑 Guests Count: {selectedBooking.guestCount} pax</p>
                 </div>
               </div>
+
+              {selectedBooking.addressLine1 && (
+                <div>
+                  <p className="text-neutral-400 font-bold uppercase text-[8px] tracking-wider mb-1">Event Location & Address</p>
+                  <div className="bg-cream-50 border border-cream-200 p-3 rounded-luxury text-neutral-700 leading-relaxed font-sans space-y-1">
+                    <p className="font-bold text-primary-800 text-xs">{selectedBooking.addressLine1}</p>
+                    {selectedBooking.addressLine2 && <p className="text-[11px] text-neutral-600">{selectedBooking.addressLine2}</p>}
+                    <p className="text-[11px] text-neutral-600">
+                      {[selectedBooking.city, selectedBooking.district, selectedBooking.state, selectedBooking.pincode ? `PIN Code: ${selectedBooking.pincode}` : ''].filter(Boolean).join(', ')}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {selectedBooking.notes && (
                 <div>

@@ -1,0 +1,14 @@
+{
+  "merchantName": "GK GRAND PALACE & RESORTS",
+  "accountHolderName": "GK Grand Palace & Events Pvt Ltd",
+  "bankName": "HDFC Bank Ltd",
+  "accountNumber": "50200099887766",
+  "ifscCode": "HDFC0001234",
+  "branchName": "Hitec City Branch, Hyderabad",
+  "upiId": "gkgrandpalace@okhdfcbank",
+  "qrCodeUrl": "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=upi://pay?pa=gkluxury%40icici&pn=GK%20LUXURY%20EVENT%20MANAGERS&am=0&cu=INR",
+  "gatewayPublicKey": "rzp_live_test_pub_999",
+  "gatewaySecretKey": "sk_live_test_sec_999",
+  "updatedAt": "2026-09-08T18:17:25.521Z",
+  "updatedBy": "GK Admin"
+}

@@ -18,5 +18,6 @@ router.get('/employees/:id', authMiddleware, roleMiddleware(['Admin', 'Employee'
 router.post('/employees', authMiddleware, roleMiddleware(['Admin']), (req, res) => controller.createEmployee(req, res));
 router.put('/employees/:id', authMiddleware, roleMiddleware(['Admin']), (req, res) => controller.updateEmployee(req, res));
 router.patch('/employees/:id/toggle-active', authMiddleware, roleMiddleware(['Admin']), (req, res) => controller.toggleEmployeeActive(req, res));
+router.patch('/employees/:id/change-password', authMiddleware, roleMiddleware(['Admin']), (req, res) => controller.changeEmployeePassword(req, res));
 
 export default router;

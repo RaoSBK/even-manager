@@ -8,6 +8,13 @@ export interface BookingPayload {
   endTime: string; // HH:MM
   guestCount: number;
   notes?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  district?: string;
+  state?: string;
+  country?: string;
+  pincode?: string;
 }
 
 export interface BookingDetails {
@@ -28,6 +35,13 @@ export interface BookingDetails {
   advanceAmount: number | null;
   balanceAmount: number | null;
   notes: string | null;
+  addressLine1?: string | null;
+  addressLine2?: string | null;
+  city?: string | null;
+  district?: string | null;
+  state?: string | null;
+  country?: string | null;
+  pincode?: string | null;
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;

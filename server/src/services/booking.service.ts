@@ -25,9 +25,16 @@ export class BookingService {
       endTime: string; // HH:MM format
       guestCount: number;
       notes?: string;
+      addressLine1?: string;
+      addressLine2?: string;
+      city?: string;
+      district?: string;
+      state?: string;
+      country?: string;
+      pincode?: string;
     }
   ): Promise<Booking> {
-    const { hallId, eventType, eventDate, startTime, endTime, guestCount, notes } = data;
+    const { hallId, eventType, eventDate, startTime, endTime, guestCount, notes, addressLine1, addressLine2, city, district, state, country, pincode } = data;
 
     // 1. Validations: Date parsing and past check
     const normalizedDate = new Date(eventDate);
@@ -99,7 +106,14 @@ export class BookingService {
         guestCount,
         totalAmount,
         status: BookingStatus.PENDING,
-        notes: notes || null
+        notes: notes || null,
+        addressLine1: addressLine1 || null,
+        addressLine2: addressLine2 || null,
+        city: city || null,
+        district: district || null,
+        state: state || null,
+        country: country || null,
+        pincode: pincode || null
       });
     }, {
       isolationLevel: Prisma.TransactionIsolationLevel.Serializable
