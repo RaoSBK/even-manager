@@ -353,8 +353,9 @@ export const EventBookingPage: React.FC = () => {
       // 3. LOAD RAZORPAY SDK AND LAUNCH CHECKOUT
       const keyId = pendingRes.razorpayOrder.key || import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_GKBooking2026';
 
-      // If placeholder test credentials are used, open the interactive test modal directly
-      if (keyId === 'rzp_test_GKBooking2026' || !import.meta.env.VITE_RAZORPAY_KEY_ID) {
+      // If placeholder test credentials are used, open the interactive test modal directly.
+      // If real Razorpay API keys are configured, open official Razorpay Checkout SDK!
+      if (!keyId || keyId === 'rzp_test_GKBooking2026') {
         setActivePaymentModal({ booking: pendingRes.booking, razorpayOrder: pendingRes.razorpayOrder });
         return;
       }

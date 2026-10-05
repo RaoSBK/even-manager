@@ -354,8 +354,9 @@ export const HallBookingPage: React.FC = () => {
   const initiateRazorpayPayment = async (bookingObj: BookingDetails, razorpayOrderObj: any) => {
     const keyId = razorpayOrderObj.key || import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_GKBooking2026';
 
-    // If placeholder test credentials are used, open the interactive test modal directly
-    if (keyId === 'rzp_test_GKBooking2026' || !import.meta.env.VITE_RAZORPAY_KEY_ID) {
+    // If placeholder test credentials are used, open the interactive test modal directly.
+    // If real Razorpay API keys are configured, open official Razorpay Checkout SDK!
+    if (!keyId || keyId === 'rzp_test_GKBooking2026') {
       setActivePaymentModal({ booking: bookingObj, razorpayOrder: razorpayOrderObj });
       return;
     }
