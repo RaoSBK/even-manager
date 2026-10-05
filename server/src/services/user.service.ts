@@ -228,4 +228,46 @@ export class UserService {
 
     return newStatus;
   }
+
+  async changeEmployeePassword(id: string, data: { currentPassword: string; newPassword: string; confirmPassword: string }): Promise<{ message: string }> {
+    const employee = await prisma.employee.findUnique({
+      where: { id },
+      include: { user: true }
+    });
+
+    if (!employee || !employee.userId || !employee.user) {
+      throw new Error('EMPLOYEE_NOT_FOUND');
+    }
+
+    const { currentPassword, newPassword, confirmPassword } = data;
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      throw new Error('ALL_PASSWORD_FIELDS_REQUIRED');
+    }
+
+    if (!newPassword.trim()) {
+      throw new Error('NEW_PASSWORD_REQUIRED');
+    }
+
+    if (newPassword !== confirmPassword) {
+      throw new Error('PASSWORDS_DO_NOT_MATCH');
+    }
+
+    if (newPassword === currentPassword) {
+      throw new Error('NEW_PASSWORD_MUST_BE_DIFFERENT');
+    }
+
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, employee.user.password);
+    if (!isCurrentPasswordValid) {
+      throw new Error('CURRENT_PASSWORD_INCORRECT');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({
+      where: { id: employee.userId },
+      data: { password: hashedPassword }
+    });
+
+    return { message: 'Password changed successfully.' };
+  }
 }

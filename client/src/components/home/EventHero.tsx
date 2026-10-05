@@ -1,16 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Sparkles, Award, Users, ArrowRight } from 'lucide-react';
+import { Sparkles, Award, Users, ArrowRight, X } from 'lucide-react';
 import heroImage from '../../assets/images/hero-wedding.jpg';
 
 export const EventHero: React.FC = () => {
   const navigate = useNavigate();
   const [mounted, setMounted] = useState(false);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
 
   useEffect(() => {
     // Trigger animations on load
     setMounted(true);
   }, []);
+
+  const existingEventOptions = [
+    { name: 'Marriage Function', path: '/events/book/marriage', icon: '💍', desc: 'Pre-wedding, rituals & grand reception' },
+    { name: 'Birthday Party', path: '/events/book/birthday', icon: '🎂', desc: 'Custom themes & catering' },
+    { name: 'Saree Function', path: '/events/book/saree', icon: '✨', desc: 'Traditional decor & stage setups' },
+    { name: 'Dawath', path: '/events/book/dawath', icon: '🍽️', desc: 'Premium banquet dining & feasts' },
+    { name: 'Other Events', path: '/events/book/other', icon: '🎉', desc: 'Custom event management' }
+  ];
 
   return (
     <section className="relative w-full max-w-[95%] mx-auto pt-8 pb-12 z-10">
@@ -105,7 +114,7 @@ export const EventHero: React.FC = () => {
             }`}
           >
             <button 
-              onClick={() => navigate('/events/book/marriage')} 
+              onClick={() => setIsBookingModalOpen(true)} 
               className="bg-[#155EEF] hover:bg-[#1254d3] text-white font-bold text-[16px] px-8 rounded-[8px] h-[52px] flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg w-full sm:w-auto"
             >
               <span>Book Now</span>
@@ -122,6 +131,56 @@ export const EventHero: React.FC = () => {
 
         </div>
       </div>
+
+      {/* Booking Options Modal Overlay */}
+      {isBookingModalOpen && (
+        <div className="fixed inset-0 bg-neutral-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-cream-200 rounded-luxury max-w-lg w-full p-6 shadow-luxury relative animate-in fade-in zoom-in-95 duration-200 space-y-5 font-sans">
+            <div className="flex justify-between items-center border-b border-cream-100 pb-3">
+              <div>
+                <h3 className="text-lg font-bold font-serif text-primary-800">Select Booking Option</h3>
+                <p className="text-xs text-neutral-400 mt-0.5">Select an existing event option to proceed with your booking</p>
+              </div>
+              <button
+                onClick={() => setIsBookingModalOpen(false)}
+                className="text-neutral-400 hover:text-primary-800 p-1.5 rounded-full transition-all hover:bg-cream-50"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              {existingEventOptions.map((opt) => (
+                <button
+                  key={opt.path}
+                  onClick={() => {
+                    setIsBookingModalOpen(false);
+                    navigate(opt.path);
+                  }}
+                  className="flex items-start gap-3 p-3.5 border border-cream-200 hover:border-gold-400 hover:bg-cream-50/60 rounded-luxury text-left transition-all group"
+                >
+                  <span className="text-xl shrink-0 mt-0.5">{opt.icon}</span>
+                  <div>
+                    <p className="font-bold text-primary-800 text-xs group-hover:text-gold-600 transition-all font-serif">
+                      {opt.name}
+                    </p>
+                    <p className="text-[10px] text-neutral-400 mt-0.5">{opt.desc}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            <div className="pt-2 border-t border-cream-100 text-center">
+              <button
+                onClick={() => setIsBookingModalOpen(false)}
+                className="text-xs font-bold text-neutral-500 hover:text-primary-800 uppercase tracking-wider py-1"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 };

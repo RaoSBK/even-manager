@@ -58,23 +58,11 @@ export const Navbar: React.FC = () => {
                 Services <ChevronDown size={14} className="text-gold-500" />
               </button>
               <div className="absolute top-full left-0 hidden group-hover:block bg-white border border-cream-200 shadow-luxury rounded-luxury py-2 w-48 mt-1">
-                <Link to="/events/book/marriage" className="block px-4 py-2 text-sm text-primary-800 hover:bg-cream-50 hover:text-gold-600">Marriage Function</Link>
-                <Link to="/events/book/birthday" className="block px-4 py-2 text-sm text-primary-800 hover:bg-cream-50 hover:text-gold-600">Birthday Party</Link>
-                <Link to="/events/book/saree" className="block px-4 py-2 text-sm text-primary-800 hover:bg-cream-50 hover:text-gold-600">Saree Function</Link>
-                <Link to="/events/book/dawath" className="block px-4 py-2 text-sm text-primary-800 hover:bg-cream-50 hover:text-gold-600">Dawath</Link>
-                <Link to="/events/book/other" className="block px-4 py-2 text-sm text-primary-800 hover:bg-cream-50 hover:text-gold-600">Other Events</Link>
+                <Link to="/events" className="block px-4 py-2 text-sm text-primary-800 hover:bg-cream-50 hover:text-gold-600">Events</Link>
+                <Link to="/halls" className="block px-4 py-2 text-sm text-primary-800 hover:bg-cream-50 hover:text-gold-600">Function Halls</Link>
+                <Link to="/travel" className="block px-4 py-2 text-sm text-primary-800 hover:bg-cream-50 hover:text-gold-600">Travel Booking</Link>
               </div>
             </div>
-
-            <Link
-              to="/halls"
-              className={`text-sm font-medium tracking-wide transition-all py-1 border-b-2 ${
-                isActive('/halls') ? 'text-gold-500 border-gold-500' : 'text-primary-800 border-transparent hover:text-gold-500'
-              }`}
-            >
-              Function Halls
-            </Link>
-
 
 
             <Link
@@ -237,18 +225,10 @@ export const Navbar: React.FC = () => {
           </Link>
           <div className="space-y-1.5 pl-3 border-l-2 border-gold-300">
             <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Services</span>
-            <Link to="/events/book/marriage" onClick={() => setIsMenuOpen(false)} className="block text-sm text-primary-700 hover:text-gold-500 py-0.5">Marriage Function</Link>
-            <Link to="/events/book/birthday" onClick={() => setIsMenuOpen(false)} className="block text-sm text-primary-700 hover:text-gold-500 py-0.5">Birthday Party</Link>
-            <Link to="/events/book/saree" onClick={() => setIsMenuOpen(false)} className="block text-sm text-primary-700 hover:text-gold-500 py-0.5">Saree Function</Link>
-            <Link to="/events/book/dawath" onClick={() => setIsMenuOpen(false)} className="block text-sm text-primary-700 hover:text-gold-500 py-0.5">Dawath</Link>
+            <Link to="/events" onClick={() => setIsMenuOpen(false)} className="block text-sm text-primary-700 hover:text-gold-500 py-0.5">Events</Link>
+            <Link to="/halls" onClick={() => setIsMenuOpen(false)} className="block text-sm text-primary-700 hover:text-gold-500 py-0.5">Function Halls</Link>
+            <Link to="/travel" onClick={() => setIsMenuOpen(false)} className="block text-sm text-primary-700 hover:text-gold-500 py-0.5">Travel Booking</Link>
           </div>
-          <Link
-            to="/halls"
-            onClick={() => setIsMenuOpen(false)}
-            className="block text-sm font-medium text-primary-800 hover:text-gold-500 py-1"
-          >
-            Function Halls
-          </Link>
 
           <Link
             to="/dashboard"

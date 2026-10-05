@@ -168,7 +168,7 @@ export class BookingController {
         return res.status(401).json({ message: 'Unauthorized' });
       }
 
-      const { hallId, eventType, eventDate, startTime, endTime, guestCount, notes } = req.body;
+      const { hallId, eventType, eventDate, startTime, endTime, guestCount, notes, addressLine1, addressLine2, city, district, state, country, pincode } = req.body;
 
       if (!hallId || !eventType || !eventDate || !startTime || !endTime || !guestCount) {
         return res.status(400).json({ message: 'Missing required booking fields' });
@@ -181,7 +181,14 @@ export class BookingController {
         startTime,
         endTime,
         guestCount: Number(guestCount),
-        notes
+        notes,
+        addressLine1,
+        addressLine2,
+        city,
+        district,
+        state,
+        country,
+        pincode
       });
 
       return res.status(201).json({

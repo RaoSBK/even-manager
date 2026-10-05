@@ -59,4 +59,8 @@ export const employeeApi = {
   toggleActive: async (id: string): Promise<{ message: string; isActive: boolean }> => {
     return httpClient.patch(`/users/employees/${id}/toggle-active`);
   },
+
+  changePassword: async (id: string, payload: { currentPassword: string; newPassword: string; confirmPassword: string }): Promise<{ message: string }> => {
+    return httpClient.patch(`/users/employees/${id}/change-password`, payload);
+  },
 };

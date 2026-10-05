@@ -7,8 +7,9 @@ import { bookingApi, BookingDetails } from '../../api/bookingApi';
 import { paymentApi } from '../../api/paymentApi';
 import { 
   Home, Camera, Gift, Heart, Check, X, ShieldAlert, ChevronRight, ChevronLeft,
-  Calendar, AlertTriangle, CheckCircle2
+  Calendar, AlertTriangle, CheckCircle2, ChevronUp, ChevronDown, Utensils
 } from 'lucide-react';
+import { getFoodItems, FoodItem } from '../../api/foodApi';
 
 interface Service {
   id: string;
@@ -42,6 +43,44 @@ const getHallAssets = (hallCode: string, name: string) => {
   };
 };
 
+const defaultFoodItems: FoodItem[] = [
+  // VEG
+  { id: 'v1', name: 'Paneer Tikka', category: 'VEG', price: 180, active: true },
+  { id: 'v2', name: 'Hara Bhara Kebab', category: 'VEG', price: 140, active: true },
+  { id: 'v3', name: 'Veg Manchurian', category: 'VEG', price: 130, active: true },
+  { id: 'v4', name: 'Paneer Butter Masala', category: 'VEG', price: 180, active: true },
+  { id: 'v5', name: 'Kadai Paneer', category: 'VEG', price: 180, active: true },
+  { id: 'v6', name: 'Dal Makhani', category: 'VEG', price: 130, active: true },
+  { id: 'v7', name: 'Veg Biryani', category: 'VEG', price: 160, active: true },
+  { id: 'v8', name: 'Jeera Rice', category: 'VEG', price: 90, active: true },
+  { id: 'v9', name: 'Veg Pulao', category: 'VEG', price: 120, active: true },
+  { id: 'v10', name: 'Butter Naan', category: 'VEG', price: 50, active: true },
+  { id: 'v11', name: 'Tandoori Roti', category: 'VEG', price: 35, active: true },
+  { id: 'v12', name: 'Veg Raita', category: 'VEG', price: 70, active: true },
+  { id: 'v13', name: 'Salad', category: 'VEG', price: 60, active: true },
+  { id: 'v14', name: 'Gulab Jamun', category: 'VEG', price: 80, active: true },
+  { id: 'v15', name: 'Ice Cream', category: 'VEG', price: 100, active: true },
+  // NON-VEG
+  { id: 'nv1', name: 'Chicken 65', category: 'NON-VEG', price: 200, active: true },
+  { id: 'nv2', name: 'Chicken Tikka', category: 'NON-VEG', price: 220, active: true },
+  { id: 'nv3', name: 'Chicken Lollipop', category: 'NON-VEG', price: 230, active: true },
+  { id: 'nv4', name: 'Chicken Curry', category: 'NON-VEG', price: 220, active: true },
+  { id: 'nv5', name: 'Butter Chicken', category: 'NON-VEG', price: 240, active: true },
+  { id: 'nv6', name: 'Chicken Tikka Masala', category: 'NON-VEG', price: 240, active: true },
+  { id: 'nv7', name: 'Kadai Chicken', category: 'NON-VEG', price: 230, active: true },
+  { id: 'nv8', name: 'Mutton Curry', category: 'NON-VEG', price: 300, active: true },
+  { id: 'nv9', name: 'Mutton Rogan Josh', category: 'NON-VEG', price: 320, active: true },
+  { id: 'nv10', name: 'Fish Fry', category: 'NON-VEG', price: 250, active: true },
+  { id: 'nv11', name: 'Fish Curry', category: 'NON-VEG', price: 260, active: true },
+  { id: 'nv12', name: 'Chicken Biryani', category: 'NON-VEG', price: 220, active: true },
+  { id: 'nv13', name: 'Mutton Biryani', category: 'NON-VEG', price: 320, active: true },
+  { id: 'nv14', name: 'Chicken Pulao', category: 'NON-VEG', price: 200, active: true },
+  { id: 'nv15', name: 'Egg Biryani', category: 'NON-VEG', price: 170, active: true },
+  { id: 'nv16', name: 'Egg Curry', category: 'NON-VEG', price: 130, active: true },
+  { id: 'nv17', name: 'Egg Masala', category: 'NON-VEG', price: 120, active: true },
+  { id: 'nv18', name: 'Egg Bhurji', category: 'NON-VEG', price: 100, active: true },
+];
+
 export const EventBookingPage: React.FC = () => {
   const { user } = useAuth();
   const { addToast } = useNotifications();
@@ -53,7 +92,7 @@ export const EventBookingPage: React.FC = () => {
     ? urlType.charAt(0).toUpperCase() + urlType.slice(1).replace('-', ' ') + ' Booking'
     : 'Event Booking';
 
-  // Available Services
+  // Available Non-Food Services (Wedding & Photography)
   const services: Service[] = [
     // Wedding Services
     { id: 'haldi', name: 'Haldi', price: 10000, category: 'wedding', iconName: 'haldi' },
@@ -66,11 +105,6 @@ export const EventBookingPage: React.FC = () => {
     { id: 'pre-wedding', name: 'Pre Wedding Shoot', price: 30000, category: 'photography', iconName: 'camera' },
     { id: 'wedding-shoot', name: 'Wedding Shoot', price: 50000, category: 'photography', iconName: 'couple' },
     { id: 'photography', name: 'Photography', price: 15000, category: 'photography', iconName: 'dslr' },
-    
-    // Food
-    { id: 'veg', name: 'Veg', price: 300, category: 'food', iconName: 'veg', perPlate: true },
-    { id: 'non-veg', name: 'Non-Veg', price: 500, category: 'food', iconName: 'non-veg', perPlate: true },
-    { id: 'both-veg-nonveg', name: 'Both (Veg + Non Veg)', price: 400, category: 'food', iconName: 'both', perPlate: true },
   ];
 
   // Stepper state
@@ -81,13 +115,18 @@ export const EventBookingPage: React.FC = () => {
   const [loadingCalendar, setLoadingCalendar] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Step 1 states
+  // Step 1 states (Services & Food Menu)
   const [selectedIds, setSelectedIds] = useState<string[]>([
     'sangeet',
     'mehndi',
-    'wedding-shoot',
-    'both-veg-nonveg'
+    'wedding-shoot'
   ]);
+
+  // Food Menu items loaded from Database/API
+  const [allFoodItems, setAllFoodItems] = useState<FoodItem[]>(defaultFoodItems);
+  const [vegExpanded, setVegExpanded] = useState<boolean>(true);
+  const [nonVegExpanded, setNonVegExpanded] = useState<boolean>(false);
+  const [selectedFoodIds, setSelectedFoodIds] = useState<string[]>(['v4', 'v7', 'nv12']);
   const [platesCount, setPlatesCount] = useState<number>(100);
 
   // Step 2 states (Event details & coordinator info)
@@ -99,6 +138,16 @@ export const EventBookingPage: React.FC = () => {
   const [customerEmail, setCustomerEmail] = useState(user?.email || '');
   const [customerAddress, setCustomerAddress] = useState('');
   const [specialNotes, setSpecialNotes] = useState('');
+
+  // Complete Event Address states
+  const [addressLine1, setAddressLine1] = useState('');
+  const [addressLine2, setAddressLine2] = useState('');
+  const [city, setCity] = useState('');
+  const [district, setDistrict] = useState('');
+  const [stateName, setStateName] = useState('');
+  const [country, setCountry] = useState('India');
+  const [pincode, setPincode] = useState('');
+  const [pincodeError, setPincodeError] = useState('');
 
   // Step 3 states (Halls availability grid)
   const [selectedHallId, setSelectedHallId] = useState<string>('');
@@ -196,34 +245,49 @@ export const EventBookingPage: React.FC = () => {
     }
   }, [currentCalendarDate, step]);
 
+  // Load Food Menu items from DB / API so Admin updates auto reflect
+  useEffect(() => {
+    const fetchFoodMenu = async () => {
+      try {
+        const items = await getFoodItems();
+        if (items && items.length > 0) {
+          const activeItems = items.filter((i) => i.active !== false);
+          if (activeItems.length > 0) {
+            setAllFoodItems(activeItems);
+          }
+        }
+      } catch (err) {
+        console.error('Using default food items menu:', err);
+      }
+    };
+    fetchFoodMenu();
+  }, []);
+
   const handleToggleService = (id: string, category: string) => {
-    if (category === 'food') {
-      setSelectedIds((prev) => {
-        const filtered = prev.filter(
-          (item) => !services.find((s) => s.id === item)?.perPlate
-        );
-        return prev.includes(id) ? filtered : [...filtered, id];
-      });
-    } else {
-      setSelectedIds((prev) =>
-        prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-      );
-    }
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
   };
 
   const handleRemoveService = (id: string) => {
     setSelectedIds((prev) => prev.filter((item) => item !== id));
   };
 
+  const handleToggleFoodItem = (id: string) => {
+    setSelectedFoodIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
   const selectedServices = services.filter((s) => selectedIds.includes(s.id));
+  const selectedFoodObjects = allFoodItems.filter((item) => selectedFoodIds.includes(item.id));
+  const foodServiceSelected = true;
 
-  // Calculations
-  const foodServiceSelected = selectedServices.find((s) => s.perPlate);
-  const foodCost = foodServiceSelected ? foodServiceSelected.price * platesCount : 0;
-  const nonFoodCost = selectedServices
-    .filter((s) => !s.perPlate)
-    .reduce((sum, s) => sum + s.price, 0);
+  // Food calculations
+  const foodPerPlateRate = selectedFoodObjects.reduce((sum, item) => sum + item.price, 0);
+  const foodCost = foodPerPlateRate * platesCount;
 
+  const nonFoodCost = selectedServices.reduce((sum, s) => sum + s.price, 0);
   const servicesSubtotal = nonFoodCost + foodCost;
 
   // Selected Hall base price
@@ -280,6 +344,34 @@ export const EventBookingPage: React.FC = () => {
         addToast('Please enter billing address.', 'warning');
         return;
       }
+      // Marriage Booking Event Address Validation
+      if (urlType?.toLowerCase() === 'marriage') {
+        if (!addressLine1.trim()) {
+          addToast('Please enter Address Line 1 for Event Address.', 'warning');
+          return;
+        }
+        if (!city.trim()) {
+          addToast('Please enter City for Event Address.', 'warning');
+          return;
+        }
+        if (!district.trim()) {
+          addToast('Please enter District for Event Address.', 'warning');
+          return;
+        }
+        if (!stateName.trim()) {
+          addToast('Please enter State for Event Address.', 'warning');
+          return;
+        }
+        if (!pincode.trim() || !/^\d{6}$/.test(pincode.trim())) {
+          setPincodeError('PIN Code must be a valid 6-digit number');
+          addToast('Please enter a valid 6-digit PIN code.', 'warning');
+          return;
+        }
+      } else if (pincode.trim() && !/^\d{6}$/.test(pincode.trim())) {
+        setPincodeError('PIN Code must be a valid 6-digit number');
+        addToast('Please enter a valid 6-digit PIN code.', 'warning');
+        return;
+      }
       setStep(3);
     }
   };
@@ -324,102 +416,37 @@ export const EventBookingPage: React.FC = () => {
         return;
       }
 
-      // 2. CREATE PENDING BOOKING & RAZORPAY ORDER
-      const pendingRes = await bookingApi.createPendingBooking({
+      // 2. CREATE BOOKING
+      const foodItemsText = selectedFoodObjects.length > 0 
+        ? `. Food Menu Items (${selectedFoodObjects.length}): ${selectedFoodObjects.map(f => `${f.name} (₹${f.price})`).join(', ')} [Food Rate: ₹${foodPerPlateRate}/plate]` 
+        : '';
+      const notesCombined = `${specialNotes ? `Notes: ${specialNotes}. ` : ''}Services: ${
+        selectedServices.map(s => s.name + (s.perPlate ? ` (${platesCount} plates)` : '')).join(', ')
+      }${foodItemsText}. Address: ${customerAddress}`;
+
+      const res = await bookingApi.create({
         hallId: selectedHallId,
         eventType: urlType ? urlType.charAt(0).toUpperCase() + urlType.slice(1) + ' Function' : 'General Function',
         eventDate,
         startTime,
         endTime,
-        guestCount: platesCount,
-        selectedServices: services
-          .filter(s => selectedIds.includes(s.id))
-          .map(s => ({
-            id: s.id,
-            name: s.name,
-            price: s.price * (s.perPlate ? platesCount : 1)
-          })),
-        customerName,
-        customerPhone,
-        customerEmail,
-        customerAddress,
-        specialNotes
+        guestCount: platesCount, // Pax matches plates count
+        notes: notesCombined,
+        addressLine1: addressLine1.trim() || undefined,
+        addressLine2: addressLine2.trim() || undefined,
+        city: city.trim() || undefined,
+        district: district.trim() || undefined,
+        state: stateName.trim() || undefined,
+        country: country.trim() || undefined,
+        pincode: pincode.trim() || undefined
       });
 
-      if (!pendingRes.success || !pendingRes.razorpayOrder) {
-        throw new Error(pendingRes.message || 'Failed to generate Razorpay order.');
-      }
-
-      // 3. LOAD RAZORPAY SDK AND LAUNCH CHECKOUT
-      const keyId = pendingRes.razorpayOrder.key || import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_GKBooking2026';
-
-      // If placeholder test credentials are used, open the interactive test modal directly.
-      // If real Razorpay API keys are configured, open official Razorpay Checkout SDK!
-      if (!keyId || keyId === 'rzp_test_GKBooking2026') {
-        setActivePaymentModal({ booking: pendingRes.booking, razorpayOrder: pendingRes.razorpayOrder });
-        return;
-      }
-
-      const isLoaded = await loadRazorpayScript();
-      if (!isLoaded) {
-        setActivePaymentModal({ booking: pendingRes.booking, razorpayOrder: pendingRes.razorpayOrder });
-        return;
-      }
-
-      const options = {
-        key: keyId,
-        amount: pendingRes.razorpayOrder.amount,
-        currency: pendingRes.razorpayOrder.currency || 'INR',
-        name: 'GK BOOKING',
-        description: `${occasionDisplayName} - ${targetHall.name}`,
-        order_id: pendingRes.razorpayOrder.id,
-        handler: async function (response: any) {
-          setLoading(true);
-          try {
-            const verifyPayRes = await paymentApi.verifyRazorpayPayment({
-              bookingId: pendingRes.booking.id,
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-            });
-            if (verifyPayRes.success) {
-              setBookingResult(verifyPayRes.booking);
-              addToast('Payment verified successfully! Booking confirmed.', 'success');
-              setStep(4);
-            } else {
-              setErrorMsg(verifyPayRes.message || 'Payment signature verification failed.');
-              addToast('Payment signature verification failed.', 'error');
-            }
-          } catch (err: any) {
-            console.error('Verification error:', err);
-            addToast(err.message || 'Server error during payment verification.', 'error');
-          } finally {
-            setLoading(false);
-          }
-        },
-        modal: {
-          ondismiss: function () {
-            setActivePaymentModal({ booking: pendingRes.booking, razorpayOrder: pendingRes.razorpayOrder });
-          },
-        },
-        prefill: {
-          name: customerName,
-          email: customerEmail,
-          contact: customerPhone,
-        },
-        theme: {
-          color: '#1e3a8a',
-        },
-      };
-
-      try {
-        const rzp = new (window as any).Razorpay(options);
-        rzp.on('payment.failed', function () {
-          setActivePaymentModal({ booking: pendingRes.booking, razorpayOrder: pendingRes.razorpayOrder });
-        });
-        rzp.open();
-      } catch {
-        setActivePaymentModal({ booking: pendingRes.booking, razorpayOrder: pendingRes.razorpayOrder });
+      if (res.success) {
+        setBookingResult(res.booking);
+        addToast('Booking completed successfully!', 'success');
+        setStep(4);
+      } else {
+        throw new Error(res.message || 'Failed to submit booking request.');
       }
     } catch (err: any) {
       console.error(err);
@@ -791,42 +818,149 @@ export const EventBookingPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Food Services */}
-              <div className="bg-white border border-cream-200 rounded-luxury-lg p-6 shadow-luxury">
-                <div className="flex items-center gap-3 border-b border-cream-100 pb-4 mb-6">
-                  <div className="bg-gold-50 text-gold-600 p-2.5 rounded-full"><Gift size={18} /></div>
-                  <div>
-                    <h3 className="font-bold text-sm text-primary-800 tracking-wide">Food Services</h3>
-                    <p className="text-[10px] text-gray-400 mt-0.5">Delicious food for your guests</p>
+              {/* Food Services Selection UI */}
+              <div className="bg-white border border-cream-200 rounded-luxury-lg p-6 shadow-luxury space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-cream-100 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-gold-50 text-gold-600 p-2.5 rounded-full"><Gift size={18} /></div>
+                    <div>
+                      <h3 className="font-bold text-sm text-primary-800 tracking-wide">Food Services & Menu Selection</h3>
+                      <p className="text-[10px] text-gray-400 mt-0.5">Select VEG / NON-VEG dishes for your event menu</p>
+                    </div>
                   </div>
+                  {selectedFoodObjects.length > 0 && (
+                    <span className="bg-gold-50 text-gold-700 border border-gold-200 text-[10px] font-bold px-3 py-1 rounded-full shrink-0">
+                      {selectedFoodObjects.length} Dishes Selected (₹{foodPerPlateRate}/plate)
+                    </span>
+                  )}
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  {services
-                    .filter((s) => s.category === 'food')
-                    .map((service) => {
-                      const isSelected = selectedIds.includes(service.id);
-                      return (
-                        <div
-                          key={service.id}
-                          onClick={() => handleToggleService(service.id, 'food')}
-                          className={`border rounded-luxury p-4 text-center transition-all duration-300 cursor-pointer relative group flex flex-col justify-between items-center min-h-[140px] ${
-                            isSelected ? 'border-gold-500 bg-gold-50/10 shadow-md' : 'border-cream-200 hover:border-gold-300 hover:shadow-sm'
-                          }`}
-                        >
-                          <div className={`absolute top-2 right-2 w-4 h-4 rounded border flex items-center justify-center transition-all ${
-                            isSelected ? 'bg-gold-500 border-gold-500 text-white' : 'border-cream-300 bg-white group-hover:border-gold-400'
-                          }`}>
-                            {isSelected && <Check size={10} strokeWidth={3} />}
-                          </div>
-                          <div className="my-auto">{renderIcon(service.iconName)}</div>
-                          <div className="mt-3">
-                            <p className="text-[11px] font-bold text-primary-800 leading-tight truncate">{service.name}</p>
-                            <p className="text-[10px] font-semibold text-gold-600 mt-0.5">₹{service.price} / Plate</p>
-                          </div>
-                        </div>
-                      );
-                    })}
+                {/* VEG Category Accordion */}
+                <div className="border border-cream-200 rounded-luxury overflow-hidden bg-white shadow-sm">
+                  <button
+                    type="button"
+                    onClick={() => setVegExpanded(!vegExpanded)}
+                    className="w-full bg-emerald-50/60 hover:bg-emerald-50 p-4 flex items-center justify-between border-b border-cream-150 transition-all text-left"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center font-bold text-xs border border-emerald-200 shrink-0">
+                        🌱
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-sm text-primary-800 font-serif flex items-center gap-2">
+                          <span>Vegetarian Menu</span>
+                          <span className="bg-emerald-100 text-emerald-800 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">VEG</span>
+                        </h4>
+                        <p className="text-[10px] text-neutral-500">
+                          {allFoodItems.filter(i => i.category === 'VEG' && selectedFoodIds.includes(i.id)).length} of {allFoodItems.filter(i => i.category === 'VEG').length} dishes selected
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider hidden sm:inline">
+                        {vegExpanded ? 'Collapse Menu' : 'Expand Menu'}
+                      </span>
+                      {vegExpanded ? <ChevronUp size={16} className="text-emerald-700" /> : <ChevronDown size={16} className="text-emerald-700" />}
+                    </div>
+                  </button>
+
+                  {vegExpanded && (
+                    <div className="p-4 bg-white grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 animate-in fade-in duration-200">
+                      {allFoodItems
+                        .filter((item) => item.category === 'VEG')
+                        .map((item) => {
+                          const isChecked = selectedFoodIds.includes(item.id);
+                          return (
+                            <div
+                              key={item.id}
+                              onClick={() => handleToggleFoodItem(item.id)}
+                              className={`p-3 rounded-luxury border transition-all duration-200 cursor-pointer flex items-center justify-between gap-3 ${
+                                isChecked
+                                  ? 'border-emerald-500 bg-emerald-50/20 shadow-sm'
+                                  : 'border-cream-200 hover:border-emerald-300 hover:bg-cream-50/40'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={() => {}}
+                                  className="w-4 h-4 text-emerald-600 rounded border-cream-300 focus:ring-emerald-500 cursor-pointer shrink-0"
+                                />
+                                <span className="text-xs font-semibold text-primary-800 truncate">{item.name}</span>
+                              </div>
+                              <span className="text-[11px] font-bold text-emerald-700 shrink-0 font-mono">
+                                ₹{item.price}
+                              </span>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  )}
+                </div>
+
+                {/* NON-VEG Category Accordion */}
+                <div className="border border-cream-200 rounded-luxury overflow-hidden bg-white shadow-sm">
+                  <button
+                    type="button"
+                    onClick={() => setNonVegExpanded(!nonVegExpanded)}
+                    className="w-full bg-red-50/60 hover:bg-red-50 p-4 flex items-center justify-between border-b border-cream-150 transition-all text-left"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 bg-red-100 text-red-700 rounded-full flex items-center justify-center font-bold text-xs border border-red-200 shrink-0">
+                        🍖
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-sm text-primary-800 font-serif flex items-center gap-2">
+                          <span>Non-Vegetarian Menu</span>
+                          <span className="bg-red-100 text-red-800 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">NON-VEG</span>
+                        </h4>
+                        <p className="text-[10px] text-neutral-500">
+                          {allFoodItems.filter(i => i.category === 'NON-VEG' && selectedFoodIds.includes(i.id)).length} of {allFoodItems.filter(i => i.category === 'NON-VEG').length} dishes selected
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-red-700 uppercase tracking-wider hidden sm:inline">
+                        {nonVegExpanded ? 'Collapse Menu' : 'Expand Menu'}
+                      </span>
+                      {nonVegExpanded ? <ChevronUp size={16} className="text-red-700" /> : <ChevronDown size={16} className="text-red-700" />}
+                    </div>
+                  </button>
+
+                  {nonVegExpanded && (
+                    <div className="p-4 bg-white grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 animate-in fade-in duration-200">
+                      {allFoodItems
+                        .filter((item) => item.category === 'NON-VEG')
+                        .map((item) => {
+                          const isChecked = selectedFoodIds.includes(item.id);
+                          return (
+                            <div
+                              key={item.id}
+                              onClick={() => handleToggleFoodItem(item.id)}
+                              className={`p-3 rounded-luxury border transition-all duration-200 cursor-pointer flex items-center justify-between gap-3 ${
+                                isChecked
+                                  ? 'border-red-500 bg-red-50/20 shadow-sm'
+                                  : 'border-cream-200 hover:border-red-300 hover:bg-cream-50/40'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={() => {}}
+                                  className="w-4 h-4 text-red-600 rounded border-cream-300 focus:ring-red-500 cursor-pointer shrink-0"
+                                />
+                                <span className="text-xs font-semibold text-primary-800 truncate">{item.name}</span>
+                              </div>
+                              <span className="text-[11px] font-bold text-red-700 shrink-0 font-mono">
+                                ₹{item.price}
+                              </span>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -890,11 +1024,47 @@ export const EventBookingPage: React.FC = () => {
                   )}
                 </div>
 
+                {/* Selected Food Menu Items Section */}
+                {foodServiceSelected && (
+                  <div className="pt-4 border-t border-cream-100 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-widest block">Food Menu Items</span>
+                      <span className="text-[10px] font-bold text-gold-600 font-mono">₹{foodPerPlateRate}/plate</span>
+                    </div>
+
+                    {selectedFoodObjects.length === 0 ? (
+                      <div className="text-[11px] text-amber-700 bg-amber-50 p-2.5 rounded-lg border border-amber-200">
+                        No food items selected yet. Click <strong>VEG</strong> or <strong>NON-VEG</strong> menu panels to choose dishes!
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5 max-h-[160px] overflow-y-auto pr-1">
+                        {selectedFoodObjects.map((item) => (
+                          <div key={item.id} className="flex items-center justify-between text-xs bg-cream-50 p-2 rounded border border-cream-100">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className={`w-2 h-2 rounded-full shrink-0 ${item.category === 'VEG' ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
+                              <span className="font-semibold text-primary-800 text-[11px] truncate">{item.name}</span>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-[10px] font-bold text-neutral-600 font-mono">₹{item.price}</span>
+                              <button
+                                onClick={() => handleToggleFoodItem(item.id)}
+                                className="text-gray-400 hover:text-red-500 p-0.5 rounded-full hover:bg-red-50"
+                              >
+                                <X size={12} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Plates counter */}
                 {foodServiceSelected && (
                   <div className="pt-4 border-t border-cream-100 flex items-center justify-between text-xs">
                     <div>
-                      <label htmlFor="plates" className="font-bold text-[11px] text-primary-800 block">Total Plates</label>
+                      <label htmlFor="plates" className="font-bold text-[11px] text-primary-800 block">Total Plates / Guests</label>
                       <span className="text-[9px] text-gray-400">Min 50 guests</span>
                     </div>
                     <div className="flex items-center gap-1 bg-cream-50 border border-cream-200 rounded-lg p-1">
@@ -925,10 +1095,16 @@ export const EventBookingPage: React.FC = () => {
                 {/* Calculations details */}
                 <div className="pt-4 border-t border-cream-100 space-y-2 text-xs">
                   {foodServiceSelected && (
-                    <div className="flex justify-between text-gray-500">
-                      <span>Price per Plate</span>
-                      <span className="font-medium text-neutral-800">₹{foodServiceSelected.price}</span>
-                    </div>
+                    <>
+                      <div className="flex justify-between text-gray-500">
+                        <span>Food Rate per Plate</span>
+                        <span className="font-bold text-neutral-800 font-mono">₹{foodPerPlateRate}</span>
+                      </div>
+                      <div className="flex justify-between text-gray-500">
+                        <span>Total Food Cost ({platesCount} plates)</span>
+                        <span className="font-bold text-neutral-800 font-mono">₹{foodCost.toLocaleString('en-IN')}</span>
+                      </div>
+                    </>
                   )}
                   <div className="flex justify-between text-gray-500">
                     <span>Services Subtotal</span>
@@ -1076,6 +1252,104 @@ export const EventBookingPage: React.FC = () => {
                   placeholder="E.g. stage layout requirements, food items, etc..."
                   className="w-full border border-cream-200 p-2.5 rounded-luxury focus:outline-none focus:ring-1 focus:ring-gold-500 text-sm"
                 />
+              </div>
+
+              {/* Event Address Section */}
+              <div className="border-t border-cream-200 pt-5 mt-6 space-y-4">
+                <h4 className="text-sm font-bold font-serif text-primary-800 tracking-wide uppercase flex items-center gap-1">
+                  <span>Event Address</span>
+                  <span className="text-red-500">*</span>
+                </h4>
+
+                <div>
+                  <label className="block font-bold text-primary-800 uppercase tracking-wider mb-1">
+                    Address Line 1 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={addressLine1}
+                    onChange={(e) => setAddressLine1(e.target.value)}
+                    placeholder="House/Building No., Street/Road, Area/Locality"
+                    className="w-full border border-cream-200 p-2.5 rounded-luxury focus:outline-none focus:ring-1 focus:ring-gold-500 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-primary-800 uppercase tracking-wider mb-1">
+                    Address Line 2 <span className="text-gray-400 font-normal text-[10px] lowercase">(optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={addressLine2}
+                    onChange={(e) => setAddressLine2(e.target.value)}
+                    placeholder="Landmark"
+                    className="w-full border border-cream-200 p-2.5 rounded-luxury focus:outline-none focus:ring-1 focus:ring-gold-500 text-sm"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-bold text-primary-800 uppercase tracking-wider mb-1">
+                      City <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      placeholder="City"
+                      className="w-full border border-cream-200 p-2.5 rounded-luxury focus:outline-none focus:ring-1 focus:ring-gold-500 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-primary-800 uppercase tracking-wider mb-1">
+                      District <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={district}
+                      onChange={(e) => setDistrict(e.target.value)}
+                      placeholder="District"
+                      className="w-full border border-cream-200 p-2.5 rounded-luxury focus:outline-none focus:ring-1 focus:ring-gold-500 text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-bold text-primary-800 uppercase tracking-wider mb-1">
+                      State <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={stateName}
+                      onChange={(e) => setStateName(e.target.value)}
+                      placeholder="State"
+                      className="w-full border border-cream-200 p-2.5 rounded-luxury focus:outline-none focus:ring-1 focus:ring-gold-500 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-primary-800 uppercase tracking-wider mb-1">
+                      PIN Code <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={6}
+                      value={pincode}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        setPincode(val);
+                        if (pincodeError) setPincodeError('');
+                      }}
+                      placeholder="6-digit PIN code"
+                      className={`w-full border p-2.5 rounded-luxury focus:outline-none focus:ring-1 text-sm ${
+                        pincodeError ? 'border-red-500 focus:ring-red-500' : 'border-cream-200 focus:ring-gold-500'
+                      }`}
+                    />
+                    {pincodeError && <p className="text-[10px] text-red-500 font-bold mt-1">{pincodeError}</p>}
+                  </div>
+                </div>
               </div>
 
               <div className="pt-4 flex justify-between border-t border-cream-100">
@@ -1291,6 +1565,14 @@ export const EventBookingPage: React.FC = () => {
                     <span>Plates / Guests:</span>
                     <span className="font-bold text-primary-800">{platesCount} pax</span>
                   </div>
+                  {addressLine1 && (
+                    <div className="pt-2 border-t border-cream-100 flex flex-col gap-0.5">
+                      <span className="text-[10px] font-bold text-primary-800 uppercase tracking-wider">Event Address:</span>
+                      <span className="text-[10px] text-neutral-600 leading-snug">
+                        {[addressLine1, addressLine2, city, district, stateName, pincode ? `PIN: ${pincode}` : ''].filter(Boolean).join(', ')}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="border-t border-cream-100 pt-3 space-y-2 font-medium">
@@ -1377,6 +1659,21 @@ export const EventBookingPage: React.FC = () => {
                   {bookingResult.status}
                 </span>
               </div>
+              {(bookingResult.addressLine1 || addressLine1) && (
+                <div className="py-2 flex flex-col items-start gap-1">
+                  <span className="text-neutral-400 font-bold uppercase tracking-wider text-[8px]">Event Address</span>
+                  <span className="font-semibold text-primary-800 text-left text-[11px] leading-snug">
+                    {[
+                      bookingResult.addressLine1 || addressLine1,
+                      bookingResult.addressLine2 || addressLine2,
+                      bookingResult.city || city,
+                      bookingResult.district || district,
+                      bookingResult.state || stateName,
+                      (bookingResult.pincode || pincode) ? `PIN: ${bookingResult.pincode || pincode}` : ''
+                    ].filter(Boolean).join(', ')}
+                  </span>
+                </div>
+              )}
               <div className="pt-2 flex justify-between font-bold text-sm text-primary-800">
                 <span>Total Amount</span>
                 <span className="font-mono text-gold-600">₹{Number(bookingResult.totalAmount).toLocaleString('en-IN')}</span>

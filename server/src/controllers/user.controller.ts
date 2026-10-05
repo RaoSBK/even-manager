@@ -202,4 +202,40 @@ export class UserController {
       return res.status(500).json({ message: 'Internal server error while toggling employee status' });
     }
   }
+
+  async changeEmployeePassword(req: Request, res: Response) {
+    try {
+      const { id } = req.params as { id: string };
+      const { currentPassword, newPassword, confirmPassword } = req.body;
+
+      const result = await this.userService.changeEmployeePassword(id, {
+        currentPassword,
+        newPassword,
+        confirmPassword
+      });
+
+      return res.status(200).json({ message: result.message });
+    } catch (error: any) {
+      if (error.message === 'EMPLOYEE_NOT_FOUND') {
+        return res.status(404).json({ message: 'Employee profile not found' });
+      }
+      if (error.message === 'CURRENT_PASSWORD_INCORRECT') {
+        return res.status(401).json({ message: 'Current password is incorrect.' });
+      }
+      if (error.message === 'PASSWORDS_DO_NOT_MATCH') {
+        return res.status(400).json({ message: 'New password and confirm password do not match.' });
+      }
+      if (error.message === 'NEW_PASSWORD_REQUIRED') {
+        return res.status(400).json({ message: 'New password cannot be empty.' });
+      }
+      if (error.message === 'NEW_PASSWORD_MUST_BE_DIFFERENT') {
+        return res.status(400).json({ message: 'New password must be different from the current password.' });
+      }
+      if (error.message === 'ALL_PASSWORD_FIELDS_REQUIRED') {
+        return res.status(400).json({ message: 'Current password, new password, and confirm password are required.' });
+      }
+      console.error('Change employee password error:', error);
+      return res.status(500).json({ message: 'Internal server error while updating employee password' });
+    }
+  }
 }

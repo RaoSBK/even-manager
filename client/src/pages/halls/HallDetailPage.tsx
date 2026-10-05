@@ -1,16 +1,111 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router';
 import { MapPin, Users, IndianRupee, ArrowRight, ExternalLink, ShieldCheck, Info, ChevronRight, Home } from 'lucide-react';
+import { hallApi } from '../../api/hallApi';
 import { sampleHalls } from '../../constants/hallsData';
+
+// Mapped assets for halls
+const getHallAssets = (hallCode: string, name: string) => {
+  const code = (hallCode || '').toUpperCase();
+  const nameLower = (name || '').toLowerCase();
+  if (code === 'HALL-A' || nameLower.includes('taj mahal')) {
+    return {
+      image: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=800',
+      images: [
+        'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=800',
+        'https://images.unsplash.com/photo-1543807535-eceef0bc6599?auto=format&fit=crop&q=80&w=800',
+        'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&q=80&w=800'
+      ],
+      facilities: ['Central A/C', 'Luxury Chandelier Lighting', 'Premium JBL Sound System', 'Two VIP Lounges', 'Large Decor Stage', '24/7 Power Backup']
+    };
+  }
+  if (code === 'T-LGA' || nameLower.includes('luxury grand') || nameLower.includes('arena')) {
+    return {
+      image: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&q=80&w=800',
+      images: [
+        'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&q=80&w=800',
+        'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=800'
+      ],
+      facilities: ['Central A/C', 'Spacious Seating Area', 'Concert-Grade Sound System', 'Dressing Rooms', 'Separate Dining Hall', 'Valet Parking']
+    };
+  }
+  return {
+    image: 'https://images.unsplash.com/photo-1543807535-eceef0bc6599?auto=format&fit=crop&q=80&w=800',
+    images: [
+      'https://images.unsplash.com/photo-1543807535-eceef0bc6599?auto=format&fit=crop&q=80&w=800',
+      'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=800'
+    ],
+    facilities: ['Spacious Stage', 'Standard Sound System', 'Dining Chairs & Tables', 'Changing Rooms']
+  };
+};
 
 export const HallDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const hall = sampleHalls.find((h) => h.id === id);
+  const [hall, setHall] = useState<any>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [activeImage, setActiveImage] = useState<string>('');
 
-  // Active image state for gallery carousel
-  const [activeImage, setActiveImage] = useState<string>(hall?.image || '');
+  useEffect(() => {
+    const loadHallDetails = async () => {
+      setLoading(true);
+      if (!id) {
+        setLoading(false);
+        return;
+      }
+      
+      // First check local sampleHalls
+      const sample = sampleHalls.find((h) => h.id === id);
+      if (sample) {
+        setHall(sample);
+        setActiveImage(sample.image);
+        setLoading(false);
+        return;
+      }
+
+      // Fetch from DB
+      try {
+        const dbHall = await hallApi.getById(id);
+        if (dbHall) {
+          const assets = getHallAssets(dbHall.hallCode, dbHall.name);
+          const mapped = {
+            id: dbHall.id,
+            name: dbHall.name,
+            hallCode: dbHall.hallCode,
+            address: dbHall.location || 'Main Venue Campus',
+            description: dbHall.description || 'Luxury banquet and function hall equipped with state-of-the-art facilities.',
+            capacity: dbHall.capacity || 500,
+            costPerDay: Number(dbHall.basePrice),
+            image: assets.image,
+            images: assets.images,
+            facilities: assets.facilities,
+            status: dbHall.status,
+            state: 'Telangana',
+            district: 'Central',
+            mandal: 'Main'
+          };
+          setHall(mapped);
+          setActiveImage(assets.image);
+        }
+      } catch (err) {
+        console.error('Error fetching hall details:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadHallDetails();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="bg-cream-50 min-h-screen py-16 font-sans flex flex-col items-center justify-center gap-3">
+        <span className="h-8 w-8 animate-spin rounded-full border-2 border-primary-800 border-t-transparent"></span>
+        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Loading venue details...</p>
+      </div>
+    );
+  }
 
   if (!hall) {
     return (
@@ -31,6 +126,8 @@ export const HallDetailPage: React.FC = () => {
       </div>
     );
   }
+
+  const isAvailable = hall.status === 'AVAILABLE' || !hall.status;
 
   return (
     <div className="bg-cream-50 min-h-screen py-8 font-sans">
@@ -71,7 +168,7 @@ export const HallDetailPage: React.FC = () => {
               {/* Thumbnails Gallery */}
               {hall.images && hall.images.length > 0 && (
                 <div className="flex gap-2 p-4 bg-cream-50/50 border-t border-cream-100 overflow-x-auto">
-                  {hall.images.map((img, idx) => (
+                  {hall.images.map((img: string, idx: number) => (
                     <button
                       key={idx}
                       onClick={() => setActiveImage(img)}
@@ -95,15 +192,6 @@ export const HallDetailPage: React.FC = () => {
                   <MapPin size={16} className="text-gold-500 shrink-0 mt-0.5" />
                   <span className="leading-relaxed font-medium">{hall.address}</span>
                 </div>
-
-                <a
-                  href={hall.googleMapsLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-gold-600 hover:text-gold-700 border border-cream-200 hover:border-gold-300 bg-cream-50/50 py-2 px-4 rounded-lg transition-all"
-                >
-                  View Google Maps Location <ExternalLink size={12} />
-                </a>
               </div>
             </div>
 
@@ -118,46 +206,28 @@ export const HallDetailPage: React.FC = () => {
             </div>
 
             {/* Facilities Panel */}
-            <div className="bg-white border border-cream-200 rounded-luxury p-6 shadow-luxury">
-              <h3 className="font-bold text-sm text-primary-800 tracking-wide mb-4 border-b border-cream-100 pb-3">
-                Available Facilities
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {hall.facilities.map((fac, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-xs text-neutral-500 bg-cream-50/30 p-2.5 rounded border border-cream-100">
-                    <div className="w-1.5 h-1.5 rounded-full bg-gold-500 shrink-0" />
-                    <span className="font-semibold">{fac}</span>
-                  </div>
-                ))}
+            {hall.facilities && hall.facilities.length > 0 && (
+              <div className="bg-white border border-cream-200 rounded-luxury p-6 shadow-luxury">
+                <h3 className="font-bold text-sm text-primary-800 tracking-wide mb-4 border-b border-cream-100 pb-3">
+                  Available Facilities
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {hall.facilities.map((fac: string, idx: number) => (
+                    <div key={idx} className="flex items-center gap-2 text-xs text-neutral-500 bg-cream-50/30 p-2.5 rounded border border-cream-100">
+                      <div className="w-1.5 h-1.5 rounded-full bg-gold-500 shrink-0" />
+                      <span className="font-semibold">{fac}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Venue Specifications */}
+            {/* Capacity & Price */}
             <div className="bg-white border border-cream-200 rounded-luxury p-6 shadow-luxury">
               <h3 className="font-bold text-sm text-primary-800 tracking-wide mb-4 border-b border-cream-100 pb-3">
                 Venue Specifications
               </h3>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                {/* State */}
-                <div className="bg-cream-50/50 p-4 rounded-lg border border-cream-100">
-                  <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-1">State</span>
-                  <span className="text-xs font-bold text-primary-800">{hall.state}</span>
-                </div>
-                {/* District */}
-                <div className="bg-cream-50/50 p-4 rounded-lg border border-cream-100">
-                  <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-1">District</span>
-                  <span className="text-xs font-bold text-primary-800">{hall.district}</span>
-                </div>
-                {/* Mandal */}
-                <div className="bg-cream-50/50 p-4 rounded-lg border border-cream-100">
-                  <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Mandal</span>
-                  <span className="text-xs font-bold text-primary-800">{hall.mandal}</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-6">
-                {/* Capacity */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="flex items-center gap-3 bg-cream-50/50 p-4 rounded-lg border border-cream-100">
                   <div className="bg-gold-50 text-gold-600 p-2.5 rounded-full">
                     <Users size={18} />
@@ -167,7 +237,6 @@ export const HallDetailPage: React.FC = () => {
                     <span className="text-xs font-bold text-primary-800">{hall.capacity} Guests Max</span>
                   </div>
                 </div>
-                {/* Cost */}
                 <div className="flex items-center gap-3 bg-cream-50/50 p-4 rounded-lg border border-cream-100">
                   <div className="bg-gold-50 text-gold-600 p-2.5 rounded-full">
                     <IndianRupee size={18} />
@@ -185,70 +254,82 @@ export const HallDetailPage: React.FC = () => {
               <h3 className="font-bold text-sm text-primary-800 tracking-wide mb-3 border-b border-cream-100 pb-3">
                 Availability Status
               </h3>
-              <div className="flex items-start gap-3 bg-emerald-50/50 p-4 rounded-lg border border-emerald-100">
-                <div className="bg-emerald-100 text-emerald-700 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">✓</div>
-                <div>
-                  <span className="text-xs font-bold text-emerald-800 block">Available for Online Booking</span>
-                  <span className="text-[10px] text-emerald-600 leading-relaxed block mt-0.5">
-                    Live schedule availability is validated automatically during checkout. Bookings can be made up to 30 days in advance.
+              {isAvailable ? (
+                <div className="flex items-start gap-3 bg-emerald-50/50 p-4 rounded-lg border border-emerald-100">
+                  <div className="bg-emerald-100 text-emerald-700 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">✓</div>
+                  <div>
+                    <span className="text-xs font-bold text-emerald-800 block">Available for Online Booking</span>
+                    <span className="text-[10px] text-emerald-600 leading-relaxed block mt-0.5">
+                      Live schedule availability is validated automatically during checkout.
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-start gap-3 bg-amber-50/50 p-4 rounded-lg border border-amber-100">
+                  <div className="bg-amber-100 text-amber-700 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">!</div>
+                  <div>
+                    <span className="text-xs font-bold text-amber-800 block">Currently Unavailable ({hall.status})</span>
+                    <span className="text-[10px] text-amber-600 leading-relaxed block mt-0.5">
+                      This venue hall is currently under maintenance or disabled by administration.
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+          </div>
+
+          {/* Right Action Sidebar */}
+          <div className="w-full">
+            <div className="bg-white border border-cream-200 rounded-luxury p-6 shadow-luxury space-y-5 sticky top-6">
+              <div className="border-b border-cream-100 pb-4">
+                <span className="text-[9px] text-gray-400 uppercase font-bold tracking-widest block mb-1">Starting Price</span>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-2xl font-bold font-mono text-gold-600">₹{hall.costPerDay.toLocaleString('en-IN')}</span>
+                  <span className="text-xs text-neutral-400 font-medium">/ event day</span>
+                </div>
+              </div>
+
+              <div className="space-y-3 text-xs text-neutral-600 border-b border-cream-100 pb-4">
+                <div className="flex justify-between">
+                  <span>Guest Capacity:</span>
+                  <span className="font-bold text-primary-800">{hall.capacity} Pax</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Location:</span>
+                  <span className="font-bold text-primary-800 truncate max-w-[120px]">{hall.address}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Status:</span>
+                  <span className={`font-bold uppercase text-[10px] ${isAvailable ? 'text-green-600' : 'text-amber-600'}`}>
+                    {isAvailable ? 'Available' : hall.status}
                   </span>
                 </div>
               </div>
-            </div>
 
-            {/* General Information Panel */}
-            <div className="bg-white border border-cream-200 rounded-luxury p-6 shadow-luxury">
-              <h3 className="font-bold text-sm text-primary-800 tracking-wide mb-3 border-b border-cream-100 pb-3">
-                Booking Information & Rules
-              </h3>
-              <ul className="space-y-2 text-xs text-neutral-500 list-disc list-inside leading-relaxed">
-                <li>Online booking requests must be submitted at least <strong className="text-primary-800">30 days</strong> before the scheduled event date.</li>
-                <li>Single-day pricing is calculated directly as the cost-per-day rate of the venue.</li>
-                <li>The customer care desk is available for custom seating, food catering, and multi-day packages.</li>
-                <li>Cancellations and booking modifications must be requested at least 15 days in advance.</li>
-              </ul>
-            </div>
-          </div>
-
-          {/* Pricing & Booking Card (Right 1/3) */}
-          <div className="w-full">
-            <div className="bg-white border border-cream-250 rounded-luxury p-6 shadow-luxury-lg relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-1.5 bg-gold-500"></div>
-
-              <div className="mb-4">
-                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block">Standard Daily Rate</span>
-                <span className="text-2xl font-extrabold text-primary-800 font-serif">
-                  ₹{hall.costPerDay.toLocaleString('en-IN')}
-                </span>
-                <span className="text-[10px] text-neutral-400"> / Per Day + Taxes</span>
-              </div>
-
-              <div className="border-t border-cream-100 pt-4 mb-6 space-y-3">
-                <div className="flex items-center gap-2 text-xs text-neutral-600">
-                  <ShieldCheck size={16} className="text-green-600 shrink-0" />
-                  <span>Instant Booking Confirmation</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-neutral-600">
-                  <ShieldCheck size={16} className="text-green-600 shrink-0" />
-                  <span>Digital Invoice & PDF Receipt</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-neutral-600">
-                  <ShieldCheck size={16} className="text-green-600 shrink-0" />
-                  <span>Configured SMTP Email Notifications</span>
-                </div>
-              </div>
+              {isAvailable ? (
+                <button
+                  onClick={() => navigate(`/halls/${hall.id}/book`)}
+                  className="w-full py-3 bg-gold-500 hover:bg-gold-600 text-white font-bold text-xs rounded-lg transition-all shadow-md uppercase tracking-wider flex items-center justify-center gap-2"
+                >
+                  <span>Book This Hall</span>
+                  <ArrowRight size={14} />
+                </button>
+              ) : (
+                <button
+                  disabled
+                  className="w-full py-3 bg-gray-150 text-gray-400 font-bold text-xs rounded-lg border border-gray-200 text-center uppercase tracking-wider cursor-not-allowed"
+                >
+                  Currently Unavailable
+                </button>
+              )}
 
               <button
-                onClick={() => navigate(`/halls/${hall.id}/book`)}
-                className="w-full bg-gold-500 text-white font-bold text-xs py-3 rounded-lg hover:bg-gold-600 transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg group animate-pulse hover:animate-none"
+                onClick={() => navigate('/halls')}
+                className="w-full py-2.5 border border-cream-200 hover:bg-cream-50 text-primary-800 font-bold text-xs rounded-lg transition-all uppercase tracking-wider text-center"
               >
-                Book Now
-                <ArrowRight size={14} className="group-hover:translate-x-1 transition-all" />
+                Back to All Halls
               </button>
-
-              <div className="mt-4 text-[10px] text-gray-400 text-center">
-                Requires login. Redirection happens automatically.
-              </div>
             </div>
           </div>
 

@@ -46,6 +46,7 @@ export const EmployeesPage: React.FC = () => {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isPasswordOpen, setIsPasswordOpen] = useState(false);
   const [isAssignTaskOpen, setIsAssignTaskOpen] = useState(false);
 
   // Forms state
@@ -71,6 +72,14 @@ export const EmployeesPage: React.FC = () => {
     dueDate: '',
     eventId: ''
   });
+
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
 
   const [events, setEvents] = useState<any[]>([]);
 
@@ -205,6 +214,56 @@ export const EmployeesPage: React.FC = () => {
       eventId: ''
     });
     setIsAssignTaskOpen(true);
+  };
+
+  const handleOpenPasswordChange = () => {
+    setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    setPasswordError('');
+    setIsPasswordOpen(true);
+  };
+
+  const handlePasswordChangeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedEmployee) return;
+
+    const { currentPassword, newPassword, confirmPassword } = passwordForm;
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError('Current password, new password, and confirm password are required.');
+      return;
+    }
+
+    if (newPassword.trim().length === 0) {
+      setPasswordError('New password cannot be empty.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New password and confirm password do not match.');
+      return;
+    }
+
+    if (newPassword === currentPassword) {
+      setPasswordError('New password must be different from the current password.');
+      return;
+    }
+
+    try {
+      setPasswordLoading(true);
+      setPasswordError('');
+      const response = await employeeApi.changePassword(selectedEmployee.id, {
+        currentPassword,
+        newPassword,
+        confirmPassword
+      });
+      addToast(response.message || 'Password changed successfully.', 'success');
+      setIsPasswordOpen(false);
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (err: any) {
+      setPasswordError(err.message || 'Failed to change password.');
+    } finally {
+      setPasswordLoading(false);
+    }
   };
 
   const handleAssignTaskSubmit = async (e: React.FormEvent) => {
@@ -543,6 +602,12 @@ export const EmployeesPage: React.FC = () => {
               )}
             </div>
 
+            <div className="flex justify-end mt-2 mb-4">
+              <Button onClick={handleOpenPasswordChange} variant="secondary" className="!py-1.5 !px-3 rounded text-xs gap-1">
+                Change Password
+              </Button>
+            </div>
+
             {/* ASSIGNED TASKS */}
             <div>
               <div className="flex justify-between items-center mb-3">
@@ -584,6 +649,40 @@ export const EmployeesPage: React.FC = () => {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* CHANGE PASSWORD MODAL */}
+      <Modal isOpen={isPasswordOpen} onClose={() => { setIsPasswordOpen(false); setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' }); setPasswordError(''); }} title="Change Password" size="sm">
+        <form onSubmit={handlePasswordChangeSubmit} className="space-y-4">
+          <Input
+            label="Current Password"
+            type="password"
+            value={passwordForm.currentPassword}
+            onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+            error={passwordError && !passwordForm.currentPassword && !passwordForm.newPassword && !passwordForm.confirmPassword ? passwordError : undefined}
+          />
+          <Input
+            label="New Password"
+            type="password"
+            value={passwordForm.newPassword}
+            onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+          />
+          <Input
+            label="Confirm New Password"
+            type="password"
+            value={passwordForm.confirmPassword}
+            onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+          />
+
+          {passwordError && (
+            <p className="text-[11px] font-medium text-red-500 mt-0.5 leading-tight">{passwordError}</p>
+          )}
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="secondary" onClick={() => { setIsPasswordOpen(false); setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' }); setPasswordError(''); }}>Cancel</Button>
+            <Button type="submit" variant="gold" loading={passwordLoading}>Change Password</Button>
+          </div>
+        </form>
       </Modal>
 
       {/* ASSIGN TASK MODAL */}

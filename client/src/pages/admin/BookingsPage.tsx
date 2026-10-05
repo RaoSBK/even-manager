@@ -326,6 +326,21 @@ export const BookingsPage: React.FC = () => {
               </div>
             </div>
 
+            {/* Event Address Details for Admin */}
+            {selectedBooking.addressLine1 && (
+              <div className="p-4 bg-cream-50/70 border border-cream-200 rounded-luxury text-xs space-y-1">
+                <span className="text-neutral-400 font-bold block uppercase mb-1">Customer Event Address</span>
+                <p className="font-bold text-primary-800 text-sm">{selectedBooking.addressLine1}</p>
+                {selectedBooking.addressLine2 && <p className="text-neutral-600">{selectedBooking.addressLine2}</p>}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 text-neutral-600 border-t border-cream-150 font-medium">
+                  <p><span className="font-bold text-primary-800">City:</span> {selectedBooking.city || 'N/A'}</p>
+                  <p><span className="font-bold text-primary-800">District:</span> {selectedBooking.district || 'N/A'}</p>
+                  <p><span className="font-bold text-primary-800">State:</span> {selectedBooking.state || 'N/A'}</p>
+                  <p><span className="font-bold text-primary-800">PIN Code:</span> {selectedBooking.pincode || 'N/A'}</p>
+                </div>
+              </div>
+            )}
+
             {/* Billing breakdown */}
             <div className="p-4 bg-cream-50/50 border border-cream-150 rounded text-xs space-y-1.5">
               <span className="text-neutral-400 font-bold block uppercase mb-2">Cost Breakdowns</span>
