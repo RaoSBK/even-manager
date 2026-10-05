@@ -5,11 +5,164 @@ export class BookingController {
   private bookingService = new BookingService();
 
   /**
-   * Create a new booking
+   * Create a new pending booking & Razorpay Order
+   */
+  async createPendingBooking(req: Request, res: Response) {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      const {
+        hallId,
+        eventType,
+        eventDate,
+        startTime,
+        endTime,
+        guestCount,
+        selectedServices,
+        customerName,
+        customerPhone,
+        customerEmail,
+        customerAddress,
+        specialNotes
+      } = req.body;
+
+      if (!hallId || !eventDate || !startTime || !endTime || !customerName || !customerPhone || !customerEmail) {
+        return res.status(400).json({ message: 'All booking contact details and parameters are required.' });
+      }
+
+      const result = await this.bookingService.createPendingBooking(userId, {
+        hallId,
+        eventType: eventType || 'General Event',
+        eventDate,
+        startTime,
+        endTime,
+        guestCount: Number(guestCount || 100),
+        selectedServices,
+        customerName,
+        customerPhone,
+        customerEmail,
+        customerAddress: customerAddress || '',
+        specialNotes
+      });
+
+      return res.status(201).json({
+        success: true,
+        message: 'Pending booking created and Razorpay order generated successfully',
+        ...result
+      });
+    } catch (error: any) {
+      if (error.message === 'CONFLICT') {
+        return res.status(409).json({
+          success: false,
+          message: 'This hall is no longer available for the selected date. Please select another date or hall.'
+        });
+      }
+
+      if (error.message === 'PAST_DATE') {
+        return res.status(400).json({ message: 'Cannot book events in the past.' });
+      }
+
+      if (error.message === 'INVALID_TIME_RANGE') {
+        return res.status(400).json({ message: 'End time must be after start time.' });
+      }
+
+      if (error.message === 'INVALID_GUEST_COUNT') {
+        return res.status(400).json({ message: 'Guest count must be greater than zero.' });
+      }
+
+      if (error.message === 'HALL_NOT_FOUND') {
+        return res.status(400).json({ message: 'Selected hall does not exist.' });
+      }
+
+      if (error.message === 'HALL_UNAVAILABLE_STATUS') {
+        return res.status(400).json({ message: 'Selected hall is currently under maintenance or inactive.' });
+      }
+
+      console.error('Create pending booking error:', error);
+      return res.status(500).json({ message: 'Internal server error while creating pending booking' });
+    }
+  }
+
+  /**
+   * Verify Razorpay Payment Signature
+   */
+  async verifyRazorpayPayment(req: Request, res: Response) {
+    try {
+      const { bookingId, razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+
+      if (!bookingId || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+        return res.status(400).json({ message: 'Missing Razorpay signature verification parameters.' });
+      }
+
+      const result = await this.bookingService.verifyRazorpayPayment({
+        bookingId,
+        razorpay_order_id,
+        razorpay_payment_id,
+        razorpay_signature
+      });
+
+      return res.status(200).json(result);
+    } catch (error: any) {
+      if (error.message === 'INVALID_SIGNATURE') {
+        return res.status(400).json({ success: false, message: 'Invalid Razorpay payment signature verification.' });
+      }
+      if (error.message === 'DOUBLE_BOOKING_CONFLICT') {
+        return res.status(409).json({ success: false, message: 'This hall is no longer available for the selected date.' });
+      }
+      console.error('Verify payment error:', error);
+      return res.status(500).json({ message: 'Internal server error during payment signature verification' });
+    }
+  }
+
+  /**
+   * Retry Razorpay Payment for existing pending booking
+   */
+  async retryRazorpayOrder(req: Request, res: Response) {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      const { bookingId } = req.body;
+      if (!bookingId) {
+        return res.status(400).json({ message: 'Booking ID is required' });
+      }
+
+      const result = await this.bookingService.retryRazorpayOrder(bookingId, userId);
+      return res.status(200).json({ success: true, ...result });
+    } catch (error: any) {
+      if (error.message === 'CONFLICT') {
+        return res.status(409).json({ message: 'This hall is no longer available for the selected date.' });
+      }
+      console.error('Retry payment order error:', error);
+      return res.status(500).json({ message: error.message || 'Internal server error during payment retry' });
+    }
+  }
+
+  /**
+   * Handle Razorpay Webhook Event
+   */
+  async processRazorpayWebhook(req: Request, res: Response) {
+    try {
+      const signature = req.headers['x-razorpay-signature'] as string;
+      const rawBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+      await this.bookingService.processRazorpayWebhook(rawBody, signature, req.body);
+      return res.status(200).json({ status: 'ok' });
+    } catch (error: any) {
+      console.error('Webhook processing error:', error);
+      return res.status(400).json({ message: error.message || 'Webhook verification failed' });
+    }
+  }
+
+  /**
+   * Create a standard booking
    */
   async createBooking(req: Request, res: Response) {
     try {
-      // Never trust frontend user ID - get it from req.user set by auth middleware
       const userId = req.user?.id;
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
@@ -17,7 +170,6 @@ export class BookingController {
 
       const { hallId, eventType, eventDate, startTime, endTime, guestCount, notes } = req.body;
 
-      // Validate required fields
       if (!hallId || !eventType || !eventDate || !startTime || !endTime || !guestCount) {
         return res.status(400).json({ message: 'Missing required booking fields' });
       }
@@ -44,33 +196,7 @@ export class BookingController {
           message: 'This hall has already been booked for the selected date and time.'
         });
       }
-
-      if (error.message === 'PAST_DATE') {
-        return res.status(400).json({ message: 'Cannot book events in the past date.' });
-      }
-
-      if (error.message === 'INVALID_TIME_RANGE') {
-        return res.status(400).json({ message: 'End time must be after start time.' });
-      }
-
-      if (error.message === 'INVALID_GUEST_COUNT') {
-        return res.status(400).json({ message: 'Guest count must be greater than zero.' });
-      }
-
-      if (error.message === 'HALL_NOT_FOUND') {
-        return res.status(400).json({ message: 'Selected hall does not exist.' });
-      }
-
-      if (error.message === 'HALL_UNAVAILABLE_STATUS') {
-        return res.status(400).json({ message: 'Selected hall is currently set under maintenance or inactive.' });
-      }
-
-      if (error.message === 'USER_NOT_FOUND') {
-        return res.status(400).json({ message: 'Authenticated user profile not found.' });
-      }
-
-      console.error('Create booking controller error:', error);
-      return res.status(500).json({ message: 'Internal server error while creating booking' });
+      return res.status(500).json({ message: error.message || 'Internal server error' });
     }
   }
 
@@ -96,7 +222,6 @@ export class BookingController {
       if (error.message === 'FORBIDDEN') {
         return res.status(403).json({ message: 'Access denied to this booking details.' });
       }
-      console.error('Get booking by ID error:', error);
       return res.status(500).json({ message: 'Internal server error while fetching booking details' });
     }
   }
@@ -114,7 +239,6 @@ export class BookingController {
       const bookings = await this.bookingService.getMyBookings(userId);
       return res.status(200).json(bookings);
     } catch (error: any) {
-      console.error('Get my bookings error:', error);
       return res.status(500).json({ message: 'Internal server error while fetching my bookings' });
     }
   }
@@ -127,7 +251,6 @@ export class BookingController {
       const bookings = await this.bookingService.getAll();
       return res.status(200).json(bookings);
     } catch (error: any) {
-      console.error('Get all bookings error:', error);
       return res.status(500).json({ message: 'Internal server error while fetching all bookings' });
     }
   }
@@ -150,19 +273,12 @@ export class BookingController {
         booking
       });
     } catch (error: any) {
-      if (error.message === 'NOT_FOUND') {
-        return res.status(404).json({ message: 'Booking not found.' });
-      }
-      if (error.message === 'INVALID_STATUS') {
-        return res.status(400).json({ message: 'Invalid status value.' });
-      }
-      console.error('Update booking status error:', error);
       return res.status(500).json({ message: 'Internal server error while updating booking status' });
     }
   }
 
   /**
-   * Cancel booking (Customer/Admin/Employee)
+   * Cancel booking
    */
   async cancelBooking(req: Request, res: Response) {
     try {
@@ -180,16 +296,6 @@ export class BookingController {
         booking
       });
     } catch (error: any) {
-      if (error.message === 'NOT_FOUND') {
-        return res.status(404).json({ message: 'Booking not found.' });
-      }
-      if (error.message === 'FORBIDDEN') {
-        return res.status(403).json({ message: 'Access denied - cannot cancel another user\'s booking.' });
-      }
-      if (error.message === 'ALREADY_FINALIZED') {
-        return res.status(400).json({ message: 'Cannot cancel an already completed, rejected or cancelled booking.' });
-      }
-      console.error('Cancel booking error:', error);
       return res.status(500).json({ message: 'Internal server error while cancelling booking' });
     }
   }

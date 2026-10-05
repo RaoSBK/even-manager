@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, HallStatus } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -85,10 +85,8 @@ async function main() {
 
   // 4. Create Halls
   console.log('Seeding Halls...');
-  const hallA = await prisma.hall.upsert({
-    where: { hallCode: 'HALL-A' },
-    update: {},
-    create: {
+  const hallsToSeed = [
+    {
       id: 'hall-seed',
       hallCode: 'HALL-A',
       name: 'Taj Mahal Grand Ballroom',
@@ -96,9 +94,75 @@ async function main() {
       location: 'A-Block, Ground Floor',
       capacity: 500,
       basePrice: 75000.00,
-      status: 'AVAILABLE',
+      status: HallStatus.AVAILABLE,
     },
-  });
+    {
+      id: 'hall-b-seed',
+      hallCode: 'T-LGA',
+      name: 'Luxury Grand Arena',
+      description: 'Spacious arena suitable for large conventions and receptions',
+      location: 'B-Block, First Floor',
+      capacity: 1000,
+      basePrice: 120000.00,
+      status: HallStatus.AVAILABLE,
+    },
+    {
+      id: 'gk-grand-convention',
+      hallCode: 'GK-GCH',
+      name: 'GK Grand Convention Hall',
+      description: 'A luxurious convention center designed for grand wedding celebrations and premium events.',
+      location: 'NH-44 Bypass Road, Jadcherla',
+      capacity: 1500,
+      basePrice: 150000.00,
+      status: HallStatus.AVAILABLE,
+    },
+    {
+      id: 'royal-palace-function',
+      hallCode: 'RP-FH',
+      name: 'Royal Palace Function Hall',
+      description: 'An elegant palace-style function hall perfect for royalty-themed weddings and massive gatherings.',
+      location: 'Kollapur Road, Nagarkurnool',
+      capacity: 2000,
+      basePrice: 200000.00,
+      status: HallStatus.AVAILABLE,
+    },
+    {
+      id: 'sri-lakshmi-function',
+      hallCode: 'SL-FH',
+      name: 'Sri Lakshmi Function Hall',
+      description: 'A pocket-friendly venue for birthdays, engagements, and medium-sized family celebrations.',
+      location: 'Station Road, Wanaparthy',
+      capacity: 800,
+      basePrice: 80000.00,
+      status: HallStatus.AVAILABLE,
+    },
+    {
+      id: 'golden-banquet-hall',
+      hallCode: 'GB-H',
+      name: 'Golden Banquet Hall',
+      description: 'An indoor banquet hall crafted for premium corporate meetups, intimate gatherings, and sangeet celebrations.',
+      location: 'Raichur Road, Gadwal',
+      capacity: 500,
+      basePrice: 60000.00,
+      status: HallStatus.AVAILABLE,
+    }
+  ];
+
+  for (const h of hallsToSeed) {
+    await prisma.hall.upsert({
+      where: { hallCode: h.hallCode },
+      update: {
+        name: h.name,
+        description: h.description,
+        location: h.location,
+        capacity: h.capacity,
+        basePrice: h.basePrice,
+        status: h.status,
+      },
+      create: h,
+    });
+  }
+
 
   // 5. Create Events
   console.log('Seeding Events...');
@@ -152,9 +216,9 @@ async function main() {
       state: 'Andhra Pradesh',
       district: 'Krishna',
       mandal: 'Vijayawada',
-      hallId: hallA.id,
-      hallName: hallA.name,
-      hallAddress: hallA.location || '',
+      hallId: 'hall-seed',
+      hallName: 'Taj Mahal Grand Ballroom',
+      hallAddress: 'A-Block, Ground Floor',
       eventDate: '2026-10-15',
       bookingDate: new Date().toISOString().split('T')[0],
       costPerDay: 75000.00,

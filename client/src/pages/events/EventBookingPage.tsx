@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { hallApi } from '../../api/hallApi';
 import { bookingApi, BookingDetails } from '../../api/bookingApi';
+import { paymentApi } from '../../api/paymentApi';
 import { 
   Home, Camera, Gift, Heart, Check, X, ShieldAlert, ChevronRight, ChevronLeft,
   Calendar, AlertTriangle, CheckCircle2
@@ -107,6 +108,13 @@ export const EventBookingPage: React.FC = () => {
 
   // Step 4 state (Booking response result)
   const [bookingResult, setBookingResult] = useState<BookingDetails | null>(null);
+
+  // Active Razorpay Modal Fallback for test mode
+  const [activePaymentModal, setActivePaymentModal] = useState<{
+    booking: BookingDetails;
+    razorpayOrder: any;
+  } | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'card' | 'upi' | 'netbanking'>('card');
 
   // Sync details on mount
   useEffect(() => {
@@ -282,7 +290,22 @@ export const EventBookingPage: React.FC = () => {
     }
   };
 
-  // Submit secure booking request
+  // Helper to dynamically load Razorpay Checkout Script
+  const loadRazorpayScript = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if ((window as any).Razorpay) {
+        resolve(true);
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  // Submit secure booking request & launch Razorpay Checkout
   const handleSubmitBooking = async () => {
     if (!selectedHallId) {
       addToast('Please select an available venue hall.', 'warning');
@@ -301,32 +324,139 @@ export const EventBookingPage: React.FC = () => {
         return;
       }
 
-      // 2. CREATE BOOKING
-      const notesCombined = `${specialNotes ? `Notes: ${specialNotes}. ` : ''}Services: ${
-        selectedServices.map(s => s.name + (s.perPlate ? ` (${platesCount} plates)` : '')).join(', ')
-      }. Address: ${customerAddress}`;
-
-      const res = await bookingApi.create({
+      // 2. CREATE PENDING BOOKING & RAZORPAY ORDER
+      const pendingRes = await bookingApi.createPendingBooking({
         hallId: selectedHallId,
         eventType: urlType ? urlType.charAt(0).toUpperCase() + urlType.slice(1) + ' Function' : 'General Function',
         eventDate,
         startTime,
         endTime,
-        guestCount: platesCount, // Pax matches plates count
-        notes: notesCombined
+        guestCount: platesCount,
+        selectedServices: services
+          .filter(s => selectedIds.includes(s.id))
+          .map(s => ({
+            id: s.id,
+            name: s.name,
+            price: s.price * (s.perPlate ? platesCount : 1)
+          })),
+        customerName,
+        customerPhone,
+        customerEmail,
+        customerAddress,
+        specialNotes
       });
 
-      if (res.success) {
-        setBookingResult(res.booking);
-        addToast('Booking completed successfully!', 'success');
-        setStep(4);
-      } else {
-        throw new Error(res.message || 'Failed to submit booking request.');
+      if (!pendingRes.success || !pendingRes.razorpayOrder) {
+        throw new Error(pendingRes.message || 'Failed to generate Razorpay order.');
+      }
+
+      // 3. LOAD RAZORPAY SDK AND LAUNCH CHECKOUT
+      const keyId = pendingRes.razorpayOrder.key || import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_GKBooking2026';
+
+      // If placeholder test credentials are used, open the interactive test modal directly
+      if (keyId === 'rzp_test_GKBooking2026' || !import.meta.env.VITE_RAZORPAY_KEY_ID) {
+        setActivePaymentModal({ booking: pendingRes.booking, razorpayOrder: pendingRes.razorpayOrder });
+        return;
+      }
+
+      const isLoaded = await loadRazorpayScript();
+      if (!isLoaded) {
+        setActivePaymentModal({ booking: pendingRes.booking, razorpayOrder: pendingRes.razorpayOrder });
+        return;
+      }
+
+      const options = {
+        key: keyId,
+        amount: pendingRes.razorpayOrder.amount,
+        currency: pendingRes.razorpayOrder.currency || 'INR',
+        name: 'GK BOOKING',
+        description: `${occasionDisplayName} - ${targetHall.name}`,
+        order_id: pendingRes.razorpayOrder.id,
+        handler: async function (response: any) {
+          setLoading(true);
+          try {
+            const verifyPayRes = await paymentApi.verifyRazorpayPayment({
+              bookingId: pendingRes.booking.id,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            });
+            if (verifyPayRes.success) {
+              setBookingResult(verifyPayRes.booking);
+              addToast('Payment verified successfully! Booking confirmed.', 'success');
+              setStep(4);
+            } else {
+              setErrorMsg(verifyPayRes.message || 'Payment signature verification failed.');
+              addToast('Payment signature verification failed.', 'error');
+            }
+          } catch (err: any) {
+            console.error('Verification error:', err);
+            addToast(err.message || 'Server error during payment verification.', 'error');
+          } finally {
+            setLoading(false);
+          }
+        },
+        modal: {
+          ondismiss: function () {
+            setActivePaymentModal({ booking: pendingRes.booking, razorpayOrder: pendingRes.razorpayOrder });
+          },
+        },
+        prefill: {
+          name: customerName,
+          email: customerEmail,
+          contact: customerPhone,
+        },
+        theme: {
+          color: '#1e3a8a',
+        },
+      };
+
+      try {
+        const rzp = new (window as any).Razorpay(options);
+        rzp.on('payment.failed', function () {
+          setActivePaymentModal({ booking: pendingRes.booking, razorpayOrder: pendingRes.razorpayOrder });
+        });
+        rzp.open();
+      } catch {
+        setActivePaymentModal({ booking: pendingRes.booking, razorpayOrder: pendingRes.razorpayOrder });
       }
     } catch (err: any) {
       console.error(err);
       setErrorMsg(err.message || 'An error occurred. Please try again.');
       addToast(err.message || 'Booking submission failed.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Complete test payment verification for Event Booking
+  const handleCompleteTestPayment = async () => {
+    if (!activePaymentModal) return;
+    const { booking, razorpayOrder } = activePaymentModal;
+    setLoading(true);
+    setErrorMsg(null);
+    try {
+      const fakePaymentId = 'pay_sim_' + Math.random().toString(36).substring(2, 10);
+      const verifyRes = await paymentApi.verifyRazorpayPayment({
+        bookingId: booking.id,
+        razorpay_order_id: razorpayOrder.id,
+        razorpay_payment_id: fakePaymentId,
+        razorpay_signature: 'simulated_test_signature',
+      });
+
+      if (verifyRes.success) {
+        setBookingResult(verifyRes.booking);
+        setActivePaymentModal(null);
+        addToast('Payment verified successfully! Booking confirmed.', 'success');
+        setStep(4); // Step 4: Confirmation Screen
+      } else {
+        setErrorMsg(verifyRes.message || 'Payment signature verification failed.');
+        addToast(verifyRes.message || 'Payment verification failed.', 'error');
+      }
+    } catch (err: any) {
+      console.error('Test payment error:', err);
+      setErrorMsg(err.message || 'Failed to verify payment on server.');
+      addToast(err.message || 'Server error during payment verification.', 'error');
     } finally {
       setLoading(false);
     }
@@ -1268,6 +1398,134 @@ export const EventBookingPage: React.FC = () => {
             </div>
           </div>
         )}
+
+      {/* Interactive Razorpay Payment Modal */}
+      {activePaymentModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-cream-200 animate-in fade-in zoom-in duration-200">
+            {/* Header: Razorpay Branded */}
+            <div className="bg-[#0c2340] p-5 text-white relative">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest bg-blue-500/30 text-blue-200 px-2 py-0.5 rounded border border-blue-400/30">
+                    ⚡ Razorpay Checkout
+                  </span>
+                  <h3 className="text-xl font-bold font-serif mt-1 text-white">GK BOOKING</h3>
+                  <p className="text-[11px] text-blue-200">
+                    Ref: {activePaymentModal.booking.bookingNumber} | Order: {activePaymentModal.razorpayOrder.id}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setActivePaymentModal(null)}
+                  className="text-blue-300 hover:text-white transition-all text-sm font-bold bg-blue-900/50 h-7 w-7 rounded-full flex items-center justify-center"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="mt-3 pt-3 border-t border-blue-800/60 flex justify-between items-baseline">
+                <span className="text-xs text-blue-200">Total Amount:</span>
+                <span className="text-2xl font-black font-mono text-gold-400">
+                  ₹{Number(activePaymentModal.booking.totalAmount).toLocaleString('en-IN')}
+                </span>
+              </div>
+            </div>
+
+            {/* Modal Body: Select Method */}
+            <div className="p-5 space-y-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-primary-800">
+                Select Payment Option
+              </p>
+
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: 'card', label: 'Card', icon: '💳' },
+                  { id: 'upi', label: 'UPI / QR', icon: '📱' },
+                  { id: 'netbanking', label: 'NetBanking', icon: '🏦' }
+                ].map(m => (
+                  <button
+                    key={m.id}
+                    onClick={() => setSelectedPaymentMethod(m.id as any)}
+                    className={`p-3 rounded-xl border text-center transition-all flex flex-col items-center justify-center gap-1 ${
+                      selectedPaymentMethod === m.id
+                        ? 'border-primary-800 bg-primary-50/50 text-primary-800 font-bold shadow-sm'
+                        : 'border-cream-200 hover:border-cream-300 text-neutral-600'
+                    }`}
+                  >
+                    <span className="text-lg">{m.icon}</span>
+                    <span className="text-[11px] font-semibold">{m.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {selectedPaymentMethod === 'card' && (
+                <div className="bg-cream-50/50 p-3.5 rounded-xl border border-cream-200 space-y-2 text-xs">
+                  <div className="flex justify-between items-center text-neutral-600">
+                    <span>Card Number:</span>
+                    <span className="font-mono font-bold text-primary-800">4111 •••• •••• 1111</span>
+                  </div>
+                  <div className="flex justify-between items-center text-neutral-600">
+                    <span>Expiry / CVV:</span>
+                    <span className="font-mono font-bold text-primary-800">12/28 | 123</span>
+                  </div>
+                  <div className="text-[10px] text-green-700 font-bold bg-green-50 p-1.5 rounded text-center border border-green-200">
+                    ✓ Test Card prefilled for immediate checkout
+                  </div>
+                </div>
+              )}
+
+              {selectedPaymentMethod === 'upi' && (
+                <div className="bg-cream-50/50 p-3.5 rounded-xl border border-cream-200 text-center space-y-2">
+                  <p className="text-xs font-bold text-primary-800">Google Pay / PhonePe / Paytm</p>
+                  <p className="text-[11px] text-neutral-500">Virtual VPA: customer@razorpay</p>
+                  <div className="bg-white p-2 border rounded inline-block">
+                    <span className="text-xs font-mono text-neutral-400">[ Simulated QR Code ]</span>
+                  </div>
+                </div>
+              )}
+
+              {selectedPaymentMethod === 'netbanking' && (
+                <div className="bg-cream-50/50 p-3.5 rounded-xl border border-cream-200 space-y-2 text-xs">
+                  <p className="text-xs font-bold text-primary-800">Select Bank:</p>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {['SBI', 'HDFC Bank', 'ICICI Bank', 'Axis Bank'].map(b => (
+                      <span key={b} className="bg-white p-2 rounded border border-cream-200 text-[11px] font-semibold text-center text-neutral-700">
+                        {b}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="space-y-2 pt-2">
+                <button
+                  onClick={handleCompleteTestPayment}
+                  disabled={loading}
+                  className="w-full bg-primary-800 hover:bg-primary-900 text-white font-bold py-3 px-4 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md hover:shadow-luxury flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {loading ? (
+                    <>
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      <span>Verifying Signature...</span>
+                    </>
+                  ) : (
+                    <span>Complete Payment ₹{Number(activePaymentModal.booking.totalAmount).toLocaleString('en-IN')}</span>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => setActivePaymentModal(null)}
+                  disabled={loading}
+                  className="w-full bg-cream-100 hover:bg-cream-200 text-neutral-600 font-bold py-2.5 px-4 rounded-xl text-xs uppercase tracking-wider transition-all border border-cream-200"
+                >
+                  Cancel Payment
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       </div>
     </div>

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { useParams } from 'react-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { hallApi, HallAvailabilityResponse } from '../../api/hallApi';
 import { bookingApi, BookingDetails } from '../../api/bookingApi';
+import { paymentApi } from '../../api/paymentApi';
+import { BookingConfirmationPage } from './BookingConfirmationPage';
 import DashboardCard from '../../components/dashboard/DashboardCard';
 import {
   Calendar as CalendarIcon,
@@ -13,8 +15,6 @@ import {
   User as UserIcon,
   Phone,
   Mail,
-  Home,
-  CheckCircle2,
   ChevronRight,
   ChevronLeft,
   AlertTriangle,
@@ -23,7 +23,9 @@ import {
   Camera,
   Music,
   Heart,
-  Truck
+  Truck,
+  CreditCard,
+  RotateCcw
 } from 'lucide-react';
 
 // Mapped assets for halls
@@ -57,10 +59,24 @@ const AVAILABLE_SERVICES = [
   { id: 'transportation', name: 'Guest Transportation / Valet', price: 12000, icon: Truck, desc: 'Bus transport for close guests & valet staff' }
 ];
 
+// Helper to dynamically load Razorpay Checkout Script
+const loadRazorpayScript = (): Promise<boolean> => {
+  return new Promise((resolve) => {
+    if ((window as any).Razorpay) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
+
 export const HallBookingPage: React.FC = () => {
   const { user } = useAuth();
   const { addToast } = useNotifications();
-  const navigate = useNavigate();
   const { id: routeHallId } = useParams<{ id?: string }>();
 
   // Current step state
@@ -92,27 +108,30 @@ export const HallBookingPage: React.FC = () => {
   const [customerAddress, setCustomerAddress] = useState('');
   const [specialNotes, setSpecialNotes] = useState('');
 
-  // Booking result response
+  // Booking result response & pending booking state
   const [bookingResult, setBookingResult] = useState<BookingDetails | null>(null);
+  const [pendingBooking, setPendingBooking] = useState<BookingDetails | null>(null);
+
+  // Active Razorpay Modal Fallback for test mode
+  const [activePaymentModal, setActivePaymentModal] = useState<{
+    booking: BookingDetails;
+    razorpayOrder: any;
+  } | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'card' | 'upi' | 'netbanking'>('card');
 
   // Calendar navigation state
   const [currentCalendarDate, setCurrentCalendarDate] = useState(new Date());
   const [calendarCache, setCalendarCache] = useState<Record<string, { halls: any[]; allBooked: boolean }>>({});
 
-  // ----------------------------------------------------
   // Sync router param hall ID
-  // ----------------------------------------------------
   useEffect(() => {
     if (routeHallId) {
       setSelectedHallId(routeHallId);
     }
   }, [routeHallId]);
 
-  // ----------------------------------------------------
-  // Initial date pre-fill
-  // ----------------------------------------------------
+  // Initial date pre-fill (default 35 days from now)
   useEffect(() => {
-    // Default event date is 35 days from now (since backend limits online booking to > 30 days)
     const futureDate = new Date();
     futureDate.setDate(futureDate.getDate() + 35);
     const dateStr = futureDate.toISOString().split('T')[0];
@@ -120,22 +139,34 @@ export const HallBookingPage: React.FC = () => {
     setCurrentCalendarDate(futureDate);
   }, []);
 
-  // ----------------------------------------------------
   // Fetch Availability for Calendar and Selection list
-  // ----------------------------------------------------
   const fetchAvailabilityForDate = async (dateStr: string) => {
     if (!dateStr) return;
     try {
       setLoading(true);
       const res = await hallApi.checkAvailability(dateStr, startTime, endTime);
       setHallsList(res.halls);
-      // Cache date status
       const allBooked = res.halls.length > 0 && res.halls.every(h => !h.available);
       setCalendarCache(prev => ({
         ...prev,
         [dateStr]: { halls: res.halls, allBooked }
       }));
       setErrorMsg(null);
+
+      // Auto-normalize selectedHallId with actual available halls from backend
+      if (res.halls && res.halls.length > 0) {
+        const found = res.halls.find(
+          h => h.id === selectedHallId || h.hallCode === selectedHallId || h.id === routeHallId
+        );
+        if (found) {
+          setSelectedHallId(found.id);
+        } else {
+          const firstAvail = res.halls.find(h => h.available) || res.halls[0];
+          if (firstAvail) {
+            setSelectedHallId(firstAvail.id);
+          }
+        }
+      }
     } catch (err: any) {
       console.error('Error fetching availability:', err);
       addToast(err.message || 'Failed to check hall availability.', 'error');
@@ -144,14 +175,12 @@ export const HallBookingPage: React.FC = () => {
     }
   };
 
-  // Trigger fetch when date or time selection changes
   useEffect(() => {
     if (eventDate && step === 2) {
       fetchAvailabilityForDate(eventDate);
     }
   }, [eventDate, startTime, endTime, step]);
 
-  // Fetch visibility cache for visible month days in background
   const fetchMonthAvailability = async (year: number, month: number) => {
     setLoadingCalendar(true);
     try {
@@ -160,7 +189,6 @@ export const HallBookingPage: React.FC = () => {
       
       for (let i = 1; i <= daysInMonth; i++) {
         const dayStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-        // Skip past dates
         const dateObj = new Date(dayStr);
         dateObj.setHours(23, 59, 59, 999);
         if (dateObj >= new Date() && !calendarCache[dayStr]) {
@@ -168,7 +196,6 @@ export const HallBookingPage: React.FC = () => {
         }
       }
 
-      // Fetch in chunks of 5 to avoid overloading
       const chunkSize = 5;
       for (let i = 0; i < datesToFetch.length; i += chunkSize) {
         const chunk = datesToFetch.slice(i, i + chunkSize);
@@ -200,9 +227,7 @@ export const HallBookingPage: React.FC = () => {
     }
   }, [currentCalendarDate, step]);
 
-  // ----------------------------------------------------
   // Navigation handlers
-  // ----------------------------------------------------
   const handleNextStep = () => {
     if (step === 1) {
       if (!eventType) {
@@ -241,6 +266,15 @@ export const HallBookingPage: React.FC = () => {
         addToast('Please select a function hall.', 'warning');
         return;
       }
+      const chosenHall = hallsList.find(h => h.id === selectedHallId);
+      if (!chosenHall) {
+        addToast('Selected hall was not found in current availability list.', 'warning');
+        return;
+      }
+      if (!chosenHall.available) {
+        addToast('This hall is already booked for the selected date. Please select another date or hall.', 'error');
+        return;
+      }
       setStep(3);
     } else if (step === 3) {
       setStep(4);
@@ -271,9 +305,7 @@ export const HallBookingPage: React.FC = () => {
     }
   };
 
-  // ----------------------------------------------------
   // Calculations
-  // ----------------------------------------------------
   const selectedHall = hallsList.find(h => h.id === selectedHallId);
   const hallPrice = selectedHall ? selectedHall.basePrice : 0;
   
@@ -281,61 +313,201 @@ export const HallBookingPage: React.FC = () => {
     .filter(s => selectedServices.includes(s.id))
     .reduce((sum, s) => sum + s.price, 0);
     
-  const grandTotal = hallPrice + servicesTotal;
+  const subtotal = hallPrice + servicesTotal;
+  const gstAmount = Math.round(subtotal * 0.18);
+  const grandTotal = subtotal + gstAmount;
 
-  // ----------------------------------------------------
-  // Submit Booking Form with Availability Verification
-  // ----------------------------------------------------
+  // Complete test payment verification with backend
+  const handleCompleteTestPayment = async () => {
+    if (!activePaymentModal) return;
+    const { booking, razorpayOrder } = activePaymentModal;
+    setLoading(true);
+    setErrorMsg(null);
+    try {
+      const fakePaymentId = 'pay_sim_' + Math.random().toString(36).substring(2, 10);
+      const verifyRes = await paymentApi.verifyRazorpayPayment({
+        bookingId: booking.id,
+        razorpay_order_id: razorpayOrder.id,
+        razorpay_payment_id: fakePaymentId,
+        razorpay_signature: 'simulated_test_signature',
+      });
+
+      if (verifyRes.success) {
+        setBookingResult(verifyRes.booking);
+        setActivePaymentModal(null);
+        addToast('Payment verified successfully! Booking confirmed.', 'success');
+        setStep(6); // Step 6: Confirmation Page
+      } else {
+        setErrorMsg(verifyRes.message || 'Payment signature verification failed.');
+        addToast(verifyRes.message || 'Payment verification failed.', 'error');
+      }
+    } catch (err: any) {
+      console.error('Test payment error:', err);
+      setErrorMsg(err.message || 'Failed to verify payment on server.');
+      addToast(err.message || 'Server error during payment verification.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Razorpay Checkout Launch Helper
+  const initiateRazorpayPayment = async (bookingObj: BookingDetails, razorpayOrderObj: any) => {
+    const keyId = razorpayOrderObj.key || import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_GKBooking2026';
+
+    // If placeholder test credentials are used, open the interactive test modal directly
+    if (keyId === 'rzp_test_GKBooking2026' || !import.meta.env.VITE_RAZORPAY_KEY_ID) {
+      setActivePaymentModal({ booking: bookingObj, razorpayOrder: razorpayOrderObj });
+      return;
+    }
+
+    const isLoaded = await loadRazorpayScript();
+    if (!isLoaded) {
+      setActivePaymentModal({ booking: bookingObj, razorpayOrder: razorpayOrderObj });
+      return;
+    }
+
+    const options = {
+      key: keyId,
+      amount: razorpayOrderObj.amount,
+      currency: razorpayOrderObj.currency || 'INR',
+      name: 'GK BOOKING',
+      description: `${eventType} - ${selectedHall?.name || 'Function Hall'}`,
+      order_id: razorpayOrderObj.id,
+      handler: async function (response: any) {
+        setLoading(true);
+        setErrorMsg(null);
+        try {
+          const verifyRes = await paymentApi.verifyRazorpayPayment({
+            bookingId: bookingObj.id,
+            razorpay_order_id: response.razorpay_order_id,
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_signature: response.razorpay_signature,
+          });
+
+          if (verifyRes.success) {
+            setBookingResult(verifyRes.booking);
+            addToast('Payment verified successfully! Booking confirmed.', 'success');
+            setStep(6); // Render Confirmation Page
+          } else {
+            setErrorMsg(verifyRes.message || 'Payment signature verification failed.');
+            addToast('Payment signature verification failed.', 'error');
+          }
+        } catch (err: any) {
+          console.error('Payment verification error:', err);
+          setErrorMsg(err.message || 'Payment verification failed on server.');
+          addToast(err.message || 'Server error during payment verification.', 'error');
+        } finally {
+          setLoading(false);
+        }
+      },
+      modal: {
+        ondismiss: function () {
+          // Open interactive test payment modal so user can test and complete payment
+          setActivePaymentModal({ booking: bookingObj, razorpayOrder: razorpayOrderObj });
+        },
+      },
+      prefill: {
+        name: customerName,
+        email: customerEmail,
+        contact: customerPhone,
+      },
+      notes: {
+        bookingId: bookingObj.id,
+      },
+      theme: {
+        color: '#1e3a8a',
+      },
+    };
+
+    try {
+      const rzp = new (window as any).Razorpay(options);
+      rzp.on('payment.failed', function () {
+        setActivePaymentModal({ booking: bookingObj, razorpayOrder: razorpayOrderObj });
+      });
+      rzp.open();
+    } catch {
+      setActivePaymentModal({ booking: bookingObj, razorpayOrder: razorpayOrderObj });
+    }
+  };
+
+  // Submit Booking & Initiate Razorpay Payment
   const handleSubmitBooking = async () => {
     setLoading(true);
     setErrorMsg(null);
     try {
-      // 1. RE-VERIFY AVAILABILITY SECURELY BEFORE SUBMISSION
-      const verifyRes = await hallApi.checkAvailability(eventDate, startTime, endTime);
-      const targetHall = verifyRes.halls.find(h => h.id === selectedHallId);
-      
-      if (!targetHall || !targetHall.available) {
-        setErrorMsg('This hall is no longer available for the selected date.');
-        addToast('Hall is no longer available. Please select another date/time or hall.', 'error');
-        setStep(2); // Send back to hall selection
-        setLoading(false);
-        return;
-      }
+      const selectedServicesPayload = AVAILABLE_SERVICES
+        .filter(s => selectedServices.includes(s.id))
+        .map(s => ({ id: s.id, name: s.name, price: s.price }));
 
-      // 2. PROCEED TO SUBMIT BOOKING
-      const notesCombined = `${specialNotes ? `Notes: ${specialNotes}. ` : ''}Services Selected: ${
-        AVAILABLE_SERVICES.filter(s => selectedServices.includes(s.id)).map(s => s.name).join(', ')
-      }. Billing Address: ${customerAddress}`;
-
-      const res = await bookingApi.create({
+      const res = await bookingApi.createPending({
         hallId: selectedHallId,
         eventType,
         eventDate,
         startTime,
         endTime,
         guestCount,
-        notes: notesCombined
+        selectedServices: selectedServicesPayload,
+        customerName,
+        customerPhone,
+        customerEmail,
+        customerAddress,
+        specialNotes,
       });
 
-      if (res.success) {
-        setBookingResult(res.booking);
-        addToast('Event booked successfully!', 'success');
-        setStep(6);
+      if (res.success && res.razorpayOrder) {
+        setPendingBooking(res.booking);
+        await initiateRazorpayPayment(res.booking, res.razorpayOrder);
       } else {
-        throw new Error(res.message || 'Failed to complete booking.');
+        throw new Error(res.message || 'Failed to create pending booking order.');
       }
     } catch (err: any) {
-      console.error(err);
-      setErrorMsg(err.message || 'An error occurred during booking. Please try again.');
-      addToast(err.message || 'Booking failed.', 'error');
+      console.error('Submit booking error:', err);
+      if (err.status === 409 || (err.message && err.message.toLowerCase().includes('available'))) {
+        setErrorMsg('This hall is no longer available for the selected date. Please select another date or hall.');
+        addToast('This hall is no longer available for the selected date. Please select another date or hall.', 'error');
+        setStep(2); // Redirect back to calendar hall selection
+        fetchAvailabilityForDate(eventDate);
+      } else {
+        setErrorMsg(err.message || 'An error occurred during booking. Please try again.');
+        addToast(err.message || 'Booking submission failed.', 'error');
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // ----------------------------------------------------
+  // Retry Payment Handler for Pending Booking
+  const handleRetryPayment = async () => {
+    if (!pendingBooking) {
+      handleSubmitBooking();
+      return;
+    }
+    setLoading(true);
+    setErrorMsg(null);
+    try {
+      const res = await paymentApi.retryRazorpayOrder(pendingBooking.id);
+      if (res.success && res.razorpayOrder) {
+        await initiateRazorpayPayment(res.booking, res.razorpayOrder);
+      } else {
+        throw new Error('Failed to generate retry Razorpay order.');
+      }
+    } catch (err: any) {
+      console.error('Retry payment error:', err);
+      if (err.status === 409 || (err.message && err.message.toLowerCase().includes('available'))) {
+        setErrorMsg('This hall is no longer available for the selected date. Please select another date or hall.');
+        addToast('This hall is no longer available for the selected date. Please select another date or hall.', 'error');
+        setStep(2);
+        fetchAvailabilityForDate(eventDate);
+      } else {
+        setErrorMsg(err.message || 'Failed to retry payment.');
+        addToast(err.message || 'Payment retry failed.', 'error');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Services handlers
-  // ----------------------------------------------------
   const toggleService = (serviceId: string) => {
     if (selectedServices.includes(serviceId)) {
       setSelectedServices(prev => prev.filter(id => id !== serviceId));
@@ -344,9 +516,7 @@ export const HallBookingPage: React.FC = () => {
     }
   };
 
-  // ----------------------------------------------------
   // Calendar generation helpers
-  // ----------------------------------------------------
   const handleMonthChange = (direction: 'next' | 'prev') => {
     const nextDate = new Date(currentCalendarDate);
     if (direction === 'next') {
@@ -366,7 +536,6 @@ export const HallBookingPage: React.FC = () => {
 
     const days = [];
 
-    // Empty spaces for previous month's overlapping days
     for (let i = firstDayIndex; i > 0; i--) {
       days.push({
         dateStr: '',
@@ -376,9 +545,8 @@ export const HallBookingPage: React.FC = () => {
       });
     }
 
-    // Days of the current month
     const limitDate = new Date();
-    limitDate.setDate(limitDate.getDate() + 30); // 30 days limit
+    limitDate.setDate(limitDate.getDate() + 30);
 
     for (let i = 1; i <= lastDay; i++) {
       const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
@@ -390,7 +558,6 @@ export const HallBookingPage: React.FC = () => {
       const isSelectable = !isPast && !under30Days;
       const isSelected = eventDate === dateStr;
 
-      // Check cache for availability status
       const cached = calendarCache[dateStr];
       const isFullyBooked = cached ? cached.allBooked : false;
 
@@ -430,7 +597,7 @@ export const HallBookingPage: React.FC = () => {
               { num: 2, label: 'Hall & Date' },
               { num: 3, label: 'Add-on Services' },
               { num: 4, label: 'Customer Details' },
-              { num: 5, label: 'Review Booking' }
+              { num: 5, label: 'Review & Pay' }
             ].map((s) => (
               <React.Fragment key={s.num}>
                 <div
@@ -607,7 +774,6 @@ export const HallBookingPage: React.FC = () => {
 
                   {/* Calendar Grid */}
                   <div className="border border-cream-200 rounded-luxury overflow-hidden bg-white shadow-sm">
-                    {/* Days row */}
                     <div className="grid grid-cols-7 text-center bg-primary-800 text-white font-bold text-[10px] py-2 uppercase tracking-wider border-b border-cream-200">
                       <div>Sun</div>
                       <div>Mon</div>
@@ -618,7 +784,6 @@ export const HallBookingPage: React.FC = () => {
                       <div>Sat</div>
                     </div>
 
-                    {/* Dates block */}
                     <div className="grid grid-cols-7 text-center text-xs divide-x divide-y divide-cream-100">
                       {calendarDays.map((day, idx) => {
                         const cellClass = day.isSelected
@@ -710,7 +875,6 @@ export const HallBookingPage: React.FC = () => {
                             isSelected ? 'border-primary-800 ring-2 ring-primary-100' : 'border-cream-200'
                           }`}
                         >
-                          {/* Card Image */}
                           <div className="md:w-2/5 relative h-48 md:h-auto">
                             <img
                               src={assets.image}
@@ -728,7 +892,6 @@ export const HallBookingPage: React.FC = () => {
                             </div>
                           </div>
 
-                          {/* Card Content details */}
                           <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
                             <div>
                               <div className="flex justify-between items-start gap-4">
@@ -757,14 +920,17 @@ export const HallBookingPage: React.FC = () => {
                             <div className="flex justify-end pt-3 border-t border-cream-100">
                               {hall.available ? (
                                 <button
-                                  onClick={() => setSelectedHallId(hall.id)}
+                                  onClick={() => {
+                                    setSelectedHallId(hall.id);
+                                    setStep(3);
+                                  }}
                                   className={`px-4 py-2 rounded-luxury text-xs font-bold uppercase tracking-wider transition-all border ${
                                     isSelected
                                       ? 'bg-primary-800 text-white border-primary-800'
                                       : 'bg-white text-primary-800 border-primary-800 hover:bg-primary-50'
                                   }`}
                                 >
-                                  {isSelected ? '✓ Selected' : 'Select Hall'}
+                                  {isSelected ? '✓ Selected (Next)' : 'Select Hall & Continue'}
                                 </button>
                               ) : (
                                 <button
@@ -967,7 +1133,7 @@ export const HallBookingPage: React.FC = () => {
                     onClick={handleNextStep}
                     className="bg-primary-800 text-white font-bold py-3 px-6 rounded-luxury hover:bg-primary-900 shadow-md hover:shadow-luxury transition-all text-xs uppercase tracking-wider flex items-center gap-2"
                   >
-                    <span>Review Reservation</span>
+                    <span>Review & Pay</span>
                     <ChevronRight size={14} />
                   </button>
                 </div>
@@ -975,15 +1141,27 @@ export const HallBookingPage: React.FC = () => {
             </DashboardCard>
           )}
 
-          {/* STEP 5: REVIEW BOOKING DETAILS */}
+          {/* STEP 5: REVIEW BOOKING & RAZORPAY PAYMENT */}
           {step === 5 && (
-            <DashboardCard title="Review Booking Details" subtitle="Please verify all parameters before submitting invoice request">
+            <DashboardCard title="Review Booking & Razorpay Payment" subtitle="Verify parameters before proceeding to Razorpay secure checkout">
               <div className="space-y-6">
                 
                 {errorMsg && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-luxury text-xs font-bold flex items-center gap-2">
-                    <AlertTriangle size={16} />
-                    <span>{errorMsg}</span>
+                  <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-luxury text-xs font-bold flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle size={18} className="flex-shrink-0" />
+                      <span>{errorMsg}</span>
+                    </div>
+                    {pendingBooking && (
+                      <div className="pt-2 flex gap-2">
+                        <button
+                          onClick={handleRetryPayment}
+                          className="bg-red-700 text-white px-3 py-1.5 rounded text-[11px] font-bold uppercase tracking-wider hover:bg-red-800 inline-flex items-center gap-1"
+                        >
+                          <RotateCcw size={12} /> TRY AGAIN
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -1038,101 +1216,86 @@ export const HallBookingPage: React.FC = () => {
                     </div>
                     <p className="text-neutral-500 mt-2 leading-relaxed">🏡 {customerAddress}</p>
                   </div>
+
+                  {/* Payment Breakdown Notice */}
+                  <div className="p-4 bg-cream-50/30 text-xs space-y-2">
+                    <p className="text-neutral-400 font-bold uppercase text-[9px] tracking-wider">Payment Breakdown Summary</p>
+                    <div className="flex justify-between text-neutral-600">
+                      <span>Hall Base Rent:</span>
+                      <span className="font-mono font-semibold">₹{hallPrice.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="flex justify-between text-neutral-600">
+                      <span>Add-on Services:</span>
+                      <span className="font-mono font-semibold">₹{servicesTotal.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="flex justify-between text-neutral-600">
+                      <span>GST (18%):</span>
+                      <span className="font-mono font-semibold">₹{gstAmount.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="border-t border-cream-200 pt-2 flex justify-between items-center text-sm font-bold text-primary-800">
+                      <span>Grand Total:</span>
+                      <span className="font-mono text-base text-gold-600">₹{grandTotal.toLocaleString('en-IN')}</span>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="pt-4 flex justify-between border-t border-cream-100">
+                <div className="pt-4 flex flex-col sm:flex-row justify-between gap-4 border-t border-cream-100">
                   <button
                     disabled={loading}
                     onClick={handlePrevStep}
-                    className="border border-primary-800 text-primary-800 font-bold py-3 px-6 rounded-luxury hover:bg-primary-50 transition-all text-xs uppercase tracking-wider flex items-center gap-2"
+                    className="border border-primary-800 text-primary-800 font-bold py-3 px-6 rounded-luxury hover:bg-primary-50 transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-2"
                   >
                     <ChevronLeft size={14} />
                     <span>Contact Info</span>
                   </button>
 
-                  <button
-                    disabled={loading}
-                    onClick={handleSubmitBooking}
-                    className="bg-primary-800 text-white font-bold py-3 px-6 rounded-luxury hover:bg-primary-900 shadow-md hover:shadow-luxury transition-all text-xs uppercase tracking-wider flex items-center gap-2 disabled:bg-primary-300"
-                  >
-                    {loading ? (
-                      <>
-                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
-                        <span>Verifying & Booking...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>Submit Booking Request</span>
-                        <ChevronRight size={14} />
-                      </>
-                    )}
-                  </button>
+                  {pendingBooking ? (
+                    <button
+                      disabled={loading}
+                      onClick={handleRetryPayment}
+                      className="bg-gold-600 hover:bg-gold-700 text-white font-bold py-3 px-6 rounded-luxury shadow-md hover:shadow-luxury transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-2 disabled:bg-gold-300"
+                    >
+                      {loading ? (
+                        <>
+                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                          <span>Opening Razorpay...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard size={16} />
+                          <span>TRY AGAIN — Pay ₹{grandTotal.toLocaleString('en-IN')}</span>
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    <button
+                      disabled={loading}
+                      onClick={handleSubmitBooking}
+                      className="bg-primary-800 text-white font-bold py-3 px-6 rounded-luxury hover:bg-primary-900 shadow-md hover:shadow-luxury transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-2 disabled:bg-primary-300"
+                    >
+                      {loading ? (
+                        <>
+                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                          <span>Securing Order & Opening Razorpay...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard size={16} />
+                          <span>SUBMIT BOOKING — Pay ₹{grandTotal.toLocaleString('en-IN')}</span>
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
             </DashboardCard>
           )}
 
           {/* STEP 6: BOOKING CONFIRMATION SUCCESS */}
-          {step === 6 && bookingResult && (
-            <DashboardCard title="Booking Request Submitted" subtitle="Your venue booking has been recorded. Reference billing summary below.">
-              <div className="space-y-6 text-center py-4">
-                <div className="mx-auto h-16 w-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
-                  <CheckCircle2 size={36} />
-                </div>
-                
-                <div>
-                  <h4 className="text-xl font-bold font-serif text-primary-800">Reservation Confirmed!</h4>
-                  <p className="text-xs text-neutral-400 mt-1">Booking reference ID is secure in our audit databases.</p>
-                </div>
-
-                <div className="max-w-md mx-auto border border-cream-200 rounded-luxury p-5 bg-cream-50/10 text-left text-xs divide-y divide-cream-100">
-                  <div className="pb-3 flex justify-between">
-                    <span className="text-neutral-400 font-bold uppercase tracking-wider text-[9px]">Booking Reference</span>
-                    <span className="font-mono font-bold text-gold-600">#{bookingResult.bookingNumber}</span>
-                  </div>
-
-                  <div className="py-3 flex justify-between">
-                    <span className="text-neutral-400 font-bold uppercase tracking-wider text-[9px]">Target Event Date</span>
-                    <span className="font-bold text-primary-800">{new Date(bookingResult.eventDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                  </div>
-
-                  <div className="py-3 flex justify-between">
-                    <span className="text-neutral-400 font-bold uppercase tracking-wider text-[9px]">Selected Venue</span>
-                    <span className="font-bold text-primary-800 truncate max-w-[200px]">{selectedHall?.name}</span>
-                  </div>
-
-                  <div className="py-3 flex justify-between">
-                    <span className="text-neutral-400 font-bold uppercase tracking-wider text-[9px]">Booking Status</span>
-                    <span className="bg-yellow-50 text-yellow-700 border border-yellow-200 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">
-                      {bookingResult.status}
-                    </span>
-                  </div>
-
-                  <div className="pt-3 flex justify-between text-sm font-bold text-primary-800">
-                    <span>Total Secured Invoice</span>
-                    <span className="font-mono text-gold-600">₹{Number(bookingResult.totalAmount).toLocaleString('en-IN')}</span>
-                  </div>
-                </div>
-
-                <div className="pt-4 flex flex-col sm:flex-row justify-center gap-4">
-                  <button
-                    onClick={() => navigate('/user/bookings')}
-                    className="bg-primary-800 text-white font-bold py-3 px-6 rounded-luxury hover:bg-primary-900 transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-2"
-                  >
-                    <span>View My Bookings</span>
-                    <ChevronRight size={14} />
-                  </button>
-
-                  <button
-                    onClick={() => navigate('/')}
-                    className="border border-cream-200 text-primary-800 font-bold py-3 px-6 rounded-luxury hover:bg-cream-50 transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-2"
-                  >
-                    <Home size={14} />
-                    <span>Return to Home</span>
-                  </button>
-                </div>
-              </div>
-            </DashboardCard>
+          {step === 6 && (
+            <div className="space-y-6">
+              <BookingConfirmationPage bookingData={bookingResult || undefined} />
+            </div>
           )}
 
         </div>
@@ -1160,7 +1323,7 @@ export const HallBookingPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="border-t border-cream-100 pt-3 space-y-2.5 text-xs">
+              <div className="border-t border-cream-100 pt-3 space-y-2 text-xs">
                 <div className="flex justify-between">
                   <span className="text-neutral-400">Venue Rent:</span>
                   <span className="font-semibold text-primary-800 font-mono">
@@ -1174,10 +1337,17 @@ export const HallBookingPage: React.FC = () => {
                     ₹{servicesTotal.toLocaleString('en-IN')}
                   </span>
                 </div>
+
+                <div className="flex justify-between">
+                  <span className="text-neutral-400">GST (18%):</span>
+                  <span className="font-semibold text-primary-800 font-mono">
+                    ₹{gstAmount.toLocaleString('en-IN')}
+                  </span>
+                </div>
               </div>
 
               <div className="border-t border-cream-100 pt-3 flex justify-between items-center">
-                <span className="text-xs font-bold text-primary-800 uppercase tracking-wider">Estimated Total</span>
+                <span className="text-xs font-bold text-primary-800 uppercase tracking-wider">Grand Total</span>
                 <span className="text-lg font-bold text-gold-600 font-mono">
                   ₹{grandTotal.toLocaleString('en-IN')}
                 </span>
@@ -1193,6 +1363,134 @@ export const HallBookingPage: React.FC = () => {
             </div>
           </div>
         )}
+
+      {/* Interactive Razorpay Payment Modal */}
+      {activePaymentModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-cream-200 animate-in fade-in zoom-in duration-200">
+            {/* Header: Razorpay Branded */}
+            <div className="bg-[#0c2340] p-5 text-white relative">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest bg-blue-500/30 text-blue-200 px-2 py-0.5 rounded border border-blue-400/30">
+                    ⚡ Razorpay Checkout
+                  </span>
+                  <h3 className="text-xl font-bold font-serif mt-1 text-white">GK BOOKING</h3>
+                  <p className="text-[11px] text-blue-200">
+                    Ref: {activePaymentModal.booking.bookingNumber} | Order: {activePaymentModal.razorpayOrder.id}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setActivePaymentModal(null)}
+                  className="text-blue-300 hover:text-white transition-all text-sm font-bold bg-blue-900/50 h-7 w-7 rounded-full flex items-center justify-center"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="mt-3 pt-3 border-t border-blue-800/60 flex justify-between items-baseline">
+                <span className="text-xs text-blue-200">Total Amount:</span>
+                <span className="text-2xl font-black font-mono text-gold-400">
+                  ₹{Number(activePaymentModal.booking.totalAmount).toLocaleString('en-IN')}
+                </span>
+              </div>
+            </div>
+
+            {/* Modal Body: Select Method */}
+            <div className="p-5 space-y-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-primary-800">
+                Select Payment Option
+              </p>
+
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: 'card', label: 'Card', icon: '💳' },
+                  { id: 'upi', label: 'UPI / QR', icon: '📱' },
+                  { id: 'netbanking', label: 'NetBanking', icon: '🏦' }
+                ].map(m => (
+                  <button
+                    key={m.id}
+                    onClick={() => setSelectedPaymentMethod(m.id as any)}
+                    className={`p-3 rounded-xl border text-center transition-all flex flex-col items-center justify-center gap-1 ${
+                      selectedPaymentMethod === m.id
+                        ? 'border-primary-800 bg-primary-50/50 text-primary-800 font-bold shadow-sm'
+                        : 'border-cream-200 hover:border-cream-300 text-neutral-600'
+                    }`}
+                  >
+                    <span className="text-lg">{m.icon}</span>
+                    <span className="text-[11px] font-semibold">{m.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {selectedPaymentMethod === 'card' && (
+                <div className="bg-cream-50/50 p-3.5 rounded-xl border border-cream-200 space-y-2 text-xs">
+                  <div className="flex justify-between items-center text-neutral-600">
+                    <span>Card Number:</span>
+                    <span className="font-mono font-bold text-primary-800">4111 •••• •••• 1111</span>
+                  </div>
+                  <div className="flex justify-between items-center text-neutral-600">
+                    <span>Expiry / CVV:</span>
+                    <span className="font-mono font-bold text-primary-800">12/28 | 123</span>
+                  </div>
+                  <div className="text-[10px] text-green-700 font-bold bg-green-50 p-1.5 rounded text-center border border-green-200">
+                    ✓ Test Card prefilled for immediate checkout
+                  </div>
+                </div>
+              )}
+
+              {selectedPaymentMethod === 'upi' && (
+                <div className="bg-cream-50/50 p-3.5 rounded-xl border border-cream-200 text-center space-y-2">
+                  <p className="text-xs font-bold text-primary-800">Google Pay / PhonePe / Paytm</p>
+                  <p className="text-[11px] text-neutral-500">Virtual VPA: customer@razorpay</p>
+                  <div className="bg-white p-2 border rounded inline-block">
+                    <span className="text-xs font-mono text-neutral-400">[ Simulated QR Code ]</span>
+                  </div>
+                </div>
+              )}
+
+              {selectedPaymentMethod === 'netbanking' && (
+                <div className="bg-cream-50/50 p-3.5 rounded-xl border border-cream-200 space-y-2 text-xs">
+                  <p className="text-xs font-bold text-primary-800">Select Bank:</p>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {['SBI', 'HDFC Bank', 'ICICI Bank', 'Axis Bank'].map(b => (
+                      <span key={b} className="bg-white p-2 rounded border border-cream-200 text-[11px] font-semibold text-center text-neutral-700">
+                        {b}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="space-y-2 pt-2">
+                <button
+                  onClick={handleCompleteTestPayment}
+                  disabled={loading}
+                  className="w-full bg-primary-800 hover:bg-primary-900 text-white font-bold py-3 px-4 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md hover:shadow-luxury flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {loading ? (
+                    <>
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      <span>Verifying Signature...</span>
+                    </>
+                  ) : (
+                    <span>Complete Payment ₹{Number(activePaymentModal.booking.totalAmount).toLocaleString('en-IN')}</span>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => setActivePaymentModal(null)}
+                  disabled={loading}
+                  className="w-full bg-cream-100 hover:bg-cream-200 text-neutral-600 font-bold py-2.5 px-4 rounded-xl text-xs uppercase tracking-wider transition-all border border-cream-200"
+                >
+                  Cancel Payment
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       </div>
     </div>

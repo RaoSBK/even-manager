@@ -5,7 +5,10 @@ import { authMiddleware, roleMiddleware } from '../app';
 const router = Router();
 const controller = new BookingController();
 
-// Create booking (Customer / User)
+// Create pending booking & Razorpay Order
+router.post('/create-pending', authMiddleware, (req, res) => controller.createPendingBooking(req, res));
+
+// Create standard booking
 router.post('/', authMiddleware, roleMiddleware(['Customer', 'Admin']), (req, res) => controller.createBooking(req, res));
 
 // Get my bookings (Customer)

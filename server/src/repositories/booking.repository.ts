@@ -21,7 +21,7 @@ export class BookingRepository {
       hallId,
       eventDate: normalizedDate,
       status: {
-        in: [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.IN_PROGRESS]
+        in: [BookingStatus.PENDING, BookingStatus.PENDING_PAYMENT, BookingStatus.CONFIRMED, BookingStatus.IN_PROGRESS]
       },
       // Interval overlap check: (start1 < end2) && (end1 > start2)
       startTime: { lt: endTime },

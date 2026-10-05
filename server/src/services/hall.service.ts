@@ -39,7 +39,7 @@ export class HallService {
         hallId: hall.id,
         eventDate: queryDate,
         status: {
-          in: [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.IN_PROGRESS]
+          in: [BookingStatus.PENDING, BookingStatus.PENDING_PAYMENT, BookingStatus.CONFIRMED, BookingStatus.IN_PROGRESS]
         }
       };
 

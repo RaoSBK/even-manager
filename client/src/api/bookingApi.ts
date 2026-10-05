@@ -23,10 +23,18 @@ export interface BookingDetails {
   endTime: string | null;
   guestCount: number | null;
   bookingDate: string;
-  status: 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'REJECTED';
+  status: 'PENDING' | 'PENDING_PAYMENT' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'REJECTED';
+  paymentStatus?: string | null;
+  hallAmount?: number | null;
+  servicesAmount?: number | null;
+  gstAmount?: number | null;
   totalAmount: number;
   advanceAmount: number | null;
   balanceAmount: number | null;
+  selectedServices?: string | null;
+  razorpayOrderId?: string | null;
+  razorpayPaymentId?: string | null;
+  razorpaySignature?: string | null;
   notes: string | null;
   createdBy: string | null;
   createdAt: string;
@@ -50,32 +58,85 @@ export interface BookingDetails {
 }
 
 export const bookingApi = {
+  createPending: async (payload: {
+    hallId: string;
+    eventType: string;
+    eventDate: string;
+    startTime: string;
+    endTime: string;
+    guestCount: number;
+    selectedServices?: Array<{ id: string; name: string; price: number }>;
+    customerName: string;
+    customerPhone: string;
+    customerEmail: string;
+    customerAddress: string;
+    specialNotes?: string;
+  }): Promise<{
+    success: boolean;
+    message: string;
+    booking: BookingDetails;
+    razorpayOrder: {
+      id: string;
+      amount: number;
+      currency: string;
+      key: string;
+    };
+  }> => {
+    return httpClient.post('/bookings/create-pending', payload);
+  },
+
+  createPendingBooking: async (payload: {
+    hallId: string;
+    eventType: string;
+    eventDate: string;
+    startTime: string;
+    endTime: string;
+    guestCount: number;
+    selectedServices?: Array<{ id: string; name: string; price: number }>;
+    customerName: string;
+    customerPhone: string;
+    customerEmail: string;
+    customerAddress: string;
+    specialNotes?: string;
+  }): Promise<{
+    success: boolean;
+    message: string;
+    booking: BookingDetails;
+    razorpayOrder: {
+      id: string;
+      amount: number;
+      currency: string;
+      key: string;
+    };
+  }> => {
+    return httpClient.post('/bookings/create-pending', payload);
+  },
+
   create: async (payload: BookingPayload): Promise<{ success: boolean; message: string; booking: BookingDetails }> => {
     return httpClient.post('/bookings', payload);
   },
-  
+
   getMyBookings: async (): Promise<BookingDetails[]> => {
     return httpClient.get('/bookings/my-bookings');
   },
-  
+
   getById: async (id: string): Promise<BookingDetails> => {
     return httpClient.get(`/bookings/${id}`);
   },
-  
+
   getAll: async (): Promise<BookingDetails[]> => {
     return httpClient.get('/bookings');
   },
-  
+
   updateStatus: async (id: string, status: string): Promise<{ message: string; booking: BookingDetails }> => {
     return httpClient.patch(`/bookings/${id}/status`, { status });
   },
-  
+
   cancel: async (id: string): Promise<{ message: string; booking: BookingDetails }> => {
     return httpClient.patch(`/bookings/${id}/cancel`);
   },
-  
+
   getHistory: async (id: string): Promise<any[]> => {
     return httpClient.get(`/bookings/hall/${id}/history`);
   },
 };
-
