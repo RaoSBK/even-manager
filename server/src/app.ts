@@ -74,7 +74,12 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
 
 export function roleMiddleware(allowedRoles: string[]) {
   return (req: Request, res: Response, next: NextFunction) => {
-    if (!req.user || !allowedRoles.includes(req.user.role)) {
+    if (!req.user) {
+      return res.status(403).json({ message: 'Forbidden - Access denied' });
+    }
+    const userRoleUpper = (req.user.role || '').toUpperCase();
+    const isAllowed = allowedRoles.some(r => r.toUpperCase() === userRoleUpper);
+    if (!isAllowed) {
       return res.status(403).json({ message: 'Forbidden - Access denied' });
     }
     next();

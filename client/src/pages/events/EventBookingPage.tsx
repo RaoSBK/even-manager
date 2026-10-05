@@ -7,7 +7,7 @@ import { bookingApi, BookingDetails } from '../../api/bookingApi';
 import { paymentApi } from '../../api/paymentApi';
 import { 
   Home, Camera, Gift, Heart, Check, X, ShieldAlert, ChevronRight, ChevronLeft,
-  Calendar, AlertTriangle, CheckCircle2, ChevronUp, ChevronDown, Utensils
+  Calendar, AlertTriangle, CheckCircle2, ChevronUp, ChevronDown
 } from 'lucide-react';
 import { getFoodItems, FoodItem } from '../../api/foodApi';
 
@@ -145,7 +145,7 @@ export const EventBookingPage: React.FC = () => {
   const [city, setCity] = useState('');
   const [district, setDistrict] = useState('');
   const [stateName, setStateName] = useState('');
-  const [country, setCountry] = useState('India');
+  const [country] = useState('India');
   const [pincode, setPincode] = useState('');
   const [pincodeError, setPincodeError] = useState('');
 
@@ -263,7 +263,7 @@ export const EventBookingPage: React.FC = () => {
     fetchFoodMenu();
   }, []);
 
-  const handleToggleService = (id: string, category: string) => {
+  const handleToggleService = (id: string, _category?: string) => {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     );
@@ -382,6 +382,7 @@ export const EventBookingPage: React.FC = () => {
     }
   };
 
+
   // Helper to dynamically load Razorpay Checkout Script
   const loadRazorpayScript = (): Promise<boolean> => {
     return new Promise((resolve) => {
@@ -395,6 +396,85 @@ export const EventBookingPage: React.FC = () => {
       script.onerror = () => resolve(false);
       document.body.appendChild(script);
     });
+  };
+
+  // Razorpay Checkout Launch Helper
+  const initiateRazorpayPayment = async (bookingObj: BookingDetails, razorpayOrderObj: any) => {
+    const keyId = razorpayOrderObj.key || import.meta.env.VITE_RAZORPAY_KEY_ID;
+    const isDummyPlaceholder = !keyId || keyId === 'rzp_test_placeholder';
+
+    if (isDummyPlaceholder) {
+      setActivePaymentModal({ booking: bookingObj, razorpayOrder: razorpayOrderObj });
+      return;
+    }
+
+    const isLoaded = await loadRazorpayScript();
+    if (!isLoaded) {
+      setActivePaymentModal({ booking: bookingObj, razorpayOrder: razorpayOrderObj });
+      return;
+    }
+
+    const options = {
+      key: keyId,
+      amount: razorpayOrderObj.amount,
+      currency: razorpayOrderObj.currency || 'INR',
+      name: 'GK BOOKING',
+      description: `Event Booking - ${bookingObj.eventType || 'Function'}`,
+      order_id: razorpayOrderObj.id,
+      handler: async function (response: any) {
+        setLoading(true);
+        setErrorMsg(null);
+        try {
+          const verifyRes = await paymentApi.verifyRazorpayPayment({
+            bookingId: bookingObj.id,
+            razorpay_order_id: response.razorpay_order_id,
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_signature: response.razorpay_signature,
+          });
+
+          if (verifyRes.success) {
+            setBookingResult(verifyRes.booking);
+            addToast('Payment verified successfully! Booking confirmed.', 'success');
+            setStep(4);
+          } else {
+            setErrorMsg(verifyRes.message || 'Payment signature verification failed.');
+            addToast('Payment signature verification failed.', 'error');
+          }
+        } catch (err: any) {
+          console.error('Payment verification error:', err);
+          setErrorMsg(err.message || 'Payment verification failed on server.');
+          addToast(err.message || 'Server error during payment verification.', 'error');
+        } finally {
+          setLoading(false);
+        }
+      },
+      modal: {
+        ondismiss: function () {
+          setActivePaymentModal({ booking: bookingObj, razorpayOrder: razorpayOrderObj });
+        },
+      },
+      prefill: {
+        name: customerName,
+        email: customerEmail,
+        contact: customerPhone,
+      },
+      notes: {
+        bookingId: bookingObj.id,
+      },
+      theme: {
+        color: '#1e3a8a',
+      },
+    };
+
+    try {
+      const rzp = new (window as any).Razorpay(options);
+      rzp.on('payment.failed', function () {
+        setActivePaymentModal({ booking: bookingObj, razorpayOrder: razorpayOrderObj });
+      });
+      rzp.open();
+    } catch {
+      setActivePaymentModal({ booking: bookingObj, razorpayOrder: razorpayOrderObj });
+    }
   };
 
   // Submit secure booking request & launch Razorpay Checkout
@@ -424,14 +504,25 @@ export const EventBookingPage: React.FC = () => {
         selectedServices.map(s => s.name + (s.perPlate ? ` (${platesCount} plates)` : '')).join(', ')
       }${foodItemsText}. Address: ${customerAddress}`;
 
-      const res = await bookingApi.create({
+      const selectedServicesPayload = selectedServices.map(s => ({
+        id: s.id,
+        name: s.name + (s.perPlate ? ` (${platesCount} plates)` : ''),
+        price: s.price
+      }));
+
+      const res = await bookingApi.createPending({
         hallId: selectedHallId,
         eventType: urlType ? urlType.charAt(0).toUpperCase() + urlType.slice(1) + ' Function' : 'General Function',
         eventDate,
         startTime,
         endTime,
         guestCount: platesCount, // Pax matches plates count
-        notes: notesCombined,
+        selectedServices: selectedServicesPayload,
+        customerName: customerName || 'Customer',
+        customerPhone: customerPhone || '9876543210',
+        customerEmail: customerEmail || 'customer@example.com',
+        customerAddress,
+        specialNotes: notesCombined,
         addressLine1: addressLine1.trim() || undefined,
         addressLine2: addressLine2.trim() || undefined,
         city: city.trim() || undefined,
@@ -441,10 +532,9 @@ export const EventBookingPage: React.FC = () => {
         pincode: pincode.trim() || undefined
       });
 
-      if (res.success) {
+      if (res.success && res.razorpayOrder) {
         setBookingResult(res.booking);
-        addToast('Booking completed successfully!', 'success');
-        setStep(4);
+        await initiateRazorpayPayment(res.booking, res.razorpayOrder);
       } else {
         throw new Error(res.message || 'Failed to submit booking request.');
       }

@@ -34,6 +34,12 @@ export class BookingService {
       startTime: string; // HH:MM
       endTime: string; // HH:MM
       guestCount: number;
+      selectedServices?: Array<{ id?: string; name: string; price: number }>;
+      customerName?: string;
+      customerPhone?: string;
+      customerEmail?: string;
+      customerAddress?: string;
+      specialNotes?: string;
       notes?: string;
       addressLine1?: string;
       addressLine2?: string;
@@ -43,8 +49,29 @@ export class BookingService {
       country?: string;
       pincode?: string;
     }
-  ): Promise<Booking> {
-    const { hallId, eventType, eventDate, startTime, endTime, guestCount, notes, addressLine1, addressLine2, city, district, state, country, pincode } = data;
+  ): Promise<any> {
+    const {
+      hallId,
+      eventType,
+      eventDate,
+      startTime,
+      endTime,
+      guestCount,
+      selectedServices = [],
+      customerName,
+      customerPhone,
+      customerEmail,
+      customerAddress,
+      specialNotes,
+      notes,
+      addressLine1,
+      addressLine2,
+      city,
+      district,
+      state,
+      country,
+      pincode
+    } = data;
 
     // 1. Validations: Date parsing and past check
     const normalizedDate = new Date(eventDate);
@@ -80,9 +107,14 @@ export class BookingService {
       throw new Error('HALL_UNAVAILABLE_STATUS');
     }
 
+    const effectiveCustomerName = customerName || user.name || 'Customer';
+    const effectiveEmail = customerEmail || user.email || '';
+    const effectivePhone = customerPhone || user.mobile || '';
+    const effectiveAddress = customerAddress || [addressLine1, addressLine2, city, district, state, pincode, country].filter(Boolean).join(', ');
+
     // 3. Backend Price Calculation (Frontend total is NEVER trusted)
     const hallAmount = Number(hall.basePrice);
-    const servicesAmount = selectedServices.reduce((sum, s) => sum + Number(s.price || 0), 0);
+    const servicesAmount = selectedServices.reduce((sum: number, s: any) => sum + Number(s.price || 0), 0);
     const subtotal = hallAmount + servicesAmount;
     const gstAmount = Math.round(subtotal * 0.18); // 18% GST
     const totalAmount = subtotal + gstAmount;
@@ -107,8 +139,8 @@ export class BookingService {
           where: {
             OR: [
               { userId },
-              { email: customerEmail },
-              { phone: customerPhone }
+              ...(effectiveEmail ? [{ email: effectiveEmail }] : []),
+              ...(effectivePhone ? [{ phone: effectivePhone }] : [])
             ]
           }
         });
@@ -117,16 +149,16 @@ export class BookingService {
           customer = await tx.customer.create({
             data: {
               userId,
-              fullName: customerName,
-              email: customerEmail,
-              phone: customerPhone,
-              address: customerAddress
+              fullName: effectiveCustomerName,
+              email: effectiveEmail,
+              phone: effectivePhone,
+              address: effectiveAddress
             }
           });
         }
 
         const bookingNumber = this.generateBookingNumber();
-        const notesCombined = `Notes: ${specialNotes || 'None'}. Address: ${customerAddress}. Coordinator: ${customerName} (${customerPhone}). Services: ${selectedServices.map(s => s.name).join(', ')}`;
+        const notesCombined = notes || `Notes: ${specialNotes || 'None'}. Address: ${effectiveAddress}. Coordinator: ${effectiveCustomerName} (${effectivePhone}). Services: ${selectedServices.map((s: any) => s.name).join(', ')}`;
 
         return await tx.booking.create({
           data: {
@@ -146,7 +178,14 @@ export class BookingService {
             gstAmount,
             totalAmount,
             selectedServices: JSON.stringify(selectedServices),
-            notes: notesCombined
+            notes: notesCombined,
+            addressLine1: addressLine1 || null,
+            addressLine2: addressLine2 || null,
+            city: city || null,
+            district: district || null,
+            state: state || null,
+            country: country || null,
+            pincode: pincode || null
           },
           include: {
             hall: true,
@@ -165,9 +204,9 @@ export class BookingService {
       booking.bookingNumber,
       {
         bookingId: booking.id,
-        customerName,
-        customerEmail,
-        customerPhone
+        customerName: effectiveCustomerName,
+        customerEmail: effectiveEmail,
+        customerPhone: effectivePhone
       }
     );
 
@@ -490,9 +529,16 @@ export class BookingService {
       endTime: string;
       guestCount: number;
       notes?: string;
+      addressLine1?: string;
+      addressLine2?: string;
+      city?: string;
+      district?: string;
+      state?: string;
+      country?: string;
+      pincode?: string;
     }
   ): Promise<Booking> {
-    const { hallId, eventType, eventDate, startTime, endTime, guestCount, notes } = data;
+    const { hallId, eventType, eventDate, startTime, endTime, guestCount, notes, addressLine1, addressLine2, city, district, state, country, pincode } = data;
 
     const normalizedDate = new Date(eventDate);
     normalizedDate.setUTCHours(0, 0, 0, 0);

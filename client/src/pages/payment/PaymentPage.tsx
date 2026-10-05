@@ -261,7 +261,7 @@ export const PaymentPage: React.FC = () => {
       setProcessingStep('Confirming reservation & generating transaction receipt...');
 
       // Prepare Payment Details object
-      let details: PaymentDetails = {};
+      let details: Partial<PaymentDetails> & Record<string, any> = {};
       let resolvedMethodName = 'UPI';
 
       if (paymentMethod === 'UPI') {

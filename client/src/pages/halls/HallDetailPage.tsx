@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router';
-import { MapPin, Users, IndianRupee, ArrowRight, ExternalLink, ShieldCheck, Info, ChevronRight, Home } from 'lucide-react';
+import { MapPin, Users, IndianRupee, ArrowRight, Info, ChevronRight, Home } from 'lucide-react';
 import { hallApi } from '../../api/hallApi';
 import { sampleHalls } from '../../constants/hallsData';
 

@@ -30,7 +30,11 @@ export class ReportController {
       // 2. Bookings Counts
       const totalBookings = await prisma.booking.count({});
       const pendingBookings = await prisma.booking.count({
-        where: { status: BookingStatus.PENDING }
+        where: {
+          status: {
+            in: [BookingStatus.PENDING, BookingStatus.PENDING_PAYMENT]
+          }
+        }
       });
       const confirmedBookings = await prisma.booking.count({
         where: { status: BookingStatus.CONFIRMED }
@@ -52,11 +56,19 @@ export class ReportController {
         where: { deletedAt: null, status: HallStatus.AVAILABLE }
       });
 
+      const startOfToday = new Date();
+      startOfToday.setUTCHours(0, 0, 0, 0);
+      const endOfToday = new Date();
+      endOfToday.setUTCHours(23, 59, 59, 999);
+
       const occupiedHallsCount = await prisma.booking.count({
         where: {
-          eventDate: today,
+          eventDate: {
+            gte: startOfToday,
+            lte: endOfToday
+          },
           status: {
-            in: [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.IN_PROGRESS]
+            in: [BookingStatus.PENDING, BookingStatus.PENDING_PAYMENT, BookingStatus.CONFIRMED, BookingStatus.IN_PROGRESS]
           }
         }
       });

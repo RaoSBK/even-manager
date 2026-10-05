@@ -128,7 +128,7 @@ export const PaymentSettingsPage: React.FC = () => {
 
       const res = await updateAdminPaymentSettings(payload);
 
-      setQrCodeUrl(res.settings.qrCodeUrl);
+      setQrCodeUrl(res.settings.qrCodeUrl || '');
       if (res.settings.updatedAt) {
         setLastUpdated({
           at: new Date(res.settings.updatedAt).toLocaleString('en-IN', {

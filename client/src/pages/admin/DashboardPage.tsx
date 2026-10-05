@@ -57,16 +57,33 @@ export const DashboardPage: React.FC = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const statsData = await reportApi.getOverview();
-        setStats(statsData);
+        let hasData = false;
+        try {
+          const statsData = await reportApi.getOverview();
+          setStats(statsData);
+          hasData = true;
+        } catch (err) {
+          console.warn('Failed to load report overview statistics:', err);
+        }
 
-        const bookingsData = await bookingApi.getAll();
-        // Limit to 5 bookings
-        setRecentBookings(bookingsData.slice(0, 5));
-        setError(null);
+        try {
+          const bookingsData = await bookingApi.getAll();
+          if (Array.isArray(bookingsData)) {
+            setRecentBookings(bookingsData.slice(0, 5));
+            hasData = true;
+          }
+        } catch (err) {
+          console.warn('Failed to load recent bookings:', err);
+        }
+
+        if (hasData) {
+          setError(null);
+        } else {
+          setError('Failed to fetch dashboard data. Please verify backend server and credentials.');
+        }
       } catch (err: any) {
         console.error('Error fetching dashboard stats:', err);
-        setError('Failed to fetch dashboard data. Please try again.');
+        setError(err.message || 'Failed to fetch dashboard data. Please try again.');
       } finally {
         setLoading(false);
       }

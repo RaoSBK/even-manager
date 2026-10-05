@@ -85,6 +85,13 @@ export const bookingApi = {
     customerEmail: string;
     customerAddress: string;
     specialNotes?: string;
+    addressLine1?: string;
+    addressLine2?: string;
+    city?: string;
+    district?: string;
+    state?: string;
+    country?: string;
+    pincode?: string;
   }): Promise<{
     success: boolean;
     message: string;

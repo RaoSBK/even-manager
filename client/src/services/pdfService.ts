@@ -238,3 +238,83 @@ export function generateHallBookingPDF(booking: HallBookingPDFData) {
   // Save the PDF
   doc.save(`GK-Booking-${booking.bookingId}.pdf`);
 }
+
+export function generatePaymentReceiptPDF(paymentData: any) {
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4'
+  });
+
+  // Primary Colors
+  const primaryColor = [26, 54, 93];
+  const secondaryColor = [197, 160, 89];
+  const textColor = [55, 65, 81];
+
+  // Header Banner
+  doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  doc.rect(0, 0, 210, 35, 'F');
+
+  doc.setFillColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+  doc.rect(0, 35, 210, 2, 'F');
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('Helvetica', 'bold');
+  doc.setFontSize(18);
+  doc.text('GK BOOKING RECEIPT', 15, 18);
+
+  doc.setFont('Helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text(`Receipt Reference: ${paymentData.id || paymentData.paymentNumber || 'PAY-001'}`, 140, 18);
+  doc.text(`Payment Date: ${paymentData.paymentDate || paymentData.paidAt || new Date().toISOString().split('T')[0]}`, 140, 24);
+
+  let y = 50;
+  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  doc.setFont('Helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.text('PAYMENT SUMMARY', 15, y);
+  doc.line(15, y + 2, 195, y + 2);
+
+  y += 10;
+  doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+  doc.setFont('Helvetica', 'normal');
+  doc.setFontSize(10);
+  
+  doc.text('Amount Paid:', 20, y);
+  doc.setFont('Helvetica', 'bold');
+  doc.text(`INR ${Number(paymentData.amount || 0).toLocaleString('en-IN')}.00`, 75, y);
+
+  y += 8;
+  doc.setFont('Helvetica', 'normal');
+  doc.text('Payment Method:', 20, y);
+  doc.setFont('Helvetica', 'bold');
+  doc.text(String(paymentData.paymentMethod || 'ONLINE'), 75, y);
+
+  y += 8;
+  doc.setFont('Helvetica', 'normal');
+  doc.text('Payment Status:', 20, y);
+  doc.setFont('Helvetica', 'bold');
+  doc.setTextColor(34, 197, 94); // Green
+  doc.text(String(paymentData.status || 'SUCCESS'), 75, y);
+
+  if (paymentData.transactionReference || paymentData.razorpayPaymentId) {
+    y += 8;
+    doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+    doc.setFont('Helvetica', 'normal');
+    doc.text('Transaction Ref ID:', 20, y);
+    doc.setFont('Helvetica', 'bold');
+    doc.text(String(paymentData.transactionReference || paymentData.razorpayPaymentId), 75, y);
+  }
+
+  y += 20;
+  doc.setDrawColor(220, 220, 220);
+  doc.line(15, y, 195, y);
+
+  doc.setFont('Helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  doc.text('Thank you for your payment to GK BOOKING!', 105, y + 10, { align: 'center' });
+
+  doc.save(`Receipt-${paymentData.id || 'GK'}.pdf`);
+}
+
