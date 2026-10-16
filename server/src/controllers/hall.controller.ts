@@ -72,7 +72,7 @@ export class HallController {
 
   async createHall(req: Request, res: Response) {
     try {
-      const { name, description, location, capacity, basePrice, status } = req.body;
+      const { name, description, location, state, district, mandal, capacity, basePrice, status } = req.body;
 
       if (!name || capacity === undefined || basePrice === undefined) {
         return res.status(400).json({ message: 'Name, capacity, and base price are required.' });
@@ -82,6 +82,9 @@ export class HallController {
         name,
         description,
         location,
+        state,
+        district,
+        mandal,
         capacity,
         basePrice,
         status: status as HallStatus

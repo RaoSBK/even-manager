@@ -1,12 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router';
-import { 
-  Calendar, Landmark, Phone, 
-  MessageSquare, Instagram, Facebook, Youtube, Mail,
-  Users
-} from 'lucide-react';
+import { Calendar, Landmark, Users, Car } from 'lucide-react';
 import EventHero from '../../components/home/EventHero';
-import { contactConfig } from '../../constants/contactConfig';
 
 export const EventListingPage: React.FC = () => {
   const navigate = useNavigate();
@@ -16,7 +11,7 @@ export const EventListingPage: React.FC = () => {
       {/* 1. Hero Section (Dynamic Banner) */}
       <EventHero />
 
-      {/* 2. Main Services Category section (Image 2 Middle) */}
+      {/* 2. Main Services Category section */}
       <section className="w-full px-4 sm:px-6 lg:px-8 py-8">
         
         {/* Header Description */}
@@ -26,113 +21,63 @@ export const EventListingPage: React.FC = () => {
           <div className="luxury-divider max-w-xs mx-auto mt-3"></div>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           
-          {/* Left Cards Grid */}
-          <div className="w-full lg:w-3/4 grid grid-cols-1 md:grid-cols-2 gap-6">
-            
-            {/* Card 1: Event Management */}
-            <div className="luxury-card flex flex-col justify-between p-6 hover:shadow-luxury-lg hover:border-gold-300 transition-all duration-300">
-              <div>
-                <div className="bg-primary-50 text-primary-800 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-5 border border-primary-100">
-                  <Calendar size={22} className="text-primary-800" />
-                </div>
-                <h3 className="text-lg font-bold font-serif text-primary-800 mb-2">Event Management</h3>
-                <p className="text-xs text-neutral-500 leading-relaxed mb-6">
-                  We plan and manage all types of events with perfection and creativity.
-                </p>
+          {/* Card 1: Event Management */}
+          <div className="luxury-card flex flex-col justify-between p-6 hover:shadow-luxury-lg hover:border-gold-300 transition-all duration-300">
+            <div>
+              <div className="bg-primary-50 text-primary-800 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-5 border border-primary-100">
+                <Calendar size={22} className="text-primary-800" />
               </div>
-              <button 
-                onClick={() => navigate('/events/book/marriage')} 
-                className="w-full py-2.5 bg-primary-800 text-white font-medium text-xs rounded-lg hover:bg-primary-900 transition-all flex items-center justify-center gap-1.5"
-              >
-                Start Booking &rarr;
-              </button>
+              <h3 className="text-lg font-bold font-serif text-primary-800 mb-2">Event Management</h3>
+              <p className="text-xs text-neutral-500 leading-relaxed mb-6">
+                We plan and manage all types of events with perfection and creativity.
+              </p>
             </div>
-
-            {/* Card 2: Function Hall Booking */}
-            <div className="luxury-card flex flex-col justify-between p-6 border-gold-300 shadow-luxury-lg hover:border-gold-500 transition-all duration-300">
-              <div>
-                <div className="bg-gold-50 text-gold-600 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-5 border border-gold-200">
-                  <Landmark size={22} className="text-gold-600" />
-                </div>
-                <h3 className="text-lg font-bold font-serif text-primary-800 mb-2">Function Hall Booking</h3>
-                <p className="text-xs text-neutral-500 leading-relaxed mb-6">
-                  Find and book the best function halls for your special occasions.
-                </p>
-              </div>
-              <button 
-                onClick={() => navigate('/halls')} 
-                className="w-full py-2.5 bg-gold-500 text-white font-medium text-xs rounded-lg hover:bg-gold-600 transition-all flex items-center justify-center gap-1.5"
-              >
-                Start Booking &rarr;
-              </button>
-            </div>
-
+            <button 
+              onClick={() => navigate('/events/book/marriage')} 
+              className="w-full py-2.5 bg-primary-800 text-white font-medium text-xs rounded-lg hover:bg-primary-900 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              Start Booking &rarr;
+            </button>
           </div>
 
-          {/* Right Customer Care Card (Image 2 Right) */}
-          <div className="w-full lg:w-1/4">
-            <div className="luxury-card p-6 border-cream-200 shadow-luxury h-full flex flex-col justify-between bg-white">
-              <div>
-                <div className="flex items-center gap-2 pb-4 border-b border-cream-100">
-                  <Phone size={18} className="text-gold-500" />
-                  <h3 className="font-bold text-sm text-primary-800 tracking-wide">Customer Care</h3>
-                </div>
-
-                <div className="mt-6 space-y-4">
-                  <a href={contactConfig.phone.value} className="flex items-center gap-3 text-xs text-neutral-700 hover:text-gold-600 transition-all">
-                    <div className="bg-gold-50 text-gold-600 p-2 rounded-full"><Phone size={14} /></div>
-                    <div>
-                      <p className="text-[10px] text-gray-400 font-medium">Call Support</p>
-                      <p className="font-semibold text-primary-800">{contactConfig.phone.display}</p>
-                    </div>
-                  </a>
-
-                  <a href={contactConfig.whatsapp.link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-xs text-neutral-700 hover:text-gold-600 transition-all">
-                    <div className="bg-green-50 text-green-600 p-2 rounded-full"><MessageSquare size={14} /></div>
-                    <div>
-                      <p className="text-[10px] text-gray-400 font-medium">WhatsApp</p>
-                      <p className="font-semibold text-primary-800">WhatsApp Chat</p>
-                    </div>
-                  </a>
-
-                  <a href={contactConfig.socials.instagram} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-xs text-neutral-700 hover:text-gold-600 transition-all">
-                    <div className="bg-pink-50 text-pink-600 p-2 rounded-full"><Instagram size={14} /></div>
-                    <div>
-                      <p className="text-[10px] text-gray-400 font-medium">Instagram</p>
-                      <p className="font-semibold text-primary-800">Instagram Profile</p>
-                    </div>
-                  </a>
-
-                  <a href={contactConfig.socials.facebook} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-xs text-neutral-700 hover:text-gold-600 transition-all">
-                    <div className="bg-blue-50 text-blue-600 p-2 rounded-full"><Facebook size={14} /></div>
-                    <div>
-                      <p className="text-[10px] text-gray-400 font-medium">Facebook</p>
-                      <p className="font-semibold text-primary-800">Facebook Page</p>
-                    </div>
-                  </a>
-
-                  <a href={contactConfig.socials.youtube} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-xs text-neutral-700 hover:text-gold-600 transition-all">
-                    <div className="bg-red-50 text-red-600 p-2 rounded-full"><Youtube size={14} /></div>
-                    <div>
-                      <p className="text-[10px] text-gray-400 font-medium">YouTube</p>
-                      <p className="font-semibold text-primary-800">YouTube Channel</p>
-                    </div>
-                  </a>
-                </div>
+          {/* Card 2: Function Hall Booking */}
+          <div className="luxury-card flex flex-col justify-between p-6 border-gold-300 shadow-luxury-lg hover:border-gold-500 transition-all duration-300">
+            <div>
+              <div className="bg-gold-50 text-gold-600 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-5 border border-gold-200">
+                <Landmark size={22} className="text-gold-600" />
               </div>
-
-              <div className="mt-8 border-t border-cream-100 pt-5">
-                <a 
-                  href="#contact" 
-                  className="w-full py-2.5 border border-gold-500 text-gold-600 hover:bg-gold-50 font-medium text-xs rounded-lg transition-all flex items-center justify-center gap-2"
-                >
-                  <Mail size={14} />
-                  Contact Us
-                </a>
-              </div>
+              <h3 className="text-lg font-bold font-serif text-primary-800 mb-2">Function Hall Booking</h3>
+              <p className="text-xs text-neutral-500 leading-relaxed mb-6">
+                Find and book the best function halls for your special occasions.
+              </p>
             </div>
+            <button 
+              onClick={() => navigate('/halls')} 
+              className="w-full py-2.5 bg-gold-500 text-white font-medium text-xs rounded-lg hover:bg-gold-600 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              Start Booking &rarr;
+            </button>
+          </div>
+
+          {/* Card 3: Travelling Booking */}
+          <div className="luxury-card flex flex-col justify-between p-6 hover:shadow-luxury-lg hover:border-gold-300 transition-all duration-300">
+            <div>
+              <div className="bg-emerald-50 text-emerald-600 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-5 border border-emerald-200">
+                <Car size={22} className="text-emerald-600" />
+              </div>
+              <h3 className="text-lg font-bold font-serif text-primary-800 mb-2">Travelling Booking</h3>
+              <p className="text-xs text-neutral-500 leading-relaxed mb-6">
+                Book luxury bridal cars, guest buses, and tempo travellers for smooth event transportation.
+              </p>
+            </div>
+            <button 
+              onClick={() => navigate('/events/book/travel')} 
+              className="w-full py-2.5 bg-emerald-600 text-white font-medium text-xs rounded-lg hover:bg-emerald-700 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              Start Booking &rarr;
+            </button>
           </div>
 
         </div>

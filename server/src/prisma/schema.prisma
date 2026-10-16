@@ -573,6 +573,9 @@ model Hall {
   name        String
   description String?
   location    String?
+  state       String?
+  district    String?
+  mandal      String?
   capacity    Int?
   basePrice   Decimal    @db.Decimal(12, 2)
   status      HallStatus @default(AVAILABLE)

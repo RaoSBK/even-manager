@@ -8,6 +8,9 @@ export interface HallAvailabilityResponse {
     hallCode: string;
     description: string | null;
     location: string | null;
+    state?: string | null;
+    district?: string | null;
+    mandal?: string | null;
     capacity: number | null;
     basePrice: number;
     status: string;
@@ -21,6 +24,9 @@ export interface Hall {
   name: string;
   description: string | null;
   location: string | null;
+  state?: string | null;
+  district?: string | null;
+  mandal?: string | null;
   capacity: number | null;
   basePrice: number;
   status: 'AVAILABLE' | 'MAINTENANCE' | 'INACTIVE';

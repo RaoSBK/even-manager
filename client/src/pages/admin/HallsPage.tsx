@@ -4,6 +4,11 @@ import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import { hallApi, Hall, HallBookingCalendarEvent } from '../../api/hallApi';
 import {
+  ALL_STATES,
+  getDistrictsForState,
+  getMandalsForDistrict
+} from '../../constants/hallsData';
+import {
   Landmark,
   Users,
   MapPin,
@@ -33,6 +38,9 @@ export const HallsPage: React.FC = () => {
     name: '',
     description: '',
     location: '',
+    state: 'Telangana',
+    district: 'Mahabubnagar',
+    mandal: 'Jadcherla',
     capacity: 250,
     basePrice: 50000,
     status: 'AVAILABLE' as Hall['status']
@@ -66,6 +74,9 @@ export const HallsPage: React.FC = () => {
       name: '',
       description: '',
       location: '',
+      state: 'Telangana',
+      district: 'Mahabubnagar',
+      mandal: 'Jadcherla',
       capacity: 500,
       basePrice: 75000,
       status: 'AVAILABLE' as Hall['status']
@@ -80,6 +91,9 @@ export const HallsPage: React.FC = () => {
       name: hall.name,
       description: hall.description || '',
       location: hall.location || '',
+      state: hall.state || 'Telangana',
+      district: hall.district || 'Mahabubnagar',
+      mandal: hall.mandal || 'Jadcherla',
       capacity: hall.capacity || 250,
       basePrice: Number(hall.basePrice),
       status: hall.status
@@ -237,6 +251,14 @@ export const HallsPage: React.FC = () => {
                     {hall.name}
                   </h4>
                   <p className="text-xs text-neutral-500 line-clamp-2">{hall.description || 'No description available.'}</p>
+                  
+                  {/* Location hierarchy tag */}
+                  <div className="flex items-center gap-1.5 text-[11px] font-semibold text-primary-800 bg-cream-50/80 border border-cream-200/80 px-2 py-1 rounded">
+                    <MapPin size={12} className="text-gold-600 shrink-0" />
+                    <span className="truncate">
+                      {[hall.mandal, hall.district, hall.state].filter(Boolean).join(', ') || hall.location || 'Location Not Specified'}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -251,7 +273,7 @@ export const HallsPage: React.FC = () => {
                     <span className="text-gold-600 flex items-center gap-1 mt-0.5">₹{Number(hall.basePrice).toLocaleString('en-IN')}</span>
                   </div>
                   <div>
-                    <span className="block text-[8px] text-neutral-400">Location</span>
+                    <span className="block text-[8px] text-neutral-400">Venue Address</span>
                     <span className="text-primary-800 flex items-center gap-1 mt-0.5 truncate"><MapPin size={10} /> {hall.location || 'N/A'}</span>
                   </div>
                 </div>
@@ -296,10 +318,90 @@ export const HallsPage: React.FC = () => {
               onChange={(e) => setFormData({ ...formData, basePrice: Number(e.target.value) })}
             />
           </div>
+
+          {/* 3-TIER LOCATION DROPDOWNS: State -> District -> Mandal */}
+          <div className="p-3.5 bg-cream-50/80 rounded-luxury border border-cream-200/90 space-y-3">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-primary-800 uppercase tracking-wider">
+              <MapPin size={13} className="text-gold-500" />
+              <span>Location Hierarchy (State &gt; District &gt; Mandal) *</span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {/* 1. SELECT STATE */}
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-bold text-primary-800">State *</label>
+                <select
+                  className="w-full bg-white border border-cream-200 rounded px-3 py-2 text-xs font-medium text-neutral-800 focus:outline-none focus:ring-1 focus:ring-gold-500"
+                  value={formData.state}
+                  required
+                  onChange={(e) => {
+                    const newState = e.target.value;
+                    const dists = getDistrictsForState(newState);
+                    const firstDist = dists[0] || '';
+                    const mnds = getMandalsForDistrict(newState, firstDist);
+                    setFormData({
+                      ...formData,
+                      state: newState,
+                      district: firstDist,
+                      mandal: mnds[0] || ''
+                    });
+                  }}
+                >
+                  <option value="">Select State</option>
+                  {ALL_STATES.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 2. SELECT DISTRICT */}
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-bold text-primary-800">District *</label>
+                <select
+                  className="w-full bg-white border border-cream-200 rounded px-3 py-2 text-xs font-medium text-neutral-800 focus:outline-none focus:ring-1 focus:ring-gold-500 disabled:opacity-50"
+                  value={formData.district}
+                  disabled={!formData.state}
+                  required
+                  onChange={(e) => {
+                    const newDistrict = e.target.value;
+                    const mnds = getMandalsForDistrict(formData.state, newDistrict);
+                    setFormData({
+                      ...formData,
+                      district: newDistrict,
+                      mandal: mnds[0] || ''
+                    });
+                  }}
+                >
+                  <option value="">Select District</option>
+                  {getDistrictsForState(formData.state).map((d) => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 3. SELECT MANDAL */}
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-bold text-primary-800">Mandal *</label>
+                <select
+                  className="w-full bg-white border border-cream-200 rounded px-3 py-2 text-xs font-medium text-neutral-800 focus:outline-none focus:ring-1 focus:ring-gold-500 disabled:opacity-50"
+                  value={formData.mandal}
+                  disabled={!formData.district}
+                  required
+                  onChange={(e) => setFormData({ ...formData, mandal: e.target.value })}
+                >
+                  <option value="">Select Mandal</option>
+                  {getMandalsForDistrict(formData.state, formData.district).map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
-              label="Venue Location/Address"
-              placeholder="e.g. Ground Floor, Block A"
+              label="Venue Street / Building Address"
+              placeholder="e.g. Ground Floor, Block A, NH-44"
               value={formData.location}
               onChange={(e) => setFormData({ ...formData, location: e.target.value })}
             />
@@ -357,9 +459,89 @@ export const HallsPage: React.FC = () => {
               onChange={(e) => setFormData({ ...formData, basePrice: Number(e.target.value) })}
             />
           </div>
+
+          {/* 3-TIER LOCATION DROPDOWNS: State -> District -> Mandal */}
+          <div className="p-3.5 bg-cream-50/80 rounded-luxury border border-cream-200/90 space-y-3">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-primary-800 uppercase tracking-wider">
+              <MapPin size={13} className="text-gold-500" />
+              <span>Location Hierarchy (State &gt; District &gt; Mandal) *</span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {/* 1. SELECT STATE */}
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-bold text-primary-800">State *</label>
+                <select
+                  className="w-full bg-white border border-cream-200 rounded px-3 py-2 text-xs font-medium text-neutral-800 focus:outline-none focus:ring-1 focus:ring-gold-500"
+                  value={formData.state}
+                  required
+                  onChange={(e) => {
+                    const newState = e.target.value;
+                    const dists = getDistrictsForState(newState);
+                    const firstDist = dists[0] || '';
+                    const mnds = getMandalsForDistrict(newState, firstDist);
+                    setFormData({
+                      ...formData,
+                      state: newState,
+                      district: firstDist,
+                      mandal: mnds[0] || ''
+                    });
+                  }}
+                >
+                  <option value="">Select State</option>
+                  {ALL_STATES.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 2. SELECT DISTRICT */}
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-bold text-primary-800">District *</label>
+                <select
+                  className="w-full bg-white border border-cream-200 rounded px-3 py-2 text-xs font-medium text-neutral-800 focus:outline-none focus:ring-1 focus:ring-gold-500 disabled:opacity-50"
+                  value={formData.district}
+                  disabled={!formData.state}
+                  required
+                  onChange={(e) => {
+                    const newDistrict = e.target.value;
+                    const mnds = getMandalsForDistrict(formData.state, newDistrict);
+                    setFormData({
+                      ...formData,
+                      district: newDistrict,
+                      mandal: mnds[0] || ''
+                    });
+                  }}
+                >
+                  <option value="">Select District</option>
+                  {getDistrictsForState(formData.state).map((d) => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 3. SELECT MANDAL */}
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-bold text-primary-800">Mandal *</label>
+                <select
+                  className="w-full bg-white border border-cream-200 rounded px-3 py-2 text-xs font-medium text-neutral-800 focus:outline-none focus:ring-1 focus:ring-gold-500 disabled:opacity-50"
+                  value={formData.mandal}
+                  disabled={!formData.district}
+                  required
+                  onChange={(e) => setFormData({ ...formData, mandal: e.target.value })}
+                >
+                  <option value="">Select Mandal</option>
+                  {getMandalsForDistrict(formData.state, formData.district).map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
-              label="Venue Location/Address"
+              label="Venue Street / Building Address"
               value={formData.location}
               onChange={(e) => setFormData({ ...formData, location: e.target.value })}
             />
@@ -406,8 +588,13 @@ export const HallsPage: React.FC = () => {
                 <span className="text-gold-600 font-semibold">₹{Number(selectedHall.basePrice).toLocaleString('en-IN')}</span>
               </div>
               <div>
-                <span className="text-xs text-neutral-400 font-bold block">Location</span>
-                <span className="text-primary-800">{selectedHall.location || 'N/A'}</span>
+                <span className="text-xs text-neutral-400 font-bold block">Location (State/District/Mandal)</span>
+                <span className="text-primary-800 font-semibold block">
+                  {[selectedHall.mandal, selectedHall.district, selectedHall.state].filter(Boolean).join(', ') || 'N/A'}
+                </span>
+                {selectedHall.location && (
+                  <span className="text-[11px] text-neutral-500 block truncate">{selectedHall.location}</span>
+                )}
               </div>
               <div>
                 <span className="text-xs text-neutral-400 font-bold block">Operation Status</span>

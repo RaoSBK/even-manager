@@ -27,6 +27,9 @@ export class HallService {
           hallCode: hall.hallCode,
           description: hall.description,
           location: hall.location,
+          state: (hall as any).state || null,
+          district: (hall as any).district || null,
+          mandal: (hall as any).mandal || null,
           capacity: hall.capacity,
           basePrice: Number(hall.basePrice),
           status: hall.status,
@@ -58,6 +61,9 @@ export class HallService {
         hallCode: hall.hallCode,
         description: hall.description,
         location: hall.location,
+        state: (hall as any).state || null,
+        district: (hall as any).district || null,
+        mandal: (hall as any).mandal || null,
         capacity: hall.capacity,
         basePrice: Number(hall.basePrice),
         status: hall.status,
@@ -85,6 +91,9 @@ export class HallService {
     name: string;
     description?: string;
     location?: string;
+    state?: string;
+    district?: string;
+    mandal?: string;
     capacity: number;
     basePrice: number;
     status?: HallStatus;
@@ -95,20 +104,26 @@ export class HallService {
       name: data.name,
       description: data.description || null,
       location: data.location || null,
+      state: data.state || null,
+      district: data.district || null,
+      mandal: data.mandal || null,
       capacity: Number(data.capacity),
       basePrice: Number(data.basePrice),
       status: data.status || HallStatus.AVAILABLE
-    });
+    } as any);
   }
 
   async updateHall(id: string, data: any): Promise<Hall> {
     const hall = await this.hallRepo.findById(id);
     if (!hall) throw new Error('HALL_NOT_FOUND');
 
-    const updateData: Prisma.HallUpdateInput = {
+    const updateData: any = {
       name: data.name,
       description: data.description,
       location: data.location,
+      state: data.state !== undefined ? data.state : undefined,
+      district: data.district !== undefined ? data.district : undefined,
+      mandal: data.mandal !== undefined ? data.mandal : undefined,
       capacity: data.capacity ? Number(data.capacity) : undefined,
       basePrice: data.basePrice ? Number(data.basePrice) : undefined,
       status: data.status
