@@ -1,6 +1,14 @@
 import { demoAuthService } from '../services/demoAuthService';
 
-export const API_HOST = import.meta.env.VITE_API_URL || 'http://localhost:5050';
+const getApiHost = () => {
+  const envUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL;
+  if (envUrl) {
+    return envUrl.replace(/\/api\/?$/, '');
+  }
+  return 'http://localhost:5050';
+};
+
+export const API_HOST = getApiHost();
 const BASE_URL = `${API_HOST}/api`;
 
 interface RequestOptions extends RequestInit {

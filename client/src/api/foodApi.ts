@@ -1,5 +1,4 @@
-import { API_HOST } from './httpClient';
-const BASE_URL = `${API_HOST}/api/food-items`;
+import { httpClient } from './httpClient';
 
 export interface FoodItem {
   id: string;
@@ -12,20 +11,9 @@ export interface FoodItem {
 }
 
 export async function getFoodItems(): Promise<FoodItem[]> {
-  const response = await fetch(BASE_URL, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
+  const responseData = await httpClient.get<any[]>('/food-items');
 
-  const responseData = await response.json();
-
-  if (!response.ok) {
-    throw new Error(responseData.message || 'Failed to fetch food items');
-  }
-
-  // Map 1/0 from sqlite to boolean active
+  // Map 1/0 from sqlite/postgres to boolean active
   return responseData.map((item: any) => ({
     ...item,
     active: item.active === 1 || item.active === true
@@ -33,22 +21,10 @@ export async function getFoodItems(): Promise<FoodItem[]> {
 }
 
 export async function createFoodItem(itemData: Omit<FoodItem, 'id' | 'createdAt' | 'updatedAt'>): Promise<FoodItem> {
-  const response = await fetch(BASE_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      ...itemData,
-      active: itemData.active ? 1 : 0
-    }),
+  const responseData = await httpClient.post<any>('/food-items', {
+    ...itemData,
+    active: itemData.active ? 1 : 0
   });
-
-  const responseData = await response.json();
-
-  if (!response.ok) {
-    throw new Error(responseData.message || 'Failed to create food item');
-  }
 
   return {
     ...responseData,
@@ -60,22 +36,10 @@ export async function updateFoodItem(
   id: string,
   itemData: Omit<FoodItem, 'id' | 'createdAt' | 'updatedAt'>
 ): Promise<FoodItem> {
-  const response = await fetch(`${BASE_URL}/${id}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      ...itemData,
-      active: itemData.active ? 1 : 0
-    }),
+  const responseData = await httpClient.put<any>(`/food-items/${id}`, {
+    ...itemData,
+    active: itemData.active ? 1 : 0
   });
-
-  const responseData = await response.json();
-
-  if (!response.ok) {
-    throw new Error(responseData.message || 'Failed to update food item');
-  }
 
   return {
     ...responseData,
@@ -84,18 +48,14 @@ export async function updateFoodItem(
 }
 
 export async function deleteFoodItem(id: string): Promise<{ message: string }> {
-  const response = await fetch(`${BASE_URL}/${id}`, {
-    method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-
-  const responseData = await response.json();
-
-  if (!response.ok) {
-    throw new Error(responseData.message || 'Failed to delete food item');
-  }
-
-  return responseData;
+  return httpClient.delete<{ message: string }>(`/food-items/${id}`);
 }
+
+export const foodApi = {
+  getFoodItems,
+  createFoodItem,
+  updateFoodItem,
+  deleteFoodItem
+};
+
+export default foodApi;

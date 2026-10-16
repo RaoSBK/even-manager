@@ -260,12 +260,19 @@ app.delete('/api/food-items/:id', async (req: Request, res: Response) => {
   const { id } = req.params as { id: string };
 
   try {
-    const existing = await prisma.foodItem.findUnique({ where: { id } });
+    const existing = await prisma.foodItem.findFirst({
+      where: {
+        OR: [
+          { id },
+          { name: id }
+        ]
+      }
+    });
     if (!existing) {
       return res.status(404).json({ message: 'Food item not found' });
     }
 
-    await prisma.foodItem.delete({ where: { id } });
+    await prisma.foodItem.delete({ where: { id: existing.id } });
     return res.status(200).json({ message: 'Food item deleted successfully' });
   } catch (error: any) {
     console.error('Delete food item error:', error);

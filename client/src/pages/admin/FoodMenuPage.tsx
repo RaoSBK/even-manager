@@ -273,8 +273,8 @@ export const FoodMenuPage: React.FC = () => {
                     <td className="px-4 py-3.5">
                       <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${
                         item.category === 'VEG' 
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-150' 
-                          : 'bg-rose-50 text-rose-700 border-rose-150'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                          : 'bg-rose-50 text-rose-700 border-rose-200'
                       }`}>
                         {item.category}
                       </span>
@@ -307,15 +307,17 @@ export const FoodMenuPage: React.FC = () => {
                     <td className="px-4 py-3.5 text-right">
                       <div className="flex justify-end gap-2">
                         <button
+                          type="button"
                           onClick={() => openEditModal(item)}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 border border-transparent hover:border-blue-150 rounded-lg transition-all"
+                          className="p-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border border-transparent hover:border-blue-200 rounded-lg transition-all cursor-pointer"
                           title="Edit Item"
                         >
                           <Edit size={14} />
                         </button>
                         <button
+                          type="button"
                           onClick={() => initiateDelete(item)}
-                          className="p-1.5 text-red-650 hover:bg-red-50 border border-transparent hover:border-red-150 rounded-lg transition-all"
+                          className="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 border border-transparent hover:border-red-200 rounded-lg transition-all cursor-pointer"
                           title="Delete Item"
                         >
                           <Trash2 size={14} />
@@ -489,21 +491,33 @@ export const FoodMenuPage: React.FC = () => {
 
             <div className="flex items-center gap-3">
               <button
+                type="button"
                 disabled={isDeleting}
                 onClick={() => {
                   setShowDeleteModal(false);
                   setItemToDelete(null);
                 }}
-                className="w-1/2 bg-cream-100 hover:bg-cream-200 text-primary-800 font-bold text-xs py-2.5 rounded-lg transition-all"
+                className="w-1/2 bg-cream-100 hover:bg-cream-200 text-primary-800 font-bold text-xs py-2.5 rounded-lg transition-all cursor-pointer disabled:opacity-50"
               >
                 No, Keep
               </button>
               <button
+                type="button"
                 disabled={isDeleting}
                 onClick={confirmDelete}
-                className="w-1/2 bg-rose-650 hover:bg-rose-750 text-white font-bold text-xs py-2.5 rounded-lg transition-all shadow flex items-center justify-center gap-1.5"
+                className="w-1/2 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-bold text-xs py-2.5 rounded-lg transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isDeleting ? 'Deleting...' : 'Yes, Delete'}
+                {isDeleting ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={14} />
+                    <span>Yes, Delete</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

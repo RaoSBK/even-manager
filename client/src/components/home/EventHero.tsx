@@ -1,25 +1,78 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Sparkles, Award, Users, ArrowRight, X } from 'lucide-react';
+import { Sparkles, Award, Users, ArrowRight, X, ArrowLeft, ChevronRight } from 'lucide-react';
 import heroImage from '../../assets/images/hero-wedding.jpg';
+
+type ServiceCategory = 'EVENT' | 'HALL' | 'TRAVEL' | null;
 
 export const EventHero: React.FC = () => {
   const navigate = useNavigate();
   const [mounted, setMounted] = useState(false);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [selectedService, setSelectedService] = useState<ServiceCategory>(null);
 
   useEffect(() => {
     // Trigger animations on load
     setMounted(true);
   }, []);
 
-  const existingEventOptions = [
+  const serviceCategories = [
+    {
+      id: 'EVENT' as const,
+      title: 'Event',
+      subtitle: 'Marriage, Birthday, Saree Function, Dawath & Celebrations',
+      icon: '🎉',
+      badge: '5 Occasions'
+    },
+    {
+      id: 'HALL' as const,
+      title: 'Function Hall',
+      subtitle: 'Luxury AC Convention Centers, Grand Ballrooms & Banquet Halls',
+      icon: '🏛️',
+      badge: 'Luxury Venues'
+    },
+    {
+      id: 'TRAVEL' as const,
+      title: 'Travelling Booking',
+      subtitle: 'Luxury Bridal Cars, Guest Buses, Tempo Travellers & Transfers',
+      icon: '🚗',
+      badge: 'Fleet Transport'
+    }
+  ];
+
+  const eventOptions = [
     { name: 'Marriage Function', path: '/events/book/marriage', icon: '💍', desc: 'Pre-wedding, rituals & grand reception' },
-    { name: 'Birthday Party', path: '/events/book/birthday', icon: '🎂', desc: 'Custom themes & catering' },
+    { name: 'Birthday Party', path: '/events/book/birthday', icon: '🎂', desc: 'Custom themes, entertainment & catering' },
     { name: 'Saree Function', path: '/events/book/saree', icon: '✨', desc: 'Traditional decor & stage setups' },
     { name: 'Dawath', path: '/events/book/dawath', icon: '🍽️', desc: 'Premium banquet dining & feasts' },
-    { name: 'Other Events', path: '/events/book/other', icon: '🎉', desc: 'Custom event management' }
+    { name: 'Other Events', path: '/events/book/other', icon: '🎉', desc: 'Corporate, anniversaries & custom celebrations' }
   ];
+
+  const hallOptions = [
+    { name: 'Taj Mahal Grand Ballroom', path: '/halls/hall-seed/book', icon: '🏛️', desc: '500+ Guests • High ceilings & chandeliers' },
+    { name: 'Luxury Grand Arena', path: '/halls/hall-b-seed/book', icon: '🏟️', desc: '1000+ Guests • Large conventions & stages' },
+    { name: 'GK Grand Convention Hall', path: '/halls/gk-grand-convention/book', icon: '🏰', desc: '1500+ Guests • Premium wedding convention' },
+    { name: 'Royal Palace Function Hall', path: '/halls/royal-palace-function/book', icon: '👑', desc: '2000+ Guests • Palace-style grand weddings' },
+    { name: 'Browse All Function Halls', path: '/halls', icon: '🔍', desc: 'Compare pricing, dates, amenities & availability' }
+  ];
+
+  const travelOptions = [
+    { name: 'Bridal & Groom Luxury Car', path: '/events/book/marriage', icon: '🚗', desc: 'Mercedes, BMW, Audi with floral decor & chauffeur' },
+    { name: 'Guest Bus & Coach Service', path: '/events/book/travel', icon: '🚌', desc: '30–50 seater AC luxury coaches for wedding attendees' },
+    { name: 'Tempo Traveller Rental', path: '/events/book/travel', icon: '🚐', desc: '12–26 seater luxury pushback tempo travellers' },
+    { name: 'Airport & Station Transfers', path: '/events/book/travel', icon: '🚖', desc: 'Round-the-clock VIP guest pickup and drop' },
+    { name: 'Custom Fleet & Logistics', path: '/events/book/travel', icon: '🗺️', desc: 'End-to-end event travel planning & vehicle fleet' }
+  ];
+
+  const handleOpenModal = () => {
+    setSelectedService(null);
+    setIsBookingModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsBookingModalOpen(false);
+    setSelectedService(null);
+  };
 
   return (
     <section className="relative w-full max-w-[95%] mx-auto pt-8 pb-12 z-10">
@@ -114,17 +167,10 @@ export const EventHero: React.FC = () => {
             }`}
           >
             <button 
-              onClick={() => setIsBookingModalOpen(true)} 
-              className="bg-[#155EEF] hover:bg-[#1254d3] text-white font-bold text-[16px] px-8 rounded-[8px] h-[52px] flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg w-full sm:w-auto"
+              onClick={handleOpenModal} 
+              className="bg-[#155EEF] hover:bg-[#1254d3] text-white font-bold text-[16px] px-8 rounded-[8px] h-[52px] flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg w-full sm:w-auto cursor-pointer"
             >
               <span>Book Now</span>
-              <ArrowRight size={18} />
-            </button>
-            <button 
-              onClick={() => navigate('/events')} 
-              className="bg-white border border-[#155EEF] text-[#155EEF] hover:bg-blue-50/40 font-bold text-[16px] px-8 rounded-[8px] h-[52px] flex items-center justify-center gap-2 transition-all w-full sm:w-auto"
-            >
-              <span>Explore Services</span>
               <ArrowRight size={18} />
             </button>
           </div>
@@ -135,45 +181,123 @@ export const EventHero: React.FC = () => {
       {/* Booking Options Modal Overlay */}
       {isBookingModalOpen && (
         <div className="fixed inset-0 bg-neutral-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-cream-200 rounded-luxury max-w-lg w-full p-6 shadow-luxury relative animate-in fade-in zoom-in-95 duration-200 space-y-5 font-sans">
-            <div className="flex justify-between items-center border-b border-cream-100 pb-3">
+          <div className="bg-white border border-cream-200 rounded-luxury max-w-lg w-full p-6 shadow-luxury relative animate-in fade-in zoom-in-95 duration-200 space-y-5 font-sans max-h-[90vh] overflow-y-auto">
+            
+            {/* Modal Header */}
+            <div className="flex justify-between items-start border-b border-cream-100 pb-3">
               <div>
-                <h3 className="text-lg font-bold font-serif text-primary-800">Select Booking Option</h3>
-                <p className="text-xs text-neutral-400 mt-0.5">Select an existing event option to proceed with your booking</p>
+                {selectedService && (
+                  <button
+                    onClick={() => setSelectedService(null)}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-[#155EEF] hover:text-[#1254d3] mb-1.5 transition-all cursor-pointer"
+                  >
+                    <ArrowLeft size={14} /> Back to Services
+                  </button>
+                )}
+                <h3 className="text-lg font-bold font-serif text-primary-800">
+                  {selectedService === 'EVENT'
+                    ? 'Event Booking Options'
+                    : selectedService === 'HALL'
+                    ? 'Function Hall Booking'
+                    : selectedService === 'TRAVEL'
+                    ? 'Travelling Booking Options'
+                    : 'Select Booking Option'}
+                </h3>
+                <p className="text-xs text-neutral-400 mt-0.5">
+                  {selectedService === 'EVENT'
+                    ? 'Select an existing event option to proceed with your booking'
+                    : selectedService === 'HALL'
+                    ? 'Choose a venue or browse all available function halls'
+                    : selectedService === 'TRAVEL'
+                    ? 'Choose a vehicle or transportation service for your event'
+                    : 'Select one of our primary services to proceed with your booking'}
+                </p>
               </div>
               <button
-                onClick={() => setIsBookingModalOpen(false)}
-                className="text-neutral-400 hover:text-primary-800 p-1.5 rounded-full transition-all hover:bg-cream-50"
+                onClick={handleCloseModal}
+                className="text-neutral-400 hover:text-primary-800 p-1.5 rounded-full transition-all hover:bg-cream-50 cursor-pointer"
               >
                 <X size={20} />
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-              {existingEventOptions.map((opt) => (
-                <button
-                  key={opt.path}
-                  onClick={() => {
-                    setIsBookingModalOpen(false);
-                    navigate(opt.path);
-                  }}
-                  className="flex items-start gap-3 p-3.5 border border-cream-200 hover:border-gold-400 hover:bg-cream-50/60 rounded-luxury text-left transition-all group"
-                >
-                  <span className="text-xl shrink-0 mt-0.5">{opt.icon}</span>
-                  <div>
-                    <p className="font-bold text-primary-800 text-xs group-hover:text-gold-600 transition-all font-serif">
-                      {opt.name}
-                    </p>
-                    <p className="text-[10px] text-neutral-400 mt-0.5">{opt.desc}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
+            {/* STEP 1: Three Main Services */}
+            {!selectedService && (
+              <div className="space-y-3">
+                {serviceCategories.map((service, idx) => (
+                  <button
+                    key={service.id}
+                    onClick={() => setSelectedService(service.id)}
+                    className="w-full flex items-center justify-between p-4 border border-cream-200 hover:border-[#155EEF] hover:bg-blue-50/30 rounded-luxury text-left transition-all group shadow-sm hover:shadow cursor-pointer"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full border border-cream-200 bg-cream-50 group-hover:bg-blue-50 group-hover:border-blue-200 flex items-center justify-center text-2xl shrink-0 transition-all">
+                        {service.icon}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] font-bold text-[#155EEF] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full">
+                            #{idx + 1}
+                          </span>
+                          <p className="font-bold text-primary-900 text-sm font-serif group-hover:text-[#155EEF] transition-all">
+                            {service.title}
+                          </p>
+                        </div>
+                        <p className="text-xs text-neutral-500 mt-1 line-clamp-1 leading-snug">
+                          {service.subtitle}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-neutral-400 group-hover:text-[#155EEF] group-hover:translate-x-1 transition-all pl-2 shrink-0">
+                      <ChevronRight size={18} />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
 
-            <div className="pt-2 border-t border-cream-100 text-center">
+            {/* STEP 2: Sub-options for selected service */}
+            {selectedService && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                {(selectedService === 'EVENT'
+                  ? eventOptions
+                  : selectedService === 'HALL'
+                  ? hallOptions
+                  : travelOptions
+                ).map((opt) => (
+                  <button
+                    key={opt.name}
+                    onClick={() => {
+                      handleCloseModal();
+                      navigate(opt.path);
+                    }}
+                    className="flex items-start gap-3 p-3.5 border border-cream-200 hover:border-gold-400 hover:bg-cream-50/60 rounded-luxury text-left transition-all group cursor-pointer"
+                  >
+                    <span className="text-xl shrink-0 mt-0.5">{opt.icon}</span>
+                    <div>
+                      <p className="font-bold text-primary-800 text-xs group-hover:text-gold-600 transition-all font-serif">
+                        {opt.name}
+                      </p>
+                      <p className="text-[10px] text-neutral-400 mt-0.5">{opt.desc}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Modal Footer */}
+            <div className="pt-2 border-t border-cream-100 flex items-center justify-between">
+              {selectedService ? (
+                <button
+                  onClick={() => setSelectedService(null)}
+                  className="text-xs font-bold text-neutral-500 hover:text-primary-800 tracking-wider py-1 cursor-pointer flex items-center gap-1"
+                >
+                  <ArrowLeft size={12} /> Back
+                </button>
+              ) : <div />}
               <button
-                onClick={() => setIsBookingModalOpen(false)}
-                className="text-xs font-bold text-neutral-500 hover:text-primary-800 uppercase tracking-wider py-1"
+                onClick={handleCloseModal}
+                className="text-xs font-bold text-neutral-500 hover:text-primary-800 uppercase tracking-wider py-1 cursor-pointer"
               >
                 Close
               </button>
