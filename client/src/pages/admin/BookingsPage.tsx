@@ -122,12 +122,15 @@ export const BookingsPage: React.FC = () => {
   };
 
   const handleCancelBooking = async (id: string) => {
-    if (!window.confirm('Are you sure you want to cancel this booking?')) {
+    const reason = window.prompt('Please enter the reason for cancellation (required):');
+    if (reason === null) return;
+    if (!reason.trim()) {
+      addToast('Cancellation reason is required.', 'warning');
       return;
     }
 
     try {
-      await bookingApi.cancel(id);
+      await bookingApi.cancel(id, reason.trim());
       addToast('Booking cancelled successfully.', 'success');
       setIsDetailsOpen(false);
       fetchData();
@@ -354,6 +357,23 @@ export const BookingsPage: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* Cancellation Details */}
+            {selectedBooking.status === 'CANCELLED' && (
+              <div className="p-3.5 bg-red-50 border border-red-200 rounded-luxury text-xs space-y-1">
+                <span className="text-red-700 font-bold block uppercase text-[10px] tracking-wider">Cancellation Record</span>
+                {selectedBooking.cancellationReason && (
+                  <p className="text-red-950 font-medium">
+                    <span className="font-bold text-red-800">Reason:</span> {selectedBooking.cancellationReason}
+                  </p>
+                )}
+                {selectedBooking.cancelledAt && (
+                  <p className="text-[10px] text-red-600">
+                    Cancelled on: {new Date(selectedBooking.cancelledAt).toLocaleString('en-IN')}
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Action controls */}
             <div className="flex flex-wrap gap-2 justify-end pt-4 border-t border-cream-100">

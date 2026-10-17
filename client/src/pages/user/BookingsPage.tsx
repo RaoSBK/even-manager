@@ -5,6 +5,7 @@ import {
   Eye,
   XCircle,
   AlertCircle,
+  AlertTriangle,
   X
 } from 'lucide-react';
 
@@ -15,6 +16,12 @@ export const BookingsPage: React.FC = () => {
   const [bookings, setBookings] = useState<BookingDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedBooking, setSelectedBooking] = useState<BookingDetails | null>(null);
+
+  // Cancellation Modal state
+  const [cancelModalBooking, setCancelModalBooking] = useState<BookingDetails | null>(null);
+  const [cancelReasonPreset, setCancelReasonPreset] = useState<string>('Change in event dates or schedule');
+  const [cancelReasonDetails, setCancelReasonDetails] = useState<string>('');
+  const [submittingCancel, setSubmittingCancel] = useState<boolean>(false);
 
   // Filters state
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'UPCOMING' | 'COMPLETED' | 'CANCELLED'>('ALL');
@@ -37,19 +44,39 @@ export const BookingsPage: React.FC = () => {
     loadBookings();
   }, []);
 
-  // Cancel handler
-  const handleCancelBooking = async (bookingId: string) => {
-    if (!window.confirm('Are you sure you want to cancel this booking? This action is irreversible.')) {
+  // Open cancel modal
+  const openCancelModal = (b: BookingDetails) => {
+    setCancelModalBooking(b);
+    setCancelReasonPreset('Change in event dates or schedule');
+    setCancelReasonDetails('');
+  };
+
+  // Submit cancellation with reason
+  const handleConfirmCancel = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cancelModalBooking) return;
+
+    if (!cancelReasonDetails.trim() && cancelReasonPreset === 'Other reason') {
+      addToast('Please describe your reason for cancellation.', 'warning');
       return;
     }
+
+    const fullReason = cancelReasonDetails.trim()
+      ? `${cancelReasonPreset}: ${cancelReasonDetails.trim()}`
+      : cancelReasonPreset;
+
+    setSubmittingCancel(true);
     try {
-      const res = await bookingApi.cancel(bookingId);
+      const res = await bookingApi.cancel(cancelModalBooking.id, fullReason);
       addToast(res.message || 'Booking cancelled successfully.', 'success');
+      setCancelModalBooking(null);
       setSelectedBooking(null); // Close modal if open
       loadBookings(); // Reload
     } catch (err: any) {
       console.error(err);
       addToast(err.message || 'Failed to cancel booking. Cancellations must be requested at least 15 days in advance.', 'error');
+    } finally {
+      setSubmittingCancel(false);
     }
   };
 
@@ -187,6 +214,16 @@ export const BookingsPage: React.FC = () => {
                   </div>
                 )}
 
+                {/* Display Cancellation Reason on Card */}
+                {b.status === 'CANCELLED' && b.cancellationReason && (
+                  <div className="bg-red-50/80 border border-red-200/80 p-2.5 rounded-luxury text-xs text-red-800 space-y-0.5">
+                    <p className="text-[9px] font-bold uppercase tracking-wider text-red-600 flex items-center gap-1">
+                      <XCircle size={11} /> Cancellation Reason:
+                    </p>
+                    <p className="text-[11px] font-medium text-red-900 leading-snug">{b.cancellationReason}</p>
+                  </div>
+                )}
+
                 <div className="flex justify-between items-center pt-3 border-t border-cream-100">
                   <div className="flex items-center gap-1.5">
                     {getStatusBadge(b.status)}
@@ -203,7 +240,7 @@ export const BookingsPage: React.FC = () => {
                     
                     {b.status !== 'CANCELLED' && b.status !== 'REJECTED' && b.status !== 'COMPLETED' && (
                       <button
-                        onClick={() => handleCancelBooking(b.id)}
+                        onClick={() => openCancelModal(b)}
                         className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 p-1.5 rounded-luxury transition-all flex items-center justify-center gap-1 text-[10px] font-bold uppercase tracking-wider"
                       >
                         <XCircle size={12} />
@@ -236,6 +273,32 @@ export const BookingsPage: React.FC = () => {
             </div>
 
             <div className="p-6 space-y-5 text-xs">
+              {/* If Cancelled, show alert with reason */}
+              {selectedBooking.status === 'CANCELLED' && (
+                <div className="bg-red-50 border border-red-200 p-3.5 rounded-luxury text-xs space-y-1">
+                  <div className="flex items-center gap-1.5 text-red-700 font-bold uppercase text-[10px] tracking-wider">
+                    <AlertTriangle size={14} />
+                    <span>Booking Cancelled</span>
+                  </div>
+                  {selectedBooking.cancellationReason && (
+                    <p className="text-red-950 font-medium pt-0.5">
+                      <span className="font-bold text-red-800">Reason:</span> {selectedBooking.cancellationReason}
+                    </p>
+                  )}
+                  {selectedBooking.cancelledAt && (
+                    <p className="text-[10px] text-red-600">
+                      Cancelled on: {new Date(selectedBooking.cancelledAt).toLocaleString('en-IN', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4 border-b border-cream-100 pb-4">
                 <div>
                   <p className="text-neutral-400 font-bold uppercase text-[8px] tracking-wider mb-0.5">Occasion Type</p>
@@ -311,13 +374,123 @@ export const BookingsPage: React.FC = () => {
               
               {selectedBooking.status !== 'CANCELLED' && selectedBooking.status !== 'REJECTED' && selectedBooking.status !== 'COMPLETED' && (
                 <button
-                  onClick={() => handleCancelBooking(selectedBooking.id)}
+                  onClick={() => openCancelModal(selectedBooking)}
                   className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-luxury text-xs font-bold uppercase tracking-wider transition-all shadow"
                 >
                   Cancel Booking
                 </button>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* CANCELLATION REASON MODAL */}
+      {cancelModalBooking && (
+        <div className="fixed inset-0 bg-neutral-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-cream-200 rounded-luxury max-w-md w-full shadow-luxury animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
+            <div className="p-5 border-b border-cream-100 flex justify-between items-start">
+              <div>
+                <div className="flex items-center gap-1.5 text-red-600">
+                  <AlertTriangle size={18} />
+                  <h4 className="font-bold text-base text-primary-800 font-serif">Cancel Booking</h4>
+                </div>
+                <p className="text-[10px] text-neutral-400 font-mono mt-0.5">
+                  Ref: #{cancelModalBooking.bookingNumber} • {cancelModalBooking.eventType}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCancelModalBooking(null)}
+                className="text-neutral-400 hover:text-primary-800 p-1 rounded-full transition-all"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmCancel} className="p-5 space-y-4 text-xs">
+              <div className="bg-red-50/70 border border-red-200 rounded-luxury p-3 text-red-800 text-[11px] leading-relaxed">
+                <p className="font-bold mb-0.5">⚠️ Important Cancellation Notice</p>
+                <p>
+                  Cancelling your booking for <span className="font-semibold">{new Date(cancelModalBooking.eventDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span> is irreversible. Please provide the reason for cancellation below.
+                </p>
+              </div>
+
+              {/* Booking Quick Info */}
+              <div className="bg-cream-50/50 border border-cream-200 rounded p-2.5 grid grid-cols-2 gap-2 text-[11px]">
+                <div>
+                  <span className="text-[9px] text-neutral-400 uppercase font-bold block">Venue</span>
+                  <span className="font-semibold text-primary-800 truncate block">{cancelModalBooking.hall?.name || 'Selected Venue'}</span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-neutral-400 uppercase font-bold block">Contract Amount</span>
+                  <span className="font-mono font-bold text-gold-600">₹{Number(cancelModalBooking.totalAmount).toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+
+              {/* Reason Presets */}
+              <div className="space-y-1">
+                <label className="block text-[11px] font-bold text-primary-800 tracking-wide">
+                  Reason for Cancellation *
+                </label>
+                <select
+                  value={cancelReasonPreset}
+                  onChange={(e) => setCancelReasonPreset(e.target.value)}
+                  className="w-full bg-cream-50/60 border border-cream-200 rounded-luxury px-3 py-2 text-xs text-primary-800 font-medium focus:outline-none focus:ring-1 focus:ring-red-500 focus:bg-white transition-all cursor-pointer"
+                >
+                  <option value="Change in event dates or schedule">Change in event dates or schedule</option>
+                  <option value="Found an alternative venue">Found an alternative venue</option>
+                  <option value="Budget or financial constraints">Budget or financial constraints</option>
+                  <option value="Emergency or unforeseen personal circumstances">Emergency or unforeseen personal circumstances</option>
+                  <option value="Guest count significantly changed">Guest count significantly changed</option>
+                  <option value="Event postponed indefinitely">Event postponed indefinitely</option>
+                  <option value="Other reason">Other reason</option>
+                </select>
+              </div>
+
+              {/* Specific Reason / Explanation Textarea */}
+              <div className="space-y-1">
+                <label className="block text-[11px] font-bold text-primary-800 tracking-wide">
+                  Additional Details / Explanation {cancelReasonPreset === 'Other reason' && '*'}
+                </label>
+                <textarea
+                  rows={3}
+                  required={cancelReasonPreset === 'Other reason'}
+                  value={cancelReasonDetails}
+                  onChange={(e) => setCancelReasonDetails(e.target.value)}
+                  placeholder="Please specify additional context (e.g. postponed to next year, change in family plans, etc.)..."
+                  className="w-full bg-cream-50/60 border border-cream-200 rounded-luxury px-3 py-2 text-xs text-primary-800 font-normal focus:outline-none focus:ring-1 focus:ring-red-500 focus:bg-white transition-all"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2 border-t border-cream-100">
+                <button
+                  type="button"
+                  disabled={submittingCancel}
+                  onClick={() => setCancelModalBooking(null)}
+                  className="px-4 py-2 border border-cream-200 rounded-luxury text-xs font-bold uppercase tracking-wider text-neutral-600 hover:bg-cream-50 transition-all disabled:opacity-50"
+                >
+                  Keep Booking
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingCancel}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-luxury text-xs font-bold uppercase tracking-wider transition-all shadow flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {submittingCancel ? (
+                    <>
+                      <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                      <span>Cancelling...</span>
+                    </>
+                  ) : (
+                    <>
+                      <XCircle size={14} />
+                      <span>Confirm Cancellation</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

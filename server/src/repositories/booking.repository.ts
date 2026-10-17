@@ -117,15 +117,29 @@ export class BookingRepository {
   }
 
   /**
-   * Cancel a booking by setting status to CANCELLED and setting cancelledAt timestamp
+   * Cancel a booking by setting status to CANCELLED, recording cancelledAt and cancellationReason
    */
-  async cancelBooking(id: string): Promise<Booking> {
-    return await prisma.booking.update({
+  async cancelBooking(id: string, cancellationReason?: string): Promise<Booking> {
+    const booking = await prisma.booking.update({
       where: { id },
       data: {
         status: BookingStatus.CANCELLED,
-        cancelledAt: new Date()
+        cancelledAt: new Date(),
+        cancellationReason: cancellationReason || null
       }
     });
+
+    if (booking.eventId) {
+      try {
+        await prisma.event.update({
+          where: { id: booking.eventId },
+          data: { status: 'CANCELLED' }
+        });
+      } catch (e) {
+        console.warn('Could not update associated event status:', e);
+      }
+    }
+
+    return booking;
   }
 }

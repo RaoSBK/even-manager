@@ -54,6 +54,7 @@ export interface BookingDetails {
   createdAt: string;
   updatedAt: string;
   cancelledAt: string | null;
+  cancellationReason?: string | null;
   user?: {
     id: string;
     name: string;
@@ -153,8 +154,8 @@ export const bookingApi = {
     return httpClient.patch(`/bookings/${id}/status`, { status });
   },
 
-  cancel: async (id: string): Promise<{ message: string; booking: BookingDetails }> => {
-    return httpClient.patch(`/bookings/${id}/cancel`);
+  cancel: async (id: string, reason?: string): Promise<{ message: string; booking: BookingDetails }> => {
+    return httpClient.patch(`/bookings/${id}/cancel`, { reason });
   },
 
   getHistory: async (id: string): Promise<any[]> => {

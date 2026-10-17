@@ -290,6 +290,7 @@ export class BookingController {
   async cancelBooking(req: Request, res: Response) {
     try {
       const { id } = req.params as { id: string };
+      const { reason } = req.body || {};
       const userId = req.user?.id;
       const role = req.user?.role;
 
@@ -297,13 +298,25 @@ export class BookingController {
         return res.status(401).json({ message: 'Unauthorized' });
       }
 
-      const booking = await this.bookingService.cancel(id, userId, role);
+      const booking = await this.bookingService.cancel(id, userId, role, reason);
       return res.status(200).json({
         message: 'Booking cancelled successfully',
         booking
       });
     } catch (error: any) {
-      return res.status(500).json({ message: 'Internal server error while cancelling booking' });
+      if (error.message === 'NOT_FOUND') {
+        return res.status(404).json({ message: 'Booking not found' });
+      }
+      if (error.message === 'FORBIDDEN') {
+        return res.status(403).json({ message: 'Forbidden: You cannot cancel this booking' });
+      }
+      if (error.message === 'ALREADY_FINALIZED') {
+        return res.status(400).json({ message: 'Booking is already cancelled or completed' });
+      }
+      console.error('Cancel booking error:', error);
+      return res.status(500).json({ 
+        message: error.message || 'Internal server error while cancelling booking' 
+      });
     }
   }
 }

@@ -641,9 +641,9 @@ export class BookingService {
   }
 
   /**
-   * Cancel booking
+   * Cancel booking with reason
    */
-  async cancel(id: string, userId: string, role: string): Promise<Booking> {
+  async cancel(id: string, userId: string, role: string, reason?: string): Promise<Booking> {
     const booking = await this.bookingRepo.findById(id);
     if (!booking) throw new Error('NOT_FOUND');
 
@@ -659,6 +659,6 @@ export class BookingService {
       throw new Error('ALREADY_FINALIZED');
     }
 
-    return await this.bookingRepo.cancelBooking(id);
+    return await this.bookingRepo.cancelBooking(id, reason);
   }
 }
