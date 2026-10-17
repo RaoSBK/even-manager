@@ -60,7 +60,7 @@ export const Navbar: React.FC = () => {
               <div className="absolute top-full left-0 hidden group-hover:block bg-white border border-cream-200 shadow-luxury rounded-luxury py-2 w-48 mt-1">
                 <Link to="/events" className="block px-4 py-2 text-sm text-primary-800 hover:bg-cream-50 hover:text-gold-600">Events</Link>
                 <Link to="/halls" className="block px-4 py-2 text-sm text-primary-800 hover:bg-cream-50 hover:text-gold-600">Function Halls</Link>
-                <Link to="/travel" className="block px-4 py-2 text-sm text-primary-800 hover:bg-cream-50 hover:text-gold-600">Travel Booking</Link>
+                <a href="https://gkbooking.vercel.app/" className="block px-4 py-2 text-sm text-primary-800 hover:bg-cream-50 hover:text-gold-600">Travel Booking</a>
               </div>
             </div>
 
@@ -227,7 +227,7 @@ export const Navbar: React.FC = () => {
             <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Services</span>
             <Link to="/events" onClick={() => setIsMenuOpen(false)} className="block text-sm text-primary-700 hover:text-gold-500 py-0.5">Events</Link>
             <Link to="/halls" onClick={() => setIsMenuOpen(false)} className="block text-sm text-primary-700 hover:text-gold-500 py-0.5">Function Halls</Link>
-            <Link to="/travel" onClick={() => setIsMenuOpen(false)} className="block text-sm text-primary-700 hover:text-gold-500 py-0.5">Travel Booking</Link>
+            <a href="https://gkbooking.vercel.app/" onClick={() => setIsMenuOpen(false)} className="block text-sm text-primary-700 hover:text-gold-500 py-0.5">Travel Booking</a>
           </div>
 
           <Link

@@ -29,12 +29,12 @@ export interface ContactDetails {
 
 export const contactConfig: ContactDetails = {
   phone: {
-    display: '+91 98896 12904',
-    value: 'tel:+919889612904'
+    display: '+91 72880 40106',
+    value: 'tel:+917288040106'
   },
   whatsapp: {
-    display: '+91 98896 12904',
-    link: 'https://wa.me/919889612904?text=Hi%20GK%20Booking,%20I%20have%20an%20enquiry'
+    display: '+91 72880 40106',
+    link: 'https://wa.me/917288040106?text=Hi%20GK%20Booking,%20I%20have%20an%20enquiry'
   },
   email: {
     display: 'gkbooking26@gmail.com',
@@ -58,7 +58,7 @@ export const contactConfig: ContactDetails = {
     {
       id: 'faq-2',
       question: 'How can I contact customer care?',
-      answer: 'You can instantly dial customer care at +91 98896 12904, initiate a WhatsApp chat, send an email to gkbooking26@gmail.com, or submit a message using the Contact Form on this page.'
+      answer: 'You can instantly dial customer care at +91 7288040106, initiate a WhatsApp chat, send an email to gkbooking26@gmail.com, or submit a message using the Contact Form on this page.'
     },
     {
       id: 'faq-3',

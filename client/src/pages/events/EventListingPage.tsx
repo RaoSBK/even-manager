@@ -62,9 +62,14 @@ export const EventListingPage: React.FC = () => {
           </div>
 
           {/* Card 3: Travelling Booking */}
-          <div className="luxury-card flex flex-col justify-between p-6 hover:shadow-luxury-lg hover:border-gold-300 transition-all duration-300">
+          <div 
+            onClick={() => {
+              window.location.href = 'https://gkbooking.vercel.app/';
+            }}
+            className="luxury-card flex flex-col justify-between p-6 hover:shadow-luxury-lg hover:border-emerald-400 transition-all duration-300 cursor-pointer group"
+          >
             <div>
-              <div className="bg-emerald-50 text-emerald-600 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-5 border border-emerald-200">
+              <div className="bg-emerald-50 text-emerald-600 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-5 border border-emerald-200 group-hover:scale-105 transition-all">
                 <Car size={22} className="text-emerald-600" />
               </div>
               <h3 className="text-lg font-bold font-serif text-primary-800 mb-2">Travelling Booking</h3>
@@ -73,8 +78,11 @@ export const EventListingPage: React.FC = () => {
               </p>
             </div>
             <button 
-              onClick={() => navigate('/events/book/travel')} 
-              className="w-full py-2.5 bg-emerald-600 text-white font-medium text-xs rounded-lg hover:bg-emerald-700 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                window.location.href = 'https://gkbooking.vercel.app/';
+              }} 
+              className="w-full py-2.5 bg-emerald-600 text-white font-medium text-xs rounded-lg hover:bg-emerald-700 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm hover:shadow"
             >
               Start Booking &rarr;
             </button>
