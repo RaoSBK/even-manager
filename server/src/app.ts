@@ -62,6 +62,15 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Serve static assets (favicons, robots.txt, logo.png) if requested via backend
+const clientDistPath = path.resolve(__dirname, '../../client/dist');
+const clientPublicPath = path.resolve(__dirname, '../../client/public');
+if (fs.existsSync(clientDistPath)) {
+  app.use(express.static(clientDistPath));
+} else if (fs.existsSync(clientPublicPath)) {
+  app.use(express.static(clientPublicPath));
+}
+
 // Helper to map Prisma HallBooking to expected frontend schema
 function mapBookingResponse(b: any) {
   if (!b) return b;
