@@ -57,11 +57,11 @@ export const EventHero: React.FC = () => {
   ];
 
   const travelOptions = [
-    { name: 'Bridal & Groom Luxury Car', path: 'https://gkbooking.vercel.app/', icon: '🚗', desc: 'Mercedes, BMW, Audi with floral decor & chauffeur' },
-    { name: 'Guest Bus & Coach Service', path: 'https://gkbooking.vercel.app/', icon: '🚌', desc: '30–50 seater AC luxury coaches for wedding attendees' },
-    { name: 'Tempo Traveller Rental', path: 'https://gkbooking.vercel.app/', icon: '🚐', desc: '12–26 seater luxury pushback tempo travellers' },
-    { name: 'Airport & Station Transfers', path: 'https://gkbooking.vercel.app/', icon: '🚖', desc: 'Round-the-clock VIP guest pickup and drop' },
-    { name: 'Custom Fleet & Logistics', path: 'https://gkbooking.vercel.app/', icon: '🗺️', desc: 'End-to-end event travel planning & vehicle fleet' }
+    { name: 'Bridal & Groom Luxury Car', path: '/travel-booking?category=cars', icon: '🚗', desc: 'Mercedes, BMW, Audi with floral decor & chauffeur' },
+    { name: 'Guest Bus & Coach Service', path: '/travel-booking?category=buses', icon: '🚌', desc: '30–50 seater AC luxury coaches for wedding attendees' },
+    { name: 'Tempo Traveller Rental', path: '/travel-booking?category=tempo', icon: '🚐', desc: '12–26 seater luxury pushback tempo travellers' },
+    { name: 'Airport & Station Transfers', path: '/travel-booking', icon: '🚖', desc: 'Round-the-clock VIP guest pickup and drop' },
+    { name: 'Custom Fleet & Logistics', path: '/travel-booking', icon: '🗺️', desc: 'End-to-end event travel planning & vehicle fleet' }
   ];
 
   const handleOpenModal = () => {
@@ -289,12 +289,15 @@ export const EventHero: React.FC = () => {
 
                 {selectedService === 'TRAVEL' && (
                   <div className="col-span-1 sm:col-span-2 pt-2">
-                    <a
-                      href="https://gkbooking.vercel.app/"
-                      className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-luxury text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow"
+                    <button
+                      onClick={() => {
+                        handleCloseModal();
+                        navigate('/travel-booking');
+                      }}
+                      className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-luxury text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow cursor-pointer"
                     >
-                      <span>Go to Travel Booking Portal (gkbooking.vercel.app) &rarr;</span>
-                    </a>
+                      <span>Open Travel Booking Portal &rarr;</span>
+                    </button>
                   </div>
                 )}
               </div>

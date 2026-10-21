@@ -31,6 +31,7 @@ const HallListingPage = lazy(() => import('../pages/halls/HallListingPage'));
 const HallDetailPage = lazy(() => import('../pages/halls/HallDetailPage'));
 const HallBookingPage = lazy(() => import('../pages/halls/HallBookingPage'));
 const BookingConfirmationPage = lazy(() => import('../pages/halls/BookingConfirmationPage'));
+const TravelBookingPage = lazy(() => import('../pages/travel/TravelBookingPage'));
 
 // Admin Pages
 const AdminDashboardPage = lazy(() => import('../pages/admin/DashboardPage'));
@@ -91,7 +92,8 @@ export const router = createBrowserRouter([
       { path: 'events', element: <EventListingPage /> },
       { path: 'halls', element: <HallListingPage /> },
       { path: 'halls/:id', element: <HallDetailPage /> },
-      { path: 'travel', element: <EventListingPage /> },
+      { path: 'travel', element: <TravelBookingPage /> },
+      { path: 'travel-booking', element: <TravelBookingPage /> },
       { path: 'contact', element: <ContactPage /> },
       { path: 'help', element: <HelpPage /> },
     ],

@@ -63,9 +63,7 @@ export const EventListingPage: React.FC = () => {
 
           {/* Card 3: Travelling Booking */}
           <div 
-            onClick={() => {
-              window.location.href = 'https://gkbooking.vercel.app/';
-            }}
+            onClick={() => { navigate('/travel-booking'); }}
             className="luxury-card flex flex-col justify-between p-6 hover:shadow-luxury-lg hover:border-emerald-400 transition-all duration-300 cursor-pointer group"
           >
             <div>
@@ -78,10 +76,7 @@ export const EventListingPage: React.FC = () => {
               </p>
             </div>
             <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                window.location.href = 'https://gkbooking.vercel.app/';
-              }} 
+              onClick={(e) => { e.stopPropagation(); navigate('/travel-booking'); }} 
               className="w-full py-2.5 bg-emerald-600 text-white font-medium text-xs rounded-lg hover:bg-emerald-700 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm hover:shadow"
             >
               Start Booking &rarr;
