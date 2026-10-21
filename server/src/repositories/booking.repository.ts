@@ -87,6 +87,88 @@ export class BookingRepository {
   /**
    * Get all bookings in the system
    */
+  /**
+   * Find all bookings for a specific hall with optional filtering and pagination
+   */
+  async findByHallId(
+    hallId: string,
+    filters?: {
+      status?: string;
+      eventType?: string;
+      startDate?: string;
+      endDate?: string;
+      page?: number;
+      limit?: number;
+    }
+  ): Promise<{ bookings: Booking[]; total: number; page: number; limit: number }> {
+    const where: Prisma.BookingWhereInput = { hallId };
+
+    if (filters?.status && filters.status !== 'ALL') {
+      where.status = filters.status as BookingStatus;
+    }
+
+    if (filters?.eventType && filters.eventType !== 'ALL') {
+      where.eventType = { contains: filters.eventType, mode: 'insensitive' };
+    }
+
+    if (filters?.startDate || filters?.endDate) {
+      where.eventDate = {};
+      if (filters.startDate) {
+        where.eventDate.gte = new Date(filters.startDate);
+      }
+      if (filters.endDate) {
+        where.eventDate.lte = new Date(filters.endDate);
+      }
+    }
+
+    const page = Math.max(filters?.page || 1, 1);
+    const limit = Math.min(Math.max(filters?.limit || 50, 1), 100);
+    const skip = (page - 1) * limit;
+
+    const [total, bookings] = await Promise.all([
+      prisma.booking.count({ where }),
+      prisma.booking.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              mobile: true
+            }
+          },
+          customer: {
+            select: {
+              id: true,
+              fullName: true,
+              email: true,
+              phone: true,
+              city: true
+            }
+          },
+          payments: {
+            select: {
+              id: true,
+              amount: true,
+              status: true,
+              paymentMethod: true,
+              paymentDate: true,
+              razorpayPaymentId: true
+            }
+          }
+        },
+        orderBy: {
+          bookingDate: 'desc'
+        },
+        skip,
+        take: limit
+      })
+    ]);
+
+    return { bookings, total, page, limit };
+  }
+
   async findAll(): Promise<Booking[]> {
     return await prisma.booking.findMany({
       include: {

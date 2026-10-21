@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Sparkles, Award, Users, ArrowRight, X, ArrowLeft, ChevronRight } from 'lucide-react';
+import { Sparkles, Award, Users, ArrowRight, X, ArrowLeft, ChevronRight, MapPin } from 'lucide-react';
 import heroImage from '../../assets/images/hero-wedding.jpg';
 
 type ServiceCategory = 'EVENT' | 'HALL' | 'TRAVEL' | null;
@@ -49,11 +49,12 @@ export const EventHero: React.FC = () => {
   ];
 
   const hallOptions = [
-    { name: 'Taj Mahal Grand Ballroom', path: '/halls/hall-seed/book', icon: '🏛️', desc: '500+ Guests • High ceilings & chandeliers' },
-    { name: 'Luxury Grand Arena', path: '/halls/hall-b-seed/book', icon: '🏟️', desc: '1000+ Guests • Large conventions & stages' },
-    { name: 'GK Grand Convention Hall', path: '/halls/gk-grand-convention/book', icon: '🏰', desc: '1500+ Guests • Premium wedding convention' },
-    { name: 'Royal Palace Function Hall', path: '/halls/royal-palace-function/book', icon: '👑', desc: '2000+ Guests • Palace-style grand weddings' },
-    { name: 'Browse All Function Halls', path: '/halls', icon: '🔍', desc: 'Compare pricing, dates, amenities & availability' }
+    { name: 'Taj Mahal Grand Ballroom', path: '/halls/hall-seed/book', icon: '🏛️', desc: 'Banjara Hills, Hyderabad • 500+ Guests' },
+    { name: 'Luxury Grand Arena', path: '/halls/hall-b-seed/book', icon: '🏟️', desc: 'Madhapur, Hyderabad • 1000+ Guests' },
+    { name: 'GK Grand Convention Hall', path: '/halls/gk-grand-convention/book', icon: '🏰', desc: 'Jadcherla, Mahabubnagar • 1500+ Guests' },
+    { name: 'Royal Palace Function Hall', path: '/halls/royal-palace-function/book', icon: '👑', desc: 'Nagarkurnool, Telangana • 2000+ Guests' },
+    { name: 'Sri Lakshmi Function Hall', path: '/halls/sri-lakshmi-function/book', icon: '✨', desc: 'Wanaparthy, Telangana • 800+ Guests' },
+    { name: 'Browse All Function Halls by Location', path: '/halls', icon: '🔍', desc: 'Filter by State, District & Mandal' }
   ];
 
   const travelOptions = [
@@ -286,6 +287,26 @@ export const EventHero: React.FC = () => {
                     </div>
                   </button>
                 ))}
+
+                {selectedService === 'HALL' && (
+                  <div className="col-span-1 sm:col-span-2 pt-2">
+                    <button
+                      onClick={() => {
+                        handleCloseModal();
+                        const el = document.getElementById('location-venues');
+                        if (el) {
+                          el.scrollIntoView({ behavior: 'smooth' });
+                        } else {
+                          navigate('/halls');
+                        }
+                      }}
+                      className="w-full py-2.5 bg-gold-500 hover:bg-gold-600 text-white rounded-luxury text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow cursor-pointer"
+                    >
+                      <MapPin size={14} />
+                      <span>Filter Venues by State, District & Mandal &rarr;</span>
+                    </button>
+                  </div>
+                )}
 
                 {selectedService === 'TRAVEL' && (
                   <div className="col-span-1 sm:col-span-2 pt-2">

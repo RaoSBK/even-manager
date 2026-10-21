@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { signupUser, loginUser, verifySession } from '../api/authApi';
 
-export type UserRole = 'ADMIN' | 'EMPLOYEE' | 'USER';
+export type UserRole = 'ADMIN' | 'EMPLOYEE' | 'USER' | 'HALL_MANAGER';
 
 export interface User {
   id: string;
@@ -11,6 +11,13 @@ export interface User {
   role: UserRole;
   avatar?: string;
   status: string;
+  loginId?: string;
+  hallId?: string;
+  ownedHall?: {
+    id: string;
+    hallCode: string;
+    name: string;
+  };
 }
 
 export interface SignupData {
@@ -34,9 +41,10 @@ export interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 function mapBackendRoleToFrontend(role: string): UserRole {
-  const norm = role.toUpperCase();
+  const norm = (role || '').toUpperCase();
   if (norm === 'ADMIN' || norm === 'SUPER ADMIN') return 'ADMIN';
   if (norm === 'EMPLOYEE') return 'EMPLOYEE';
+  if (norm === 'OWNER' || norm === 'HALL_MANAGER' || norm === 'MANAGER') return 'HALL_MANAGER';
   return 'USER';
 }
 
@@ -58,7 +66,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             email: backendUser.email,
             mobile: backendUser.mobile,
             role: mapBackendRoleToFrontend(backendUser.role),
-            status: 'active'
+            status: 'active',
+            loginId: backendUser.loginId || undefined,
+            hallId: backendUser.hallId || undefined,
+            ownedHall: backendUser.ownedHall || undefined
           };
           setUser(mappedUser);
         } catch (error) {
@@ -85,7 +96,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email: backendUser.email,
         mobile: backendUser.mobile,
         role: mapBackendRoleToFrontend(backendUser.role),
-        status: 'active'
+        status: 'active',
+        loginId: backendUser.loginId || undefined,
+        hallId: backendUser.hallId || undefined,
+        ownedHall: backendUser.ownedHall || undefined
       };
 
       localStorage.setItem('gk_events_token', token);

@@ -16,13 +16,13 @@ export const LoginPage: React.FC = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!emailOrMobile.trim() || !password) {
-      addToast('Please enter your email/mobile and password.', 'warning');
+      addToast('Please enter your email/mobile/login ID and password.', 'warning');
       return;
     }
 
     setSubmitting(true);
     try {
-      const user = await login(emailOrMobile, password);
+      const user = await login(emailOrMobile.trim(), password);
       addToast(`Welcome back, ${user.name}!`, 'success');
       
       // Role based redirection
@@ -30,11 +30,13 @@ export const LoginPage: React.FC = () => {
         navigate('/admin/dashboard');
       } else if (user.role === 'EMPLOYEE') {
         navigate('/employee/dashboard');
+      } else if (user.role === 'HALL_MANAGER') {
+        navigate('/manager/dashboard');
       } else {
         navigate('/user/dashboard');
       }
     } catch (err: any) {
-      addToast(err.message || 'Invalid email/mobile or password.', 'error');
+      addToast(err.message || 'Invalid credentials or password.', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -50,7 +52,7 @@ export const LoginPage: React.FC = () => {
       <form onSubmit={handleLogin} className="space-y-4">
         <div>
           <label className="block text-xs font-bold text-primary-800 uppercase tracking-wider mb-1">
-            Email or Mobile Number
+            Email, Mobile Number, or Login ID
           </label>
           <div className="relative">
             <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gold-500">
@@ -61,7 +63,7 @@ export const LoginPage: React.FC = () => {
               value={emailOrMobile}
               onChange={(e) => setEmailOrMobile(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 border border-cream-200 rounded-luxury focus:outline-none focus:ring-1 focus:ring-gold-500 focus:border-gold-500 text-sm"
-              placeholder="e.g. admin@gkevent.com or 9876543210"
+              placeholder="e.g. admin@gkevent.com, 9876543210, or mgr_taj"
               disabled={submitting}
             />
           </div>

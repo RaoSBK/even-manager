@@ -14,14 +14,17 @@ router.post('/', authMiddleware, roleMiddleware(['Customer', 'Admin']), (req, re
 // Get my bookings (Customer)
 router.get('/my-bookings', authMiddleware, (req, res) => controller.getMyBookings(req, res));
 
-// Get booking by ID (Customer / Admin / Employee)
+// Get owner/manager hall bookings (Owner / Hall_Manager / Manager / Admin) - Must precede /:id to avoid route collision
+router.get('/owner-hall', authMiddleware, roleMiddleware(['Owner', 'Hall_Manager', 'Manager', 'Admin']), (req, res) => controller.getOwnerHallBookings(req, res));
+
+// Get booking by ID (Customer / Admin / Employee / Hall Owner)
 router.get('/:id', authMiddleware, (req, res) => controller.getBookingById(req, res));
 
 // Get all bookings (Admin / Employee)
 router.get('/', authMiddleware, roleMiddleware(['Admin', 'Employee']), (req, res) => controller.getAllBookings(req, res));
 
-// Update booking status (Admin / Employee)
-router.patch('/:id/status', authMiddleware, roleMiddleware(['Admin', 'Employee']), (req, res) => controller.updateBookingStatus(req, res));
+// Update booking status (Admin / Employee / Owner / Hall_Manager / Manager)
+router.patch('/:id/status', authMiddleware, roleMiddleware(['Admin', 'Employee', 'Owner', 'Hall_Manager', 'Manager']), (req, res) => controller.updateBookingStatus(req, res));
 
 // Cancel booking (Customer/Admin/Employee)
 router.patch('/:id/cancel', authMiddleware, (req, res) => controller.cancelBooking(req, res));

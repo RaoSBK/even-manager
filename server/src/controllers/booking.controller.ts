@@ -253,6 +253,61 @@ export class BookingController {
   /**
    * Get all bookings (Admin/Employee only)
    */
+  /**
+   * Get bookings for authenticated owner's hall
+   */
+  async getOwnerHallBookings(req: Request, res: Response) {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      const { status, eventType, startDate, endDate, page, limit } = req.query;
+
+      // Hardening: Validate status query filter
+      if (status && status !== 'ALL') {
+        const validStatuses = ['PENDING', 'PENDING_PAYMENT', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'REJECTED'];
+        if (!validStatuses.includes(String(status).toUpperCase())) {
+          return res.status(400).json({
+            message: `Invalid status filter '${status}'. Allowed values: ${validStatuses.join(', ')}, ALL`
+          });
+        }
+      }
+
+      // Hardening: Validate date filters
+      if (startDate) {
+        const parsedStart = new Date(String(startDate));
+        if (isNaN(parsedStart.getTime())) {
+          return res.status(400).json({ message: 'Invalid startDate filter. Expected valid date format (YYYY-MM-DD).' });
+        }
+      }
+      if (endDate) {
+        const parsedEnd = new Date(String(endDate));
+        if (isNaN(parsedEnd.getTime())) {
+          return res.status(400).json({ message: 'Invalid endDate filter. Expected valid date format (YYYY-MM-DD).' });
+        }
+      }
+
+      const result = await this.bookingService.getOwnerHallBookings(userId, {
+        status: status as string | undefined,
+        eventType: eventType as string | undefined,
+        startDate: startDate as string | undefined,
+        endDate: endDate as string | undefined,
+        page: page ? Number(page) : undefined,
+        limit: limit ? Number(limit) : undefined,
+      });
+
+      return res.status(200).json(result);
+    } catch (error: any) {
+      if (error.message === 'NO_ASSIGNED_HALL') {
+        return res.status(404).json({ message: 'No hall is currently assigned to this owner account.' });
+      }
+      console.error('Get owner hall bookings error:', error);
+      return res.status(500).json({ message: 'Internal server error while fetching owner hall bookings' });
+    }
+  }
+
   async getAllBookings(req: Request, res: Response) {
     try {
       const bookings = await this.bookingService.getAll();
@@ -269,17 +324,36 @@ export class BookingController {
     try {
       const { id } = req.params as { id: string };
       const { status } = req.body;
+      const userId = req.user?.id;
+      const role = req.user?.role;
 
       if (!status) {
         return res.status(400).json({ message: 'Status field is required.' });
       }
 
-      const booking = await this.bookingService.updateStatus(id, status);
+      if (!userId || !role) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      const booking = await this.bookingService.updateStatus(id, status, userId, role);
       return res.status(200).json({
         message: 'Booking status updated successfully',
         booking
       });
     } catch (error: any) {
+      if (error.message === 'NOT_FOUND') {
+        return res.status(404).json({ message: 'Booking not found.' });
+      }
+      if (error.message === 'FORBIDDEN') {
+        return res.status(403).json({ message: 'Forbidden: You do not have permission to update this booking.' });
+      }
+      if (error.message === 'INVALID_STATUS') {
+        return res.status(400).json({ message: 'Invalid booking status supplied.' });
+      }
+      if (error.message === 'DISALLOWED_OWNER_TRANSITION') {
+        return res.status(400).json({ message: 'Owners can only transition booking status to CONFIRMED, COMPLETED, CANCELLED, or REJECTED.' });
+      }
+      console.error('Update booking status error:', error);
       return res.status(500).json({ message: 'Internal server error while updating booking status' });
     }
   }

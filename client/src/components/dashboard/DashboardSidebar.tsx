@@ -69,6 +69,10 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ isOpen, onCl
     { path: '/employee/profile', name: 'Profile', icon: <User size={18} /> }
   ];
 
+  const managerLinks: SidebarLink[] = [
+    { path: '/manager/dashboard', name: 'Hall Operations', icon: <LayoutDashboard size={18} /> }
+  ];
+
   const userLinks: SidebarLink[] = [
     { path: '/user/dashboard', name: 'Dashboard', icon: <LayoutDashboard size={18} /> },
     { path: '/user/events', name: 'Book Event', icon: <Sparkles size={18} /> },
@@ -83,12 +87,14 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ isOpen, onCl
   const getLinks = () => {
     if (user.role === 'ADMIN') return adminLinks;
     if (user.role === 'EMPLOYEE') return employeeLinks;
+    if (user.role === 'HALL_MANAGER') return managerLinks;
     return userLinks;
   };
 
   const getTitle = () => {
     if (user.role === 'ADMIN') return 'Admin Portal';
     if (user.role === 'EMPLOYEE') return 'Staff Portal';
+    if (user.role === 'HALL_MANAGER') return 'Hall Manager Portal';
     return 'Customer Hub';
   };
 
@@ -153,7 +159,7 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ isOpen, onCl
         {/* Footer info inside sidebar */}
         <div className="p-4 border-t border-white/10 text-center text-[10px] text-gray-400 bg-primary-950/10">
           <p className="font-semibold text-gold-500">GK BOOKING</p>
-          <p className="mt-0.5">&copy; {new Date().getFullYear()} v1.0.0 (Demo Mode)</p>
+          <p className="mt-0.5">&copy; {new Date().getFullYear()} v1.0.0</p>
         </div>
       </aside>
     </>

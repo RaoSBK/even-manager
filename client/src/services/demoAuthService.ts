@@ -1,4 +1,4 @@
-export type UserRole = 'ADMIN' | 'EMPLOYEE' | 'USER';
+export type UserRole = 'ADMIN' | 'EMPLOYEE' | 'USER' | 'HALL_MANAGER';
 
 export interface User {
   id: string;
@@ -28,6 +28,7 @@ function mapRole(backendRole: string): UserRole {
   const roleUpper = (backendRole || '').toUpperCase();
   if (roleUpper === 'ADMIN') return 'ADMIN';
   if (roleUpper === 'EMPLOYEE') return 'EMPLOYEE';
+  if (roleUpper === 'OWNER' || roleUpper === 'HALL_MANAGER' || roleUpper === 'MANAGER') return 'HALL_MANAGER';
   return 'USER';
 }
 

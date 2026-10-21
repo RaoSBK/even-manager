@@ -29,7 +29,7 @@ import employeeRoutes from './routes/employee.routes';
 declare global {
   namespace Express {
     interface Request {
-      user?: { id: string; role: string };
+      user?: { id: string; role: string; hallId?: string };
     }
   }
 }
@@ -37,7 +37,29 @@ declare global {
 const app = express();
 const PORT = process.env.PORT || 5050;
 
-app.use(cors());
+const defaultAllowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://localhost:5050',
+  'http://localhost:8080',
+  'http://127.0.0.1:5500',
+  'http://127.0.0.1:8080'
+];
+
+const configuredOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map(o => o.trim()).filter(Boolean)
+  : defaultAllowedOrigins;
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (process.env.NODE_ENV !== 'production' || configuredOrigins.includes('*') || configuredOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true
+}));
 app.use(express.json());
 
 // Helper to map Prisma HallBooking to expected frontend schema
@@ -52,8 +74,12 @@ function mapBookingResponse(b: any) {
 // JWT Helpers & Middlewares
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key';
 
-function generateToken(user: { id: string; role: string }) {
-  return jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+function generateToken(user: { id: string; role: string; hallId?: string }) {
+  const payload: { id: string; role: string; hallId?: string } = { id: user.id, role: user.role };
+  if (user.hallId) {
+    payload.hallId = user.hallId;
+  }
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
 }
 
 export function authMiddleware(req: Request, res: Response, next: NextFunction) {
@@ -64,7 +90,7 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
 
   const token = authHeader.split(' ')[1];
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { id: string; role: string };
+    const decoded = jwt.verify(token, JWT_SECRET) as { id: string; role: string; hallId?: string };
     req.user = decoded;
     next();
   } catch (error) {
@@ -138,11 +164,11 @@ app.post('/api/auth/signup', async (req: Request, res: Response) => {
 
 // Login Endpoint
 app.post('/api/auth/login', async (req: Request, res: Response) => {
-  const { emailOrMobile, mobile, password } = req.body;
-  const identifier = emailOrMobile || mobile;
+  const { emailOrMobile, mobile, password, loginId, username } = req.body;
+  const identifier = loginId || emailOrMobile || mobile || username;
 
   if (!identifier || !password) {
-    return res.status(400).json({ message: 'Email or Mobile number and password are required' });
+    return res.status(400).json({ message: 'Email, Mobile number, or Login ID and password are required' });
   }
 
   try {
@@ -150,13 +176,27 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
       where: {
         OR: [
           { mobile: identifier },
-          { email: identifier }
+          { email: identifier },
+          { loginId: identifier }
         ]
+      },
+      include: {
+        ownedHall: {
+          select: {
+            id: true,
+            hallCode: true,
+            name: true
+          }
+        }
       }
     });
 
     if (!user) {
-      return res.status(400).json({ message: 'This email or mobile number is not registered. Please sign up first.' });
+      return res.status(400).json({ message: 'This account is not registered. Please check your credentials or sign up first.' });
+    }
+
+    if (user.isActive === false) {
+      return res.status(403).json({ message: 'This account is inactive. Please contact support.' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -164,7 +204,8 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Incorrect password' });
     }
 
-    const token = generateToken({ id: user.id, role: user.role });
+    const hallId = user.ownedHall?.id;
+    const token = generateToken({ id: user.id, role: user.role, hallId });
 
     return res.status(200).json({
       message: 'Login successful',
@@ -174,7 +215,14 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
         name: user.name,
         email: user.email,
         mobile: user.mobile,
-        role: user.role
+        loginId: user.loginId || undefined,
+        role: user.role,
+        hallId: hallId || undefined,
+        ownedHall: user.ownedHall ? {
+          id: user.ownedHall.id,
+          hallCode: user.ownedHall.hallCode,
+          name: user.ownedHall.name
+        } : undefined
       }
     });
   } catch (error: any) {
@@ -294,8 +342,16 @@ app.get('/api/auth/me', authMiddleware, async (req: Request, res: Response) => {
         name: true,
         email: true,
         mobile: true,
+        loginId: true,
         role: true,
-        createdAt: true
+        createdAt: true,
+        ownedHall: {
+          select: {
+            id: true,
+            hallCode: true,
+            name: true
+          }
+        }
       }
     });
 
@@ -308,7 +364,10 @@ app.get('/api/auth/me', authMiddleware, async (req: Request, res: Response) => {
       name: user.name,
       email: user.email,
       mobile: user.mobile,
+      loginId: user.loginId || undefined,
       role: user.role,
+      hallId: user.ownedHall?.id || undefined,
+      ownedHall: user.ownedHall || undefined,
       registrationDate: user.createdAt.toISOString()
     };
 
@@ -1088,10 +1147,14 @@ app.use('/api/search', searchRoutes);
 app.use('/api/employee', employeeRoutes);
 
 // Start Server
-connectDb().then(() => {
-  app.listen(PORT, () => {
-    console.log(`Backend server running on http://localhost:${PORT}`);
+if (process.env.NODE_ENV !== 'test') {
+  connectDb().then(() => {
+    app.listen(PORT, () => {
+      console.log(`Backend server running on http://localhost:${PORT}`);
+    });
+  }).catch(err => {
+    console.error('Failed to start server:', err);
   });
-}).catch(err => {
-  console.error('Failed to start server:', err);
-});
+}
+
+export default app;

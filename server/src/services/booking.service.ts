@@ -602,11 +602,60 @@ export class BookingService {
   /**
    * Get booking details by ID
    */
+  /**
+   * Get bookings belonging to the hall owned by the authenticated user
+   */
+  async getOwnerHallBookings(
+    userId: string,
+    filters?: {
+      status?: string;
+      eventType?: string;
+      startDate?: string;
+      endDate?: string;
+      page?: number;
+      limit?: number;
+    }
+  ): Promise<{ bookings: Booking[]; total: number; page: number; limit: number; hall: any }> {
+    const hall = await prisma.hall.findUnique({
+      where: { ownerId: userId }
+    });
+
+    if (!hall) {
+      throw new Error('NO_ASSIGNED_HALL');
+    }
+
+    const result = await this.bookingRepo.findByHallId(hall.id, filters);
+
+    return {
+      hall: {
+        id: hall.id,
+        hallCode: hall.hallCode,
+        name: hall.name,
+        location: hall.location,
+        capacity: hall.capacity,
+        basePrice: hall.basePrice
+      },
+      ...result
+    };
+  }
+
   async getById(id: string, userId: string, role: string): Promise<Booking> {
     const booking = await this.bookingRepo.findById(id);
     if (!booking) throw new Error('NOT_FOUND');
 
-    if (role !== 'Admin' && role !== 'Employee' && booking.userId !== userId) {
+    const isStaff = role === 'Admin' || role === 'Employee';
+    const isCustomerOwner = booking.userId === userId;
+
+    let isHallOwner = false;
+    const isManager = role && (role.toUpperCase() === 'OWNER' || role.toUpperCase() === 'HALL_MANAGER' || role.toUpperCase() === 'MANAGER');
+    if (isManager) {
+      const hall = await prisma.hall.findUnique({ where: { ownerId: userId } });
+      if (hall && booking.hallId === hall.id) {
+        isHallOwner = true;
+      }
+    }
+
+    if (!isStaff && !isCustomerOwner && !isHallOwner) {
       throw new Error('FORBIDDEN');
     }
 
@@ -630,12 +679,37 @@ export class BookingService {
   /**
    * Update booking status (Admin / Employee)
    */
-  async updateStatus(id: string, status: string): Promise<Booking> {
+  async updateStatus(id: string, status: string, userId?: string, role?: string): Promise<Booking> {
     const validStatuses = Object.keys(BookingStatus);
     if (!validStatuses.includes(status)) throw new Error('INVALID_STATUS');
 
     const booking = await this.bookingRepo.findById(id);
     if (!booking) throw new Error('NOT_FOUND');
+
+    // If caller is Owner or Hall Manager, verify ownership and permitted status transitions
+    const isManager = role && (role.toUpperCase() === 'OWNER' || role.toUpperCase() === 'HALL_MANAGER' || role.toUpperCase() === 'MANAGER');
+    if (isManager) {
+      if (!userId) throw new Error('FORBIDDEN');
+
+      const hall = await prisma.hall.findUnique({
+        where: { ownerId: userId }
+      });
+
+      if (!hall || booking.hallId !== hall.id) {
+        throw new Error('FORBIDDEN');
+      }
+
+      const allowedOwnerStatuses: BookingStatus[] = [
+        BookingStatus.CONFIRMED,
+        BookingStatus.COMPLETED,
+        BookingStatus.CANCELLED,
+        BookingStatus.REJECTED
+      ];
+
+      if (!allowedOwnerStatuses.includes(status as BookingStatus)) {
+        throw new Error('DISALLOWED_OWNER_TRANSITION');
+      }
+    }
 
     return await this.bookingRepo.updateStatus(id, status as BookingStatus);
   }

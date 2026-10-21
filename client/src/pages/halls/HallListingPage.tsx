@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import { MapPin, Users, IndianRupee, Search, Building, RefreshCw, CheckCircle2, ShieldAlert, ChevronRight, RotateCcw } from 'lucide-react';
 import { hallApi, Hall } from '../../api/hallApi';
 import { ALL_STATES, getDistrictsForState, getMandalsForDistrict } from '../../constants/hallsData';
@@ -28,6 +28,7 @@ const getHallAssets = (hallCode: string, name: string) => {
 
 export const HallListingPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   // DB Halls state
   const [halls, setHalls] = useState<Hall[]>([]);
@@ -36,9 +37,19 @@ export const HallListingPage: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // 3-tier Location Filters (State -> District -> Mandal)
-  const [filterState, setFilterState] = useState<string>('');
-  const [filterDistrict, setFilterDistrict] = useState<string>('');
-  const [filterMandal, setFilterMandal] = useState<string>('');
+  const [filterState, setFilterState] = useState<string>(() => searchParams.get('state') || '');
+  const [filterDistrict, setFilterDistrict] = useState<string>(() => searchParams.get('district') || '');
+  const [filterMandal, setFilterMandal] = useState<string>(() => searchParams.get('mandal') || '');
+
+  // Sync if URL search params change
+  useEffect(() => {
+    const s = searchParams.get('state');
+    const d = searchParams.get('district');
+    const m = searchParams.get('mandal');
+    if (s !== null) setFilterState(s);
+    if (d !== null) setFilterDistrict(d);
+    if (m !== null) setFilterMandal(m);
+  }, [searchParams]);
 
   // Fetch all halls from database on mount
   const fetchAllHalls = async () => {

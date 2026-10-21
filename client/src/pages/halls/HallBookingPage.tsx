@@ -7,6 +7,7 @@ import { bookingApi, BookingDetails } from '../../api/bookingApi';
 import { paymentApi } from '../../api/paymentApi';
 import { BookingConfirmationPage } from './BookingConfirmationPage';
 import DashboardCard from '../../components/dashboard/DashboardCard';
+import { ALL_STATES, getDistrictsForState, getMandalsForDistrict } from '../../constants/hallsData';
 import {
   Calendar as CalendarIcon,
   Users,
@@ -99,6 +100,12 @@ export const HallBookingPage: React.FC = () => {
   const [selectedHallId, setSelectedHallId] = useState<string>(routeHallId || '');
   const [hallsList, setHallsList] = useState<HallAvailabilityResponse['halls']>([]);
 
+  // 3-tier Location Filters (State -> District -> Mandal)
+  const [filterState, setFilterState] = useState<string>('');
+  const [filterDistrict, setFilterDistrict] = useState<string>('');
+  const [filterMandal, setFilterMandal] = useState<string>('');
+  const [showLocationPickerInStep1, setShowLocationPickerInStep1] = useState<boolean>(false);
+
 
   // Services selection
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
@@ -132,6 +139,44 @@ export const HallBookingPage: React.FC = () => {
     }
   }, [routeHallId]);
 
+  // Pre-load all halls on mount so hall details & rent are instantly available in Step 1
+  useEffect(() => {
+    const loadAllHalls = async () => {
+      try {
+        const all = await hallApi.getAll();
+        const active = (all || []).filter(h => !h.deletedAt);
+        if (active.length > 0) {
+          setHallsList(prev => (prev.length === 0 ? active.map(h => ({
+            id: h.id,
+            name: h.name,
+            hallCode: h.hallCode,
+            description: h.description,
+            location: h.location,
+            state: h.state,
+            district: h.district,
+            mandal: h.mandal,
+            capacity: h.capacity,
+            basePrice: Number(h.basePrice),
+            status: h.status,
+            available: h.status === 'AVAILABLE'
+          })) : prev));
+
+          const targetId = routeHallId || selectedHallId;
+          const matched = active.find(h => h.id === targetId || h.hallCode === targetId);
+          if (matched) {
+            setSelectedHallId(matched.id);
+            if (matched.state) setFilterState(matched.state);
+            if (matched.district) setFilterDistrict(matched.district);
+            if (matched.mandal) setFilterMandal(matched.mandal);
+          }
+        }
+      } catch (err) {
+        console.error('Error preloading halls:', err);
+      }
+    };
+    loadAllHalls();
+  }, [routeHallId]);
+
   // Initial date pre-fill (default 35 days from now)
   useEffect(() => {
     const futureDate = new Date();
@@ -157,15 +202,22 @@ export const HallBookingPage: React.FC = () => {
 
       // Auto-normalize selectedHallId with actual available halls from backend
       if (res.halls && res.halls.length > 0) {
+        const target = routeHallId || selectedHallId;
         const found = res.halls.find(
-          h => h.id === selectedHallId || h.hallCode === selectedHallId || h.id === routeHallId
+          h => h.id === target || h.hallCode === target || h.id === selectedHallId || h.hallCode === selectedHallId
         );
         if (found) {
           setSelectedHallId(found.id);
-        } else {
+          if (found.state && !filterState) setFilterState(found.state);
+          if (found.district && !filterDistrict) setFilterDistrict(found.district);
+          if (found.mandal && !filterMandal) setFilterMandal(found.mandal);
+        } else if (!selectedHallId) {
           const firstAvail = res.halls.find(h => h.available) || res.halls[0];
           if (firstAvail) {
             setSelectedHallId(firstAvail.id);
+            if (firstAvail.state && !filterState) setFilterState(firstAvail.state);
+            if (firstAvail.district && !filterDistrict) setFilterDistrict(firstAvail.district);
+            if (firstAvail.mandal && !filterMandal) setFilterMandal(firstAvail.mandal);
           }
         }
       }
@@ -178,10 +230,10 @@ export const HallBookingPage: React.FC = () => {
   };
 
   useEffect(() => {
-    if (eventDate && step === 2) {
+    if (eventDate) {
       fetchAvailabilityForDate(eventDate);
     }
-  }, [eventDate, startTime, endTime, step]);
+  }, [eventDate, startTime, endTime]);
 
   const fetchMonthAvailability = async (year: number, month: number) => {
     setLoadingCalendar(true);
@@ -307,8 +359,31 @@ export const HallBookingPage: React.FC = () => {
     }
   };
 
+  // Filtered halls based on State, District, and Mandal
+  const filteredHallsList = hallsList.filter((hall) => {
+    if (filterState) {
+      const hallState = (hall.state || '').toLowerCase();
+      const hallLoc = (hall.location || '').toLowerCase();
+      const match = hallState.includes(filterState.toLowerCase()) || hallLoc.includes(filterState.toLowerCase());
+      if (!match) return false;
+    }
+    if (filterDistrict) {
+      const hallDist = (hall.district || '').toLowerCase();
+      const hallLoc = (hall.location || '').toLowerCase();
+      const match = hallDist.includes(filterDistrict.toLowerCase()) || hallLoc.includes(filterDistrict.toLowerCase());
+      if (!match) return false;
+    }
+    if (filterMandal) {
+      const hallMandal = (hall.mandal || '').toLowerCase();
+      const hallLoc = (hall.location || '').toLowerCase();
+      const match = hallMandal.includes(filterMandal.toLowerCase()) || hallLoc.includes(filterMandal.toLowerCase());
+      if (!match) return false;
+    }
+    return true;
+  });
+
   // Calculations
-  const selectedHall = hallsList.find(h => h.id === selectedHallId);
+  const selectedHall = hallsList.find(h => h.id === selectedHallId || h.hallCode === selectedHallId);
   const hallPrice = selectedHall ? selectedHall.basePrice : 0;
   
   const servicesTotal = AVAILABLE_SERVICES
@@ -637,7 +712,192 @@ export const HallBookingPage: React.FC = () => {
           
           {/* STEP 1: EVENT DETAILS */}
           {step === 1 && (
-            <DashboardCard title="Event Details" subtitle="Provide date, guest counts and timelines">
+            <div className="space-y-6">
+              {/* Selected Venue Hall & Place Card */}
+              <div className="bg-white border border-cream-200 rounded-luxury p-5 shadow-sm space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-cream-100 pb-3">
+                  <div>
+                    <span className="text-[10px] font-bold text-gold-600 uppercase tracking-widest block">Selected Venue & Location</span>
+                    <h3 className="text-lg font-bold font-serif text-primary-800 flex items-center gap-2">
+                      {selectedHall ? selectedHall.name : 'Select a Function Hall'}
+                    </h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowLocationPickerInStep1(!showLocationPickerInStep1)}
+                    className="self-start sm:self-auto text-xs font-bold text-[#155EEF] hover:text-[#1254d3] flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg border border-blue-200 transition-colors cursor-pointer"
+                  >
+                    <MapPin size={13} />
+                    <span>{showLocationPickerInStep1 ? 'Hide Location Selector' : 'Select / Change Place'}</span>
+                  </button>
+                </div>
+
+                {selectedHall ? (
+                  <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between bg-cream-50/50 p-4 rounded-luxury border border-cream-150">
+                    <div className="flex items-start gap-3.5">
+                      <div className="w-16 h-16 rounded-lg overflow-hidden bg-cream-200 shrink-0">
+                        <img
+                          src={getHallAssets(selectedHall.hallCode, selectedHall.name).image}
+                          alt={selectedHall.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] font-mono font-bold bg-primary-800 text-white px-2 py-0.5 rounded">
+                            {selectedHall.hallCode}
+                          </span>
+                          <span className="text-sm font-bold text-primary-900 font-serif">
+                            {selectedHall.name}
+                          </span>
+                        </div>
+                        <p className="text-xs text-neutral-600 flex items-center gap-1 mt-1 font-medium">
+                          <MapPin size={13} className="text-gold-500 shrink-0" />
+                          <span>
+                            {[selectedHall.mandal, selectedHall.district, selectedHall.state].filter(Boolean).join(', ') || selectedHall.location || 'Main Venue Campus'}
+                          </span>
+                        </p>
+                        <div className="flex items-center gap-3 text-[11px] text-neutral-500 mt-1">
+                          <span className="flex items-center gap-1"><Users size={12} className="text-gold-500" /> Max: {selectedHall.capacity || 500} Pax</span>
+                          <span className="font-mono font-bold text-gold-600">₹{Number(selectedHall.basePrice).toLocaleString('en-IN')} / day</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-right sm:self-center shrink-0 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-cream-200 flex sm:flex-col justify-between items-center sm:items-end">
+                      <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Hall Base Rent</span>
+                      <span className="text-lg font-bold text-gold-600 font-mono">
+                        ₹{Number(selectedHall.basePrice).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-amber-50 border border-amber-200 p-4 rounded-luxury text-xs text-amber-800 flex items-center gap-2">
+                    <AlertTriangle size={16} className="text-amber-600 shrink-0" />
+                    <span>Please select a function hall or choose your preferred location to view nearby venues.</span>
+                  </div>
+                )}
+
+                {/* 3-tier Location Selection & Hall Picker in Step 1 */}
+                {(showLocationPickerInStep1 || !selectedHall) && (
+                  <div className="pt-3 border-t border-cream-100 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h5 className="font-bold text-xs text-primary-800 uppercase tracking-wider flex items-center gap-1.5">
+                        <MapPin size={13} className="text-gold-500" />
+                        Filter Venue by Location (State › District › Mandal)
+                      </h5>
+                      {(filterState || filterDistrict || filterMandal) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFilterState('');
+                            setFilterDistrict('');
+                            setFilterMandal('');
+                          }}
+                          className="text-[10px] font-bold text-gold-600 hover:text-gold-700 flex items-center gap-1 cursor-pointer"
+                        >
+                          <RotateCcw size={10} /> Reset
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {/* State */}
+                      <div className="space-y-1">
+                        <label className="block text-[10px] font-bold text-primary-800 uppercase tracking-wider">
+                          1. Select State
+                        </label>
+                        <select
+                          value={filterState}
+                          onChange={(e) => {
+                            const newState = e.target.value;
+                            setFilterState(newState);
+                            setFilterDistrict('');
+                            setFilterMandal('');
+                          }}
+                          className="w-full bg-cream-50/60 border border-cream-200 rounded-luxury px-3 py-2 text-xs text-primary-800 font-medium focus:ring-1 focus:ring-gold-500 cursor-pointer"
+                        >
+                          <option value="">All States ({ALL_STATES.length})</option>
+                          {ALL_STATES.map((s) => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* District */}
+                      <div className="space-y-1">
+                        <label className="block text-[10px] font-bold text-primary-800 uppercase tracking-wider">
+                          2. Select District
+                        </label>
+                        <select
+                          value={filterDistrict}
+                          disabled={!filterState}
+                          onChange={(e) => {
+                            const newDist = e.target.value;
+                            setFilterDistrict(newDist);
+                            setFilterMandal('');
+                          }}
+                          className="w-full bg-cream-50/60 border border-cream-200 rounded-luxury px-3 py-2 text-xs text-primary-800 font-medium focus:ring-1 focus:ring-gold-500 cursor-pointer disabled:opacity-50"
+                        >
+                          <option value="">{filterState ? 'All Districts' : 'Select State first'}</option>
+                          {getDistrictsForState(filterState).map((d) => (
+                            <option key={d} value={d}>{d}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Mandal */}
+                      <div className="space-y-1">
+                        <label className="block text-[10px] font-bold text-primary-800 uppercase tracking-wider">
+                          3. Select Mandal
+                        </label>
+                        <select
+                          value={filterMandal}
+                          disabled={!filterDistrict}
+                          onChange={(e) => setFilterMandal(e.target.value)}
+                          className="w-full bg-cream-50/60 border border-cream-200 rounded-luxury px-3 py-2 text-xs text-primary-800 font-medium focus:ring-1 focus:ring-gold-500 cursor-pointer disabled:opacity-50"
+                        >
+                          <option value="">{filterDistrict ? 'All Mandals' : 'Select District first'}</option>
+                          {getMandalsForDistrict(filterState, filterDistrict).map((m) => (
+                            <option key={m} value={m}>{m}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Venue Hall selection dropdown */}
+                    <div className="space-y-1 pt-1">
+                      <label className="block text-[10px] font-bold text-primary-800 uppercase tracking-wider">
+                        Choose Hall at this Place ({filteredHallsList.length} available)
+                      </label>
+                      <select
+                        value={selectedHallId}
+                        onChange={(e) => {
+                          const newId = e.target.value;
+                          setSelectedHallId(newId);
+                          const h = hallsList.find(x => x.id === newId);
+                          if (h) {
+                            if (h.state && !filterState) setFilterState(h.state);
+                            if (h.district && !filterDistrict) setFilterDistrict(h.district);
+                            if (h.mandal && !filterMandal) setFilterMandal(h.mandal);
+                          }
+                        }}
+                        className="w-full bg-white border border-cream-200 rounded-luxury p-2.5 text-xs text-primary-800 font-medium focus:ring-1 focus:ring-gold-500 cursor-pointer"
+                      >
+                        <option value="">-- Select a Function Hall --</option>
+                        {filteredHallsList.map((h) => (
+                          <option key={h.id} value={h.id}>
+                            {h.name} ({[h.mandal, h.district, h.state].filter(Boolean).join(', ') || h.location || 'Main'}) - ₹{Number(h.basePrice).toLocaleString('en-IN')}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Event Details Card */}
+              <DashboardCard title="Event Details" subtitle="Provide date, guest counts and timelines">
               <div className="space-y-5">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-primary-800 mb-1.5">
@@ -747,6 +1007,7 @@ export const HallBookingPage: React.FC = () => {
                 </div>
               </div>
             </DashboardCard>
+            </div>
           )}
 
           {/* STEP 2: CALENDAR & HALL SELECTION */}
@@ -850,6 +1111,108 @@ export const HallBookingPage: React.FC = () => {
                 </div>
               </DashboardCard>
 
+              {/* 3-Tier Location Filter for Step 2 */}
+              <div className="bg-white border border-cream-200 rounded-luxury p-4 shadow-sm space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-cream-100 pb-2.5">
+                  <div>
+                    <h5 className="font-bold text-xs text-primary-800 font-serif flex items-center gap-1.5">
+                      <MapPin size={14} className="text-gold-500" />
+                      Filter Halls by Place / Location
+                    </h5>
+                    <p className="text-[10px] text-neutral-400 mt-0.5">
+                      Select State, District, and Mandal to find nearby function halls
+                    </p>
+                  </div>
+                  {(filterState || filterDistrict || filterMandal) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFilterState('');
+                        setFilterDistrict('');
+                        setFilterMandal('');
+                      }}
+                      className="self-start sm:self-auto text-[9px] font-bold text-gold-600 hover:text-gold-700 uppercase tracking-wider flex items-center gap-1 bg-cream-50 hover:bg-cream-100 px-2.5 py-1 rounded border border-cream-200 transition-colors cursor-pointer"
+                    >
+                      <RotateCcw size={10} /> Reset Location
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* 1. SELECT STATE */}
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-primary-800 uppercase tracking-wider">
+                      1. Select State
+                    </label>
+                    <select
+                      value={filterState}
+                      onChange={(e) => {
+                        setFilterState(e.target.value);
+                        setFilterDistrict('');
+                        setFilterMandal('');
+                      }}
+                      className="w-full bg-cream-50/60 border border-cream-200 rounded-luxury px-3 py-2 text-xs text-primary-800 font-medium focus:outline-none focus:ring-1 focus:ring-gold-500 focus:bg-white transition-all cursor-pointer"
+                    >
+                      <option value="">All States ({ALL_STATES.length})</option>
+                      {ALL_STATES.map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* 2. SELECT DISTRICT */}
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-primary-800 uppercase tracking-wider">
+                      2. Select District
+                    </label>
+                    <select
+                      value={filterDistrict}
+                      disabled={!filterState}
+                      onChange={(e) => {
+                        setFilterDistrict(e.target.value);
+                        setFilterMandal('');
+                      }}
+                      className="w-full bg-cream-50/60 border border-cream-200 rounded-luxury px-3 py-2 text-xs text-primary-800 font-medium focus:outline-none focus:ring-1 focus:ring-gold-500 focus:bg-white transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <option value="">{filterState ? 'All Districts' : 'Select State first'}</option>
+                      {getDistrictsForState(filterState).map((d) => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* 3. SELECT MANDAL */}
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-primary-800 uppercase tracking-wider">
+                      3. Select Mandal
+                    </label>
+                    <select
+                      value={filterMandal}
+                      disabled={!filterDistrict}
+                      onChange={(e) => setFilterMandal(e.target.value)}
+                      className="w-full bg-cream-50/60 border border-cream-200 rounded-luxury px-3 py-2 text-xs text-primary-800 font-medium focus:outline-none focus:ring-1 focus:ring-gold-500 focus:bg-white transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <option value="">{filterDistrict ? 'All Mandals' : 'Select District first'}</option>
+                      {getMandalsForDistrict(filterState, filterDistrict).map((m) => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {(filterState || filterDistrict || filterMandal) && (
+                  <div className="flex items-center gap-2 text-[10px] text-neutral-600 bg-cream-50 px-2.5 py-1 rounded border border-cream-150">
+                    <span className="font-semibold text-primary-800">Filtered Place:</span>
+                    <span className="font-medium text-gold-600">
+                      {[filterMandal, filterDistrict, filterState].filter(Boolean).join(' › ')}
+                    </span>
+                    <span className="text-neutral-400 font-mono">
+                      ({filteredHallsList.length} {filteredHallsList.length === 1 ? 'hall' : 'halls'} available)
+                    </span>
+                  </div>
+                )}
+              </div>
+
               {/* Hall Cards displaying availability */}
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
@@ -857,7 +1220,7 @@ export const HallBookingPage: React.FC = () => {
                     Available Venue Halls for {eventDate}
                   </h4>
                   <span className="text-xs font-bold text-neutral-400 font-mono">
-                    Showing {hallsList.length} {hallsList.length === 1 ? 'hall' : 'halls'}
+                    Showing {filteredHallsList.length} of {hallsList.length} {hallsList.length === 1 ? 'hall' : 'halls'}
                   </span>
                 </div>
 
@@ -866,14 +1229,27 @@ export const HallBookingPage: React.FC = () => {
                     <span className="h-8 w-8 animate-spin rounded-full border-2 border-primary-800 border-t-transparent"></span>
                     <p className="text-xs text-neutral-400 font-bold uppercase tracking-wider">Loading Halls Availability...</p>
                   </div>
-                ) : hallsList.length === 0 ? (
-                  <div className="bg-yellow-50 border border-yellow-200 p-8 rounded-luxury text-center">
-                    <AlertTriangle className="mx-auto text-yellow-600 mb-2" size={24} />
-                    <p className="text-sm font-semibold text-yellow-800">No active function halls found.</p>
+                ) : filteredHallsList.length === 0 ? (
+                  <div className="bg-yellow-50 border border-yellow-200 p-8 rounded-luxury text-center space-y-2">
+                    <AlertTriangle className="mx-auto text-yellow-600 mb-1" size={24} />
+                    <p className="text-sm font-semibold text-yellow-800">No function halls found matching the selected location.</p>
+                    {(filterState || filterDistrict || filterMandal) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFilterState('');
+                          setFilterDistrict('');
+                          setFilterMandal('');
+                        }}
+                        className="text-xs font-bold text-primary-800 underline hover:text-gold-600 cursor-pointer"
+                      >
+                        Reset location filter to view all halls
+                      </button>
+                    )}
                   </div>
                                 ) : (
                   <div className="grid grid-cols-1 gap-6">
-                    {hallsList.map((hall) => {
+                    {filteredHallsList.map((hall) => {
                       const assets = getHallAssets(hall.hallCode, hall.name);
                       const isSelected = selectedHallId === hall.id;
 
@@ -1320,6 +1696,38 @@ export const HallBookingPage: React.FC = () => {
                 Booking Cost Summary
               </h4>
 
+              {/* Selected Venue & Place Card */}
+              <div className="border-b border-cream-100 pb-3">
+                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-1.5">
+                  Selected Venue & Place
+                </span>
+                {selectedHall ? (
+                  <div className="bg-white border border-cream-200 p-3 rounded-luxury space-y-1.5 text-xs text-neutral-600 shadow-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-primary-900 font-serif text-sm">{selectedHall.name}</span>
+                      <span className="text-[9px] font-mono font-bold bg-primary-800 text-white px-1.5 py-0.5 rounded">
+                        {selectedHall.hallCode}
+                      </span>
+                    </div>
+                    <p className="flex items-start gap-1 text-[11px] text-neutral-600 font-medium leading-tight">
+                      <MapPin size={12} className="text-gold-500 shrink-0 mt-0.5" />
+                      <span>
+                        {[selectedHall.mandal, selectedHall.district, selectedHall.state].filter(Boolean).join(', ') || selectedHall.location || 'Main Venue Campus'}
+                      </span>
+                    </p>
+                    <div className="flex justify-between text-[11px] text-gray-500 pt-1.5 border-t border-cream-100">
+                      <span>Max: <strong className="text-primary-800">{selectedHall.capacity || 500} Pax</strong></span>
+                      <span>Rent: <strong className="text-gold-600 font-mono">₹{Number(selectedHall.basePrice).toLocaleString('en-IN')}</strong></span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-amber-50 border border-amber-200 p-2.5 rounded-luxury text-xs text-amber-800 flex items-center gap-1.5">
+                    <AlertTriangle size={13} className="shrink-0 text-amber-600" />
+                    <span>No venue selected yet</span>
+                  </div>
+                )}
+              </div>
+
               <div className="space-y-2 text-xs text-neutral-600">
                 <div className="flex justify-between">
                   <span>Occasion:</span>
@@ -1365,13 +1773,7 @@ export const HallBookingPage: React.FC = () => {
                 </span>
               </div>
 
-              {selectedHall && (
-                <div className="bg-white border border-cream-200 p-3 rounded-luxury space-y-1 text-[11px] text-neutral-500">
-                  <p className="font-bold text-primary-800">📍 {selectedHall.name}</p>
-                  <p>Capacity: {selectedHall.capacity} Pax</p>
-                  <p>Base price: ₹{Number(selectedHall.basePrice).toLocaleString('en-IN')}</p>
-                </div>
-              )}
+
             </div>
           </div>
         )}

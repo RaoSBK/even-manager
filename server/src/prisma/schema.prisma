@@ -152,6 +152,7 @@ model User {
   name            String
   email           String            @unique
   mobile          String            @unique
+  loginId         String?           @unique
   password        String
   referralCode    String?
   role            String            @default("Customer") // Custom role string to match existing SQLite roles "Admin" / "Employee" / "Customer"
@@ -164,6 +165,7 @@ model User {
 
   customer        Customer?
   employee        Employee?
+  ownedHall       Hall?             @relation("HallOwner")
   auditLogs       AuditLog[]
   otpVerifications OtpVerification[]
   notifications   Notification[]
@@ -171,6 +173,7 @@ model User {
 
   @@index([email])
   @@index([mobile])
+  @@index([loginId])
   @@index([role])
   @@index([isActive])
 }
@@ -580,12 +583,16 @@ model Hall {
   capacity    Int?
   basePrice   Decimal    @db.Decimal(12, 2)
   status      HallStatus @default(AVAILABLE)
+  ownerId     String?    @unique
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   deletedAt   DateTime?
 
   bookings    HallBooking[]
   eventBookings Booking[]
+  owner       User?      @relation("HallOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+
+  @@index([ownerId])
 }
 
 model HallBooking {

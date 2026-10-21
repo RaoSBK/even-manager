@@ -1,9 +1,10 @@
 import React from 'react';
 import { Navigate, Outlet } from 'react-router';
 import { useAuth } from '../hooks/useAuth';
+import { UserRole } from '../contexts/AuthContext';
 
 interface RoleRouteProps {
-  allowedRoles: Array<'ADMIN' | 'EMPLOYEE' | 'USER'>;
+  allowedRoles: UserRole[];
   children?: React.ReactNode;
 }
 
@@ -28,6 +29,8 @@ export const RoleRoute: React.FC<RoleRouteProps> = ({ allowedRoles, children }) 
       return <Navigate to="/admin/dashboard" replace />;
     } else if (user.role === 'EMPLOYEE') {
       return <Navigate to="/employee/dashboard" replace />;
+    } else if (user.role === 'HALL_MANAGER') {
+      return <Navigate to="/manager/dashboard" replace />;
     } else {
       return <Navigate to="/user/dashboard" replace />;
     }

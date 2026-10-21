@@ -16,8 +16,6 @@ const HomePage = lazy(() => import('../pages/events/EventListingPage'));
 const ContactPage = lazy(() => import('../pages/contact/ContactPage'));
 const HelpPage = lazy(() => import('../pages/help/HelpPage'));
 
-
-
 // Auth Pages
 const LoginPage = lazy(() => import('../pages/auth/LoginPage'));
 const SignupPage = lazy(() => import('../pages/auth/SignupPage'));
@@ -61,6 +59,9 @@ const EmployeeAttendancePage = lazy(() => import('../pages/employee/AttendancePa
 const EmployeeProfilePage = lazy(() => import('../pages/employee/ProfilePage'));
 const EmployeeNotificationsPage = lazy(() => import('../pages/employee/NotificationsPage'));
 
+// Manager Pages
+const ManagerDashboardPage = lazy(() => import('../pages/manager/ManagerDashboardPage'));
+
 // User/Customer Pages
 const UserDashboardPage = lazy(() => import('../pages/user/DashboardPage'));
 const UserEventsPage = lazy(() => import('../pages/user/EventsPage'));
@@ -79,6 +80,7 @@ const DashboardRedirect: React.FC = () => {
   const { user } = useAuth();
   if (user?.role === 'ADMIN') return <Navigate to="/admin/dashboard" replace />;
   if (user?.role === 'EMPLOYEE') return <Navigate to="/employee/dashboard" replace />;
+  if (user?.role === 'HALL_MANAGER') return <Navigate to="/manager/dashboard" replace />;
   return <Navigate to="/user/dashboard" replace />;
 };
 
@@ -98,8 +100,6 @@ export const router = createBrowserRouter([
       { path: 'help', element: <HelpPage /> },
     ],
   },
-
-
 
   // Auth Routes (Public Only - redirect authenticated users)
   {
@@ -198,6 +198,26 @@ export const router = createBrowserRouter([
               { path: 'attendance', element: <EmployeeAttendancePage /> },
               { path: 'profile', element: <EmployeeProfilePage /> },
               { path: 'notifications', element: <EmployeeNotificationsPage /> },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+
+  // Protected Hall Manager Portal Routes
+  {
+    path: 'manager',
+    element: <ProtectedRoute />,
+    children: [
+      {
+        element: <RoleRoute allowedRoles={['HALL_MANAGER']} />,
+        children: [
+          {
+            element: <DashboardLayout role="HALL_MANAGER" />,
+            children: [
+              { index: true, element: <Navigate to="dashboard" replace /> },
+              { path: 'dashboard', element: <ManagerDashboardPage /> },
             ],
           },
         ],

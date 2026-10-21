@@ -142,6 +142,23 @@ export const bookingApi = {
     return httpClient.get('/bookings/my-bookings');
   },
 
+  getOwnerHallBookings: async (filters?: {
+    status?: string;
+    eventType?: string;
+    startDate?: string;
+    endDate?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{
+    bookings: BookingDetails[];
+    total: number;
+    page: number;
+    limit: number;
+    hall: any;
+  }> => {
+    return httpClient.get('/bookings/owner-hall', filters);
+  },
+
   getById: async (id: string): Promise<BookingDetails> => {
     return httpClient.get(`/bookings/${id}`);
   },
