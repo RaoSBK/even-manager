@@ -16,8 +16,9 @@ export const DashboardPage: React.FC = () => {
   const services = [
     { name: 'Marriage Function', path: '/events/book/marriage', desc: 'Pre-wedding, wedding rituals & grand receptions' },
     { name: 'Birthday Party', path: '/events/book/birthday', desc: 'Custom theme setups, catering & fun zones' },
-    { name: 'Saree Ceremony', path: '/events/book/saree', desc: 'Traditional decor setups & stages' },
-    { name: 'Dawath / Banquet', path: '/events/book/dawath', desc: 'Premium banquet dining & setups' }
+    { name: 'Saree Function', path: '/events/book/saree', desc: 'Traditional decor setups & stages' },
+    { name: 'Dawath / Banquet', path: '/events/book/dawath', desc: 'Premium banquet dining & setups' },
+    { name: 'Other Events', path: '/events/book/other', desc: 'Corporate, anniversaries & custom celebrations' }
   ];
 
   return (

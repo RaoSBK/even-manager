@@ -7,8 +7,12 @@ import { bookingApi, BookingDetails } from '../../api/bookingApi';
 import { paymentApi } from '../../api/paymentApi';
 import { 
   Home, Camera, Gift, Heart, Check, X, ShieldAlert, ChevronRight, ChevronLeft,
-  Calendar, AlertTriangle, CheckCircle2, ChevronUp, ChevronDown, MapPin, RotateCcw
+  Calendar, AlertTriangle, CheckCircle2, ChevronUp, ChevronDown, MapPin, RotateCcw,
+  Sparkles, UtensilsCrossed, Award
 } from 'lucide-react';
+import { getEventConfig, ServiceItem } from '../../constants/eventsData';
+
+type Service = ServiceItem;
 import { getFoodItems, FoodItem } from '../../api/foodApi';
 import {
   ALL_STATES,
@@ -16,15 +20,7 @@ import {
   getMandalsForDistrict
 } from '../../constants/hallsData';
 
-interface Service {
-  id: string;
-  name: string;
-  price: number;
-  category: 'wedding' | 'photography' | 'food';
-  description?: string;
-  iconName: string;
-  perPlate?: boolean;
-}
+
 
 // Mapped assets for halls
 const getHallAssets = (hallCode: string, name: string) => {
@@ -92,24 +88,13 @@ export const EventBookingPage: React.FC = () => {
   const navigate = useNavigate();
   const { type: urlType } = useParams<{ type?: string }>();
 
-  // Occasion display name
-  const occasionDisplayName = urlType
-    ? urlType.charAt(0).toUpperCase() + urlType.slice(1).replace('-', ' ') + ' Booking'
-    : 'Event Booking';
+  // Dynamic Occasion Configuration based on route parameter
+  const eventConfig = getEventConfig(urlType);
 
-  // Available Non-Food Services (Wedding & Photography)
+  // Available Non-Food Services for selected occasion
   const services: Service[] = [
-    // Wedding Services
-    { id: 'haldi', name: 'Haldi', price: 10000, category: 'wedding', iconName: 'haldi' },
-    { id: 'sangeet', name: 'Sangeet', price: 15000, category: 'wedding', iconName: 'sangeet' },
-    { id: 'mehndi', name: 'Mehndi', price: 12000, category: 'wedding', iconName: 'mehndi' },
-    { id: 'baraat', name: 'Baraat', price: 20000, category: 'wedding', iconName: 'baraat' },
-    { id: 'reception', name: 'Reception', price: 25000, category: 'wedding', iconName: 'reception' },
-    
-    // Photography
-    { id: 'pre-wedding', name: 'Pre Wedding Shoot', price: 30000, category: 'photography', iconName: 'camera' },
-    { id: 'wedding-shoot', name: 'Wedding Shoot', price: 50000, category: 'photography', iconName: 'couple' },
-    { id: 'photography', name: 'Photography', price: 15000, category: 'photography', iconName: 'dslr' },
+    ...eventConfig.primaryServices,
+    ...eventConfig.photoServices
   ];
 
   // Stepper state
@@ -120,12 +105,13 @@ export const EventBookingPage: React.FC = () => {
   const [loadingCalendar, setLoadingCalendar] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Step 1 states (Services & Food Menu)
-  const [selectedIds, setSelectedIds] = useState<string[]>([
-    'sangeet',
-    'mehndi',
-    'wedding-shoot'
-  ]);
+  // Step 1 states (Services & Food Menu) - initialized with occasion default IDs
+  const [selectedIds, setSelectedIds] = useState<string[]>(() => getEventConfig(urlType).defaultSelectedIds);
+
+  // Keep selected IDs synced if URL parameter changes
+  useEffect(() => {
+    setSelectedIds(getEventConfig(urlType).defaultSelectedIds);
+  }, [urlType]);
 
   // Food Menu items loaded from Database/API
   const [allFoodItems, setAllFoodItems] = useState<FoodItem[]>(defaultFoodItems);
@@ -378,30 +364,24 @@ export const EventBookingPage: React.FC = () => {
         addToast('Please enter billing address.', 'warning');
         return;
       }
-      // Marriage Booking Event Address Validation
-      if (urlType?.toLowerCase() === 'marriage') {
-        if (!addressLine1.trim()) {
-          addToast('Please enter Address Line 1 for Event Address.', 'warning');
-          return;
-        }
-        if (!city.trim()) {
-          addToast('Please enter City for Event Address.', 'warning');
-          return;
-        }
-        if (!district.trim()) {
-          addToast('Please enter District for Event Address.', 'warning');
-          return;
-        }
-        if (!stateName.trim()) {
-          addToast('Please enter State for Event Address.', 'warning');
-          return;
-        }
-        if (!pincode.trim() || !/^\d{6}$/.test(pincode.trim())) {
-          setPincodeError('PIN Code must be a valid 6-digit number');
-          addToast('Please enter a valid 6-digit PIN code.', 'warning');
-          return;
-        }
-      } else if (pincode.trim() && !/^\d{6}$/.test(pincode.trim())) {
+      // Event Address Validation for all occasions
+      if (!addressLine1.trim()) {
+        addToast('Please enter Address Line 1 for Event Address.', 'warning');
+        return;
+      }
+      if (!city.trim()) {
+        addToast('Please enter City for Event Address.', 'warning');
+        return;
+      }
+      if (!district.trim()) {
+        addToast('Please enter District for Event Address.', 'warning');
+        return;
+      }
+      if (!stateName.trim()) {
+        addToast('Please enter State for Event Address.', 'warning');
+        return;
+      }
+      if (!pincode.trim() || !/^\d{6}$/.test(pincode.trim())) {
         setPincodeError('PIN Code must be a valid 6-digit number');
         addToast('Please enter a valid 6-digit PIN code.', 'warning');
         return;
@@ -546,7 +526,7 @@ export const EventBookingPage: React.FC = () => {
 
       const res = await bookingApi.createPending({
         hallId: selectedHallId,
-        eventType: urlType ? urlType.charAt(0).toUpperCase() + urlType.slice(1) + ' Function' : 'General Function',
+        eventType: eventConfig.eventType,
         eventDate,
         startTime,
         endTime,
@@ -726,6 +706,187 @@ export const EventBookingPage: React.FC = () => {
             </svg>
           </div>
         );
+      case 'stage':
+        return (
+          <div className="w-12 h-12 bg-rose-50 rounded-full flex items-center justify-center border border-rose-100">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-rose-600">
+              <path d="M3 20H21M5 20V8L12 4L19 8V20M5 8H19M9 20V14H15V20" stroke="#E11D48" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M12 4V8" stroke="#E11D48" strokeWidth="1.5"/>
+            </svg>
+          </div>
+        );
+      case 'drone':
+        return (
+          <div className="w-12 h-12 bg-sky-50 rounded-full flex items-center justify-center border border-sky-100">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-sky-600">
+              <rect x="9" y="9" width="6" height="6" rx="2" fill="#BAE6FD" stroke="#0284C7" strokeWidth="1.5"/>
+              <circle cx="12" cy="12" r="1.5" fill="#0284C7"/>
+              <path d="M6 6L9 9M18 6L15 9M6 18L9 15M18 18L15 15" stroke="#0284C7" strokeWidth="1.5" strokeLinecap="round"/>
+              <ellipse cx="5" cy="5" rx="3" ry="1.5" stroke="#0284C7" strokeWidth="1.5"/>
+              <ellipse cx="19" cy="5" rx="3" ry="1.5" stroke="#0284C7" strokeWidth="1.5"/>
+              <ellipse cx="5" cy="19" rx="3" ry="1.5" stroke="#0284C7" strokeWidth="1.5"/>
+              <ellipse cx="19" cy="19" rx="3" ry="1.5" stroke="#0284C7" strokeWidth="1.5"/>
+            </svg>
+          </div>
+        );
+      case 'balloon':
+        return (
+          <div className="w-12 h-12 bg-pink-50 rounded-full flex items-center justify-center border border-pink-100">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-pink-600">
+              <path d="M10 3C7 3 5 5.5 5 8.5C5 12 10 16 10 16C10 16 15 12 15 8.5C15 5.5 13 3 10 3Z" fill="#FBCFE8" stroke="#DB2777" strokeWidth="1.5"/>
+              <path d="M16 5C17.5 5.8 19 7.5 19 10C19 12.5 16 15 16 15" stroke="#F472B6" strokeWidth="1.5" strokeLinecap="round"/>
+              <path d="M10 16L9 18M10 18H9M10 18C10 20 8 21 8 22" stroke="#DB2777" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+          </div>
+        );
+      case 'magic':
+        return (
+          <div className="w-12 h-12 bg-violet-50 rounded-full flex items-center justify-center border border-violet-100">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-violet-600">
+              <path d="M3 18H21M6 18V10C6 8 8 7 12 7C16 7 18 8 18 10V18" stroke="#7C3AED" strokeWidth="1.5" strokeLinecap="round"/>
+              <path d="M6 14H18" stroke="#A78BFA" strokeWidth="1.5"/>
+              <path d="M12 2L13 4L15 5L13 6L12 8L11 6L9 5L11 4L12 2Z" fill="#DDD6FE" stroke="#7C3AED" strokeWidth="1"/>
+            </svg>
+          </div>
+        );
+      case 'music':
+        return (
+          <div className="w-12 h-12 bg-cyan-50 rounded-full flex items-center justify-center border border-cyan-100">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-cyan-600">
+              <path d="M9 18V6L19 4V16" stroke="#0891B2" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <circle cx="6" cy="18" r="3" fill="#A5F3FC" stroke="#0891B2" strokeWidth="1.5"/>
+              <circle cx="16" cy="16" r="3" fill="#A5F3FC" stroke="#0891B2" strokeWidth="1.5"/>
+            </svg>
+          </div>
+        );
+      case 'mascot':
+        return (
+          <div className="w-12 h-12 bg-amber-50 rounded-full flex items-center justify-center border border-amber-100">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-amber-600">
+              <circle cx="12" cy="13" r="7" fill="#FDE68A" stroke="#D97706" strokeWidth="1.5"/>
+              <circle cx="6" cy="7" r="2.5" fill="#FDE68A" stroke="#D97706" strokeWidth="1.5"/>
+              <circle cx="18" cy="7" r="2.5" fill="#FDE68A" stroke="#D97706" strokeWidth="1.5"/>
+              <circle cx="10" cy="12" r="1" fill="#D97706"/>
+              <circle cx="14" cy="12" r="1" fill="#D97706"/>
+              <path d="M10 15C10.5 16.5 13.5 16.5 14 15" stroke="#D97706" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+          </div>
+        );
+      case 'games':
+        return (
+          <div className="w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center border border-emerald-100">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-emerald-600">
+              <rect x="3" y="6" width="18" height="12" rx="4" fill="#A7F3D0" stroke="#059669" strokeWidth="1.5"/>
+              <path d="M7 12H11M9 10V14" stroke="#059669" strokeWidth="1.5" strokeLinecap="round"/>
+              <circle cx="15" cy="11" r="1" fill="#059669"/>
+              <circle cx="17" cy="13" r="1" fill="#059669"/>
+            </svg>
+          </div>
+        );
+      case 'booth':
+        return (
+          <div className="w-12 h-12 bg-fuchsia-50 rounded-full flex items-center justify-center border border-fuchsia-100">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-fuchsia-600">
+              <rect x="5" y="3" width="14" height="18" rx="2" fill="#F5D0FE" stroke="#C026D3" strokeWidth="1.5"/>
+              <rect x="7" y="5" width="10" height="9" fill="white" stroke="#C026D3" strokeWidth="1.2"/>
+              <circle cx="12" cy="17" r="1" fill="#C026D3"/>
+            </svg>
+          </div>
+        );
+      case 'floral':
+        return (
+          <div className="w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center border border-emerald-100">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-emerald-600">
+              <path d="M4 20V12C4 7.57 7.58 4 12 4C16.42 4 20 7.57 20 12V20" stroke="#059669" strokeWidth="1.5" strokeLinecap="round"/>
+              <circle cx="12" cy="4" r="2" fill="#FDE68A" stroke="#D97706" strokeWidth="1"/>
+              <circle cx="6" cy="10" r="2" fill="#FBCFE8" stroke="#DB2777" strokeWidth="1"/>
+              <circle cx="18" cy="10" r="2" fill="#FBCFE8" stroke="#DB2777" strokeWidth="1"/>
+              <circle cx="4" cy="16" r="2" fill="#FDE68A" stroke="#D97706" strokeWidth="1"/>
+              <circle cx="20" cy="16" r="2" fill="#FDE68A" stroke="#D97706" strokeWidth="1"/>
+            </svg>
+          </div>
+        );
+      case 'pooja':
+        return (
+          <div className="w-12 h-12 bg-amber-50 rounded-full flex items-center justify-center border border-amber-100">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-amber-600">
+              <path d="M5 16C5 19 8.13 20 12 20C15.87 20 19 19 19 16C19 14.5 17 14 12 14C7 14 5 14.5 5 16Z" fill="#FDE68A" stroke="#D97706" strokeWidth="1.5"/>
+              <path d="M12 14V11" stroke="#D97706" strokeWidth="1.5" strokeLinecap="round"/>
+              <path d="M12 4C10.5 6 10 7.5 10 9C10 10.5 10.9 11.5 12 11.5C13.1 11.5 14 10.5 14 9C14 7.5 13.5 6 12 4Z" fill="#F59E0B" stroke="#D97706" strokeWidth="1.2"/>
+            </svg>
+          </div>
+        );
+      case 'snanam':
+        return (
+          <div className="w-12 h-12 bg-teal-50 rounded-full flex items-center justify-center border border-teal-100">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-teal-600">
+              <ellipse cx="12" cy="7" rx="4" ry="1.5" fill="#99F6E4" stroke="#0D9488" strokeWidth="1.5"/>
+              <path d="M8 7C6 11 5 13 5 16C5 19 8.13 20 12 20C15.87 20 19 19 19 16C19 13 18 11 16 7" stroke="#0D9488" strokeWidth="1.5"/>
+              <path d="M12 2C12 2 10.5 4 10.5 5C10.5 5.8 11.2 6.5 12 6.5C12.8 6.5 13.5 5.8 13.5 5C13.5 4 12 2 12 2Z" fill="#2DD4BF"/>
+            </svg>
+          </div>
+        );
+      case 'seating':
+        return (
+          <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center border border-red-100">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-red-600">
+              <rect x="3" y="14" width="18" height="5" rx="1.5" fill="#FECACA" stroke="#DC2626" strokeWidth="1.5"/>
+              <rect x="6" y="9" width="12" height="5" rx="1" fill="#FEE2E2" stroke="#DC2626" strokeWidth="1.2"/>
+              <circle cx="5" cy="11.5" r="2" fill="#FECACA" stroke="#DC2626" strokeWidth="1.2"/>
+              <circle cx="19" cy="11.5" r="2" fill="#FECACA" stroke="#DC2626" strokeWidth="1.2"/>
+            </svg>
+          </div>
+        );
+      case 'buffet':
+        return (
+          <div className="w-12 h-12 bg-orange-50 rounded-full flex items-center justify-center border border-orange-100">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-orange-600">
+              <path d="M4 12C4 8 7 6 12 6C17 6 20 8 20 12H4Z" fill="#FED7AA" stroke="#EA580C" strokeWidth="1.5"/>
+              <rect x="3" y="12" width="18" height="4" rx="1" fill="#FFEDD5" stroke="#EA580C" strokeWidth="1.5"/>
+              <path d="M6 16V20M18 16V20M12 4V6" stroke="#EA580C" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+          </div>
+        );
+      case 'dessert':
+        return (
+          <div className="w-12 h-12 bg-pink-50 rounded-full flex items-center justify-center border border-pink-100">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-pink-600">
+              <path d="M4 14C4 18 8 19 12 19C16 19 20 18 20 14H4Z" fill="#FBCFE8" stroke="#DB2777" strokeWidth="1.5"/>
+              <circle cx="12" cy="10" r="4" fill="#F472B6" stroke="#DB2777" strokeWidth="1.5"/>
+              <path d="M12 19V21M8 21H16" stroke="#DB2777" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+          </div>
+        );
+      case 'lighting':
+        return (
+          <div className="w-12 h-12 bg-yellow-50 rounded-full flex items-center justify-center border border-yellow-100">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-yellow-600">
+              <rect x="8" y="4" width="8" height="6" rx="1" fill="#FEF08A" stroke="#CA8A04" strokeWidth="1.5"/>
+              <path d="M7 10L3 19H21L17 10" fill="#FEF9C3" stroke="#CA8A04" strokeWidth="1.5" strokeLinejoin="round"/>
+              <circle cx="12" cy="7" r="1.5" fill="#CA8A04"/>
+            </svg>
+          </div>
+        );
+      case 'mic':
+        return (
+          <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center border border-blue-100">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-blue-600">
+              <rect x="9" y="3" width="6" height="11" rx="3" fill="#BFDBFE" stroke="#2563EB" strokeWidth="1.5"/>
+              <path d="M5 10C5 13.87 8.13 17 12 17C15.87 17 19 13.87 19 10" stroke="#2563EB" strokeWidth="1.5" strokeLinecap="round"/>
+              <path d="M12 17V21M8 21H16" stroke="#2563EB" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+          </div>
+        );
+      case 'desk':
+        return (
+          <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center border border-slate-200">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-slate-600">
+              <path d="M3 13H21V19H3V13Z" fill="#E2E8F0" stroke="#475569" strokeWidth="1.5"/>
+              <path d="M7 13V8C7 6.89 7.89 6 9 6H15C16.11 6 17 6.89 17 8V13" stroke="#475569" strokeWidth="1.5"/>
+              <circle cx="12" cy="10" r="1.5" fill="#475569"/>
+            </svg>
+          </div>
+        );
       case 'camera':
         return (
           <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center border border-blue-100">
@@ -802,14 +963,19 @@ export const EventBookingPage: React.FC = () => {
           <ChevronRight size={12} className="text-gray-400" />
           <span className="hover:text-gold-500 cursor-pointer">Event Management</span>
           <ChevronRight size={12} className="text-gray-400" />
-          <span className="text-primary-800 font-medium">{urlType ? urlType.charAt(0).toUpperCase() + urlType.slice(1) : 'Event'} Function</span>
+          <span className="text-primary-800 font-medium">{eventConfig.breadcrumb}</span>
         </div>
 
         {/* Title and Stepper Tracker */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8 border-b border-cream-200 pb-6 bg-white p-6 rounded-luxury shadow-sm">
           <div>
+            <div className="inline-flex items-center gap-2 mb-1.5">
+              <span className="bg-gold-50 border border-gold-200 text-gold-700 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                {eventConfig.badge}
+              </span>
+            </div>
             <h1 className="text-2xl sm:text-3xl font-bold font-serif text-primary-800 tracking-wide">
-              {occasionDisplayName}
+              {eventConfig.displayName}
             </h1>
             <div className="flex items-center gap-1 mt-1 mb-2">
               <div className="h-[1px] w-6 bg-gold-400"></div>
@@ -817,7 +983,7 @@ export const EventBookingPage: React.FC = () => {
               <div className="h-[1px] w-6 bg-gold-400"></div>
             </div>
             <p className="text-xs text-neutral-500">
-              {step === 1 && 'Select the services you need for your special day'}
+              {step === 1 && eventConfig.subtitle}
               {step === 2 && 'Provide event details and coordinator contact info'}
               {step === 3 && 'Choose a function hall and review reservation invoice'}
               {step === 4 && 'Your event has been successfully reserved!'}
@@ -862,44 +1028,55 @@ export const EventBookingPage: React.FC = () => {
             
             {/* Left Services Panels */}
             <div className="lg:col-span-2 space-y-8">
-              {/* Wedding Services */}
+              {/* Primary Occasion Services */}
               <div className="bg-white border border-cream-200 rounded-luxury-lg p-6 shadow-luxury">
                 <div className="flex items-center gap-3 border-b border-cream-100 pb-4 mb-6">
-                  <div className="bg-gold-50 text-gold-600 p-2.5 rounded-full"><Heart size={18} /></div>
+                  <div className="bg-gold-50 text-gold-600 p-2.5 rounded-full">
+                    {eventConfig.primarySectionIcon === 'heart' && <Heart size={18} />}
+                    {eventConfig.primarySectionIcon === 'gift' && <Gift size={18} />}
+                    {eventConfig.primarySectionIcon === 'sparkles' && <Sparkles size={18} />}
+                    {eventConfig.primarySectionIcon === 'utensils' && <UtensilsCrossed size={18} />}
+                    {eventConfig.primarySectionIcon === 'award' && <Award size={18} />}
+                  </div>
                   <div>
-                    <h3 className="font-bold text-sm text-primary-800 tracking-wide">Wedding Services</h3>
-                    <p className="text-[10px] text-gray-400 mt-0.5">Traditional wedding ceremony services</p>
+                    <h3 className="font-bold text-sm text-primary-800 tracking-wide">{eventConfig.primarySectionTitle}</h3>
+                    <p className="text-[10px] text-gray-400 mt-0.5">{eventConfig.primarySectionSubtitle}</p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                  {services
-                    .filter((s) => s.category === 'wedding')
-                    .map((service) => {
-                      const isSelected = selectedIds.includes(service.id);
-                      return (
-                        <div
-                          key={service.id}
-                          onClick={() => handleToggleService(service.id, 'wedding')}
-                          className={`border rounded-luxury p-3 text-center transition-all duration-300 cursor-pointer relative group flex flex-col justify-between items-center min-h-[140px] ${
-                            isSelected
-                              ? 'border-gold-500 bg-gold-50/10 shadow-md'
-                              : 'border-cream-200 hover:border-gold-300 hover:shadow-sm'
-                          }`}
-                        >
-                          <div className={`absolute top-2 right-2 w-4 h-4 rounded border flex items-center justify-center transition-all ${
-                            isSelected ? 'bg-gold-500 border-gold-500 text-white' : 'border-cream-300 bg-white group-hover:border-gold-400'
-                          }`}>
-                            {isSelected && <Check size={10} strokeWidth={3} />}
-                          </div>
-                          <div className="my-auto">{renderIcon(service.iconName)}</div>
-                          <div className="mt-3">
-                            <p className="text-[11px] font-bold text-primary-800 leading-tight truncate">{service.name}</p>
-                            <p className="text-[10px] font-semibold text-gold-600 mt-0.5">₹{service.price.toLocaleString('en-IN')}</p>
-                          </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-5">
+                  {eventConfig.primaryServices.map((service) => {
+                    const isSelected = selectedIds.includes(service.id);
+                    return (
+                      <div
+                        key={service.id}
+                        onClick={() => handleToggleService(service.id, 'primary')}
+                        className={`border rounded-luxury p-4 text-center transition-all duration-300 cursor-pointer relative group flex flex-col justify-between items-center min-h-[155px] w-full min-w-0 overflow-hidden ${
+                          isSelected
+                            ? 'border-gold-500 bg-gold-50/20 shadow-md ring-1 ring-gold-400/50'
+                            : 'border-cream-200 hover:border-gold-300 hover:shadow-sm bg-white'
+                        }`}
+                      >
+                        <div className={`absolute top-2.5 right-2.5 w-4.5 h-4.5 rounded border flex items-center justify-center transition-all shrink-0 ${
+                          isSelected ? 'bg-gold-500 border-gold-500 text-white shadow-xs' : 'border-cream-300 bg-white group-hover:border-gold-400'
+                        }`}>
+                          {isSelected && <Check size={11} strokeWidth={3} />}
                         </div>
-                      );
-                    })}
+                        <div className="my-auto py-1 shrink-0">{renderIcon(service.iconName)}</div>
+                        <div className="w-full min-w-0 mt-2 text-center px-1">
+                          <p 
+                            className="text-xs font-bold text-primary-800 leading-snug line-clamp-2 break-words"
+                            title={service.name}
+                          >
+                            {service.name}
+                          </p>
+                          <p className="text-[11px] font-bold text-gold-600 font-mono mt-1">
+                            ₹{service.price.toLocaleString('en-IN')}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -908,37 +1085,44 @@ export const EventBookingPage: React.FC = () => {
                 <div className="flex items-center gap-3 border-b border-cream-100 pb-4 mb-6">
                   <div className="bg-gold-50 text-gold-600 p-2.5 rounded-full"><Camera size={18} /></div>
                   <div>
-                    <h3 className="font-bold text-sm text-primary-800 tracking-wide">Photography Services</h3>
-                    <p className="text-[10px] text-gray-400 mt-0.5">Capture your beautiful moments</p>
+                    <h3 className="font-bold text-sm text-primary-800 tracking-wide">{eventConfig.photoSectionTitle}</h3>
+                    <p className="text-[10px] text-gray-400 mt-0.5">{eventConfig.photoSectionSubtitle}</p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  {services
-                    .filter((s) => s.category === 'photography')
-                    .map((service) => {
-                      const isSelected = selectedIds.includes(service.id);
-                      return (
-                        <div
-                          key={service.id}
-                          onClick={() => handleToggleService(service.id, 'photography')}
-                          className={`border rounded-luxury p-4 text-center transition-all duration-300 cursor-pointer relative group flex flex-col justify-between items-center min-h-[140px] ${
-                            isSelected ? 'border-gold-500 bg-gold-50/10 shadow-md' : 'border-cream-200 hover:border-gold-300 hover:shadow-sm'
-                          }`}
-                        >
-                          <div className={`absolute top-2 right-2 w-4 h-4 rounded border flex items-center justify-center transition-all ${
-                            isSelected ? 'bg-gold-500 border-gold-500 text-white' : 'border-cream-300 bg-white group-hover:border-gold-400'
-                          }`}>
-                            {isSelected && <Check size={10} strokeWidth={3} />}
-                          </div>
-                          <div className="my-auto">{renderIcon(service.iconName)}</div>
-                          <div className="mt-3">
-                            <p className="text-[11px] font-bold text-primary-800 leading-tight truncate">{service.name}</p>
-                            <p className="text-[10px] font-semibold text-gold-600 mt-0.5">₹{service.price.toLocaleString('en-IN')}</p>
-                          </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-5">
+                  {eventConfig.photoServices.map((service) => {
+                    const isSelected = selectedIds.includes(service.id);
+                    return (
+                      <div
+                        key={service.id}
+                        onClick={() => handleToggleService(service.id, 'photography')}
+                        className={`border rounded-luxury p-4 text-center transition-all duration-300 cursor-pointer relative group flex flex-col justify-between items-center min-h-[155px] w-full min-w-0 overflow-hidden ${
+                          isSelected
+                            ? 'border-gold-500 bg-gold-50/20 shadow-md ring-1 ring-gold-400/50'
+                            : 'border-cream-200 hover:border-gold-300 hover:shadow-sm bg-white'
+                        }`}
+                      >
+                        <div className={`absolute top-2.5 right-2.5 w-4.5 h-4.5 rounded border flex items-center justify-center transition-all shrink-0 ${
+                          isSelected ? 'bg-gold-500 border-gold-500 text-white shadow-xs' : 'border-cream-300 bg-white group-hover:border-gold-400'
+                        }`}>
+                          {isSelected && <Check size={11} strokeWidth={3} />}
                         </div>
-                      );
-                    })}
+                        <div className="my-auto py-1 shrink-0">{renderIcon(service.iconName)}</div>
+                        <div className="w-full min-w-0 mt-2 text-center px-1">
+                          <p 
+                            className="text-xs font-bold text-primary-800 leading-snug line-clamp-2 break-words"
+                            title={service.name}
+                          >
+                            {service.name}
+                          </p>
+                          <p className="text-[11px] font-bold text-gold-600 font-mono mt-1">
+                            ₹{service.price.toLocaleString('en-IN')}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 

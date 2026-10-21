@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { MapPin, Users, IndianRupee, Search, Building, RefreshCw, CheckCircle2, ShieldAlert, ChevronRight } from 'lucide-react';
+import { MapPin, Users, IndianRupee, Search, Building, RefreshCw, CheckCircle2, ShieldAlert, ChevronRight, RotateCcw } from 'lucide-react';
 import { hallApi, Hall } from '../../api/hallApi';
+import { ALL_STATES, getDistrictsForState, getMandalsForDistrict } from '../../constants/hallsData';
 
 // Mapped assets for halls
 const getHallAssets = (hallCode: string, name: string) => {
@@ -34,6 +35,11 @@ export const HallListingPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // 3-tier Location Filters (State -> District -> Mandal)
+  const [filterState, setFilterState] = useState<string>('');
+  const [filterDistrict, setFilterDistrict] = useState<string>('');
+  const [filterMandal, setFilterMandal] = useState<string>('');
+
   // Fetch all halls from database on mount
   const fetchAllHalls = async () => {
     setIsLoading(true);
@@ -55,8 +61,26 @@ export const HallListingPage: React.FC = () => {
     fetchAllHalls();
   }, []);
 
-  // Filter halls based on search query
+  // Filter halls based on location and search query
   const filteredHalls = halls.filter((hall) => {
+    if (filterState) {
+      const hallState = (hall.state || '').toLowerCase();
+      const hallLoc = (hall.location || '').toLowerCase();
+      const match = hallState.includes(filterState.toLowerCase()) || hallLoc.includes(filterState.toLowerCase());
+      if (!match) return false;
+    }
+    if (filterDistrict) {
+      const hallDist = (hall.district || '').toLowerCase();
+      const hallLoc = (hall.location || '').toLowerCase();
+      const match = hallDist.includes(filterDistrict.toLowerCase()) || hallLoc.includes(filterDistrict.toLowerCase());
+      if (!match) return false;
+    }
+    if (filterMandal) {
+      const hallMandal = (hall.mandal || '').toLowerCase();
+      const hallLoc = (hall.location || '').toLowerCase();
+      const match = hallMandal.includes(filterMandal.toLowerCase()) || hallLoc.includes(filterMandal.toLowerCase());
+      if (!match) return false;
+    }
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -87,6 +111,120 @@ export const HallListingPage: React.FC = () => {
               Explore all function halls available in our system with live availability and instant online reservation.
             </p>
           </div>
+        </div>
+
+        {/* Filter Venues by Location: State -> District -> Mandal */}
+        <div className="bg-white border border-cream-200 rounded-luxury p-5 shadow-luxury mb-6 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-cream-100 pb-3">
+            <div>
+              <h5 className="font-bold text-sm text-primary-800 font-serif flex items-center gap-2">
+                <MapPin size={16} className="text-gold-500" />
+                Filter Venues by Location
+              </h5>
+              <p className="text-[11px] text-neutral-400 mt-0.5">
+                Select your State, District, and Mandal to find nearby function halls
+              </p>
+            </div>
+            {(filterState || filterDistrict || filterMandal) && (
+              <button
+                onClick={() => {
+                  setFilterState('');
+                  setFilterDistrict('');
+                  setFilterMandal('');
+                }}
+                className="self-start sm:self-auto text-[10px] font-bold text-gold-600 hover:text-gold-700 uppercase tracking-wider flex items-center gap-1 bg-cream-50 hover:bg-cream-100 px-2.5 py-1 rounded border border-cream-200 transition-colors cursor-pointer"
+              >
+                <RotateCcw size={11} /> Reset Location
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+            {/* 1. SELECT STATE */}
+            <div className="space-y-1">
+              <label className="block text-[11px] font-bold text-primary-800 uppercase tracking-wider">
+                1. Select State
+              </label>
+              <div className="relative">
+                <select
+                  value={filterState}
+                  onChange={(e) => {
+                    const newState = e.target.value;
+                    setFilterState(newState);
+                    setFilterDistrict('');
+                    setFilterMandal('');
+                  }}
+                  className="w-full bg-cream-50/60 border border-cream-200 rounded-luxury px-3.5 py-2.5 text-xs text-primary-800 font-medium focus:outline-none focus:ring-1 focus:ring-gold-500 focus:bg-white transition-all cursor-pointer"
+                >
+                  <option value="">All States ({ALL_STATES.length})</option>
+                  {ALL_STATES.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* 2. SELECT DISTRICT */}
+            <div className="space-y-1">
+              <label className="block text-[11px] font-bold text-primary-800 uppercase tracking-wider">
+                2. Select District
+              </label>
+              <div className="relative">
+                <select
+                  value={filterDistrict}
+                  disabled={!filterState}
+                  onChange={(e) => {
+                    const newDist = e.target.value;
+                    setFilterDistrict(newDist);
+                    setFilterMandal('');
+                  }}
+                  className="w-full bg-cream-50/60 border border-cream-200 rounded-luxury px-3.5 py-2.5 text-xs text-primary-800 font-medium focus:outline-none focus:ring-1 focus:ring-gold-500 focus:bg-white transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <option value="">
+                    {filterState ? 'All Districts' : 'Select State first'}
+                  </option>
+                  {getDistrictsForState(filterState).map((d) => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* 3. SELECT MANDAL */}
+            <div className="space-y-1">
+              <label className="block text-[11px] font-bold text-primary-800 uppercase tracking-wider">
+                3. Select Mandal
+              </label>
+              <div className="relative">
+                <select
+                  value={filterMandal}
+                  disabled={!filterDistrict}
+                  onChange={(e) => setFilterMandal(e.target.value)}
+                  className="w-full bg-cream-50/60 border border-cream-200 rounded-luxury px-3.5 py-2.5 text-xs text-primary-800 font-medium focus:outline-none focus:ring-1 focus:ring-gold-500 focus:bg-white transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <option value="">
+                    {filterDistrict ? 'All Mandals' : 'Select District first'}
+                  </option>
+                  {getMandalsForDistrict(filterState, filterDistrict).map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Filter Status Badge */}
+          {(filterState || filterDistrict || filterMandal) && (
+            <div className="flex items-center gap-2 text-[11px] text-neutral-600 bg-cream-50 px-3 py-1.5 rounded border border-cream-150">
+              <span className="font-semibold text-primary-800">Active Location:</span>
+              <span>
+                {[filterMandal, filterDistrict, filterState].filter(Boolean).join(' › ')}
+              </span>
+              <span className="text-neutral-400 font-mono">
+                ({filteredHalls.length} {filteredHalls.length === 1 ? 'hall' : 'halls'} found)
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Search Bar & Refresh Bar */}
@@ -171,19 +309,26 @@ export const HallListingPage: React.FC = () => {
               <Building size={28} className="text-gray-400" />
             </div>
             <h4 className="font-bold text-sm text-primary-800 uppercase tracking-wider mb-2">
-              {searchQuery ? 'No Matching Halls Found' : 'No Function Halls Available'}
+              {searchQuery || filterState || filterDistrict || filterMandal
+                ? 'No Matching Halls Found'
+                : 'No Function Halls Available'}
             </h4>
             <p className="text-neutral-400 text-xs leading-relaxed mb-6">
-              {searchQuery
-                ? `No function halls match "${searchQuery}". Please try another search term.`
+              {searchQuery || filterState || filterDistrict || filterMandal
+                ? `No function halls match your search or location criteria. Try changing or resetting the filters.`
                 : 'There are currently no function halls added in the Admin Panel.'}
             </p>
-            {searchQuery && (
+            {(searchQuery || filterState || filterDistrict || filterMandal) && (
               <button
-                onClick={() => setSearchQuery('')}
-                className="bg-primary-800 text-white text-xs font-bold py-2.5 px-6 rounded-full hover:bg-primary-900 transition-all shadow"
+                onClick={() => {
+                  setSearchQuery('');
+                  setFilterState('');
+                  setFilterDistrict('');
+                  setFilterMandal('');
+                }}
+                className="bg-primary-800 text-white text-xs font-bold py-2.5 px-6 rounded-full hover:bg-primary-900 transition-all shadow cursor-pointer"
               >
-                Clear Search
+                Reset All Filters
               </button>
             )}
           </div>

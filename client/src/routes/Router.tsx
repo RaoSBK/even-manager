@@ -122,6 +122,7 @@ export const router = createBrowserRouter([
       {
         element: <MainLayout />,
         children: [
+          { path: 'events/book', element: <EventBookingPage /> },
           { path: 'events/book/:type', element: <EventBookingPage /> },
           { path: 'halls/book', element: <HallBookingPage /> },
           { path: 'halls/:id/book', element: <HallBookingPage /> },
