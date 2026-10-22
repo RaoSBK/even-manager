@@ -29,12 +29,12 @@ export class BookingController {
         specialNotes
       } = req.body;
 
-      if (!hallId || !eventDate || !startTime || !endTime || !customerName || !customerPhone || !customerEmail) {
+      if (!eventDate || !startTime || !endTime || !customerName || !customerPhone || !customerEmail) {
         return res.status(400).json({ message: 'All booking contact details and parameters are required.' });
       }
 
       const result = await this.bookingService.createPendingBooking(userId, {
-        hallId,
+        hallId: hallId || undefined,
         eventType: eventType || 'General Event',
         eventDate,
         startTime,

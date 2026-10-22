@@ -74,7 +74,7 @@ export interface BookingDetails {
 
 export const bookingApi = {
   createPending: async (payload: {
-    hallId: string;
+    hallId?: string;
     eventType: string;
     eventDate: string;
     startTime: string;
@@ -108,7 +108,7 @@ export const bookingApi = {
   },
 
   createPendingBooking: async (payload: {
-    hallId: string;
+    hallId?: string;
     eventType: string;
     eventDate: string;
     startTime: string;

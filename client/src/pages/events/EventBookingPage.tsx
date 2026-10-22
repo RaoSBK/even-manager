@@ -8,7 +8,7 @@ import { paymentApi } from '../../api/paymentApi';
 import { 
   Home, Camera, Gift, Heart, Check, X, ShieldAlert, ChevronRight, ChevronLeft,
   Calendar, AlertTriangle, CheckCircle2, ChevronUp, ChevronDown, MapPin, RotateCcw,
-  Sparkles, UtensilsCrossed, Award
+  Sparkles, UtensilsCrossed, Award, Building2
 } from 'lucide-react';
 import { getEventConfig, ServiceItem } from '../../constants/eventsData';
 
@@ -140,8 +140,9 @@ export const EventBookingPage: React.FC = () => {
   const [pincode, setPincode] = useState('');
   const [pincodeError, setPincodeError] = useState('');
 
-  // Step 3 states (Halls availability grid)
+  // Step 3 states (Halls availability grid - Optional Feature)
   const [selectedHallId, setSelectedHallId] = useState<string>('');
+  const [includeHall, setIncludeHall] = useState<boolean>(true);
   const [hallsList, setHallsList] = useState<any[]>([]);
 
   // 3-tier Location Filters (State -> District -> Mandal)
@@ -493,21 +494,19 @@ export const EventBookingPage: React.FC = () => {
 
   // Submit secure booking request & launch Razorpay Checkout
   const handleSubmitBooking = async () => {
-    if (!selectedHallId) {
-      addToast('Please select an available venue hall.', 'warning');
-      return;
-    }
     setLoading(true);
     setErrorMsg(null);
     try {
-      // 1. RE-VERIFY AVAILABILITY
-      const verifyRes = await hallApi.checkAvailability(eventDate, startTime, endTime);
-      const targetHall = verifyRes.halls.find(h => h.id === selectedHallId);
-      if (!targetHall || !targetHall.available) {
-        setErrorMsg('This hall is no longer available for the selected date.');
-        addToast('Selected hall is no longer available. Please select another date or hall.', 'error');
-        setLoading(false);
-        return;
+      // 1. RE-VERIFY AVAILABILITY (Only if user opted to select a function hall)
+      if (selectedHallId) {
+        const verifyRes = await hallApi.checkAvailability(eventDate, startTime, endTime);
+        const targetHall = verifyRes.halls.find(h => h.id === selectedHallId);
+        if (!targetHall || !targetHall.available) {
+          setErrorMsg('This hall is no longer available for the selected date.');
+          addToast('Selected hall is no longer available. Please select another date or hall.', 'error');
+          setLoading(false);
+          return;
+        }
       }
 
       // 2. CREATE BOOKING
@@ -525,7 +524,7 @@ export const EventBookingPage: React.FC = () => {
       }));
 
       const res = await bookingApi.createPending({
-        hallId: selectedHallId,
+        hallId: selectedHallId || undefined,
         eventType: eventConfig.eventType,
         eventDate,
         startTime,
@@ -985,7 +984,7 @@ export const EventBookingPage: React.FC = () => {
             <p className="text-xs text-neutral-500">
               {step === 1 && eventConfig.subtitle}
               {step === 2 && 'Provide event details and coordinator contact info'}
-              {step === 3 && 'Choose a function hall and review reservation invoice'}
+              {step === 3 && 'Select a function hall (optional) and review reservation invoice'}
               {step === 4 && 'Your event has been successfully reserved!'}
             </p>
           </div>
@@ -1672,7 +1671,7 @@ export const EventBookingPage: React.FC = () => {
                   onClick={handleNextStep}
                   className="bg-primary-800 text-white font-bold py-2.5 px-5 rounded-luxury hover:bg-primary-900 transition-all uppercase tracking-wider text-[10px] flex items-center gap-1.5"
                 >
-                  <span>Choose Venue Hall</span>
+                  <span>Review & Confirm</span>
                   <ChevronRight size={12} />
                 </button>
               </div>
@@ -1686,7 +1685,90 @@ export const EventBookingPage: React.FC = () => {
             
             {/* Left 2 Columns: Calendar & Hall Selection Cards */}
             <div className="lg:col-span-2 space-y-6">
-              
+
+              {/* Function Hall Preference Selection (Optional Feature) */}
+              <div className="bg-white border border-cream-200 rounded-luxury p-4 sm:p-5 shadow-sm space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <div className="inline-flex items-center gap-1.5 bg-gold-50 border border-gold-200 text-gold-700 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                      <Sparkles size={11} className="text-gold-500" />
+                      Venue Selection (Optional)
+                    </div>
+                    <h4 className="font-bold text-sm sm:text-base text-primary-800 font-serif mt-1 flex items-center gap-2">
+                      <Building2 size={18} className="text-gold-500" />
+                      Do you need a Function Hall for this event?
+                    </h4>
+                    <p className="text-[11px] text-neutral-500 mt-0.5">
+                      You can book one of our luxury function halls or host the event at your own venue/home.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIncludeHall(false);
+                        setSelectedHallId('');
+                      }}
+                      className={`px-3.5 py-2 rounded text-xs font-bold uppercase tracking-wider border transition-all ${
+                        !includeHall
+                          ? 'bg-primary-800 text-white border-primary-800 shadow-sm'
+                          : 'bg-white text-neutral-600 border-cream-200 hover:bg-cream-50'
+                      }`}
+                    >
+                      No Hall (Own Venue)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIncludeHall(true)}
+                      className={`px-3.5 py-2 rounded text-xs font-bold uppercase tracking-wider border transition-all ${
+                        includeHall
+                          ? 'bg-primary-800 text-white border-primary-800 shadow-sm'
+                          : 'bg-white text-neutral-600 border-cream-200 hover:bg-cream-50'
+                      }`}
+                    >
+                      Add Function Hall
+                    </button>
+                  </div>
+                </div>
+
+                {!includeHall ? (
+                  <div className="bg-green-50/80 border border-green-200 p-3.5 rounded-luxury flex items-start gap-2.5 text-xs text-green-900">
+                    <CheckCircle2 size={16} className="text-green-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-bold text-green-800">Booking without a Function Hall</p>
+                      <p className="text-[11px] text-green-700 mt-0.5">
+                        No function hall fee will be charged (₹0). All catering, photography, and decor services will be provided at your event address: 
+                        <span className="font-semibold text-primary-800 ml-1">
+                          {[addressLine1, city, district, stateName].filter(Boolean).join(', ') || 'as specified in Step 2'}.
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-cream-50/60 border border-cream-150 p-2.5 rounded-lg flex items-center justify-between text-xs text-neutral-600">
+                    <span className="text-[11px]">
+                      {chosenHall ? (
+                        <>Selected: <strong className="text-primary-800 font-semibold">{chosenHall.name}</strong> (+₹{Number(chosenHall.basePrice).toLocaleString('en-IN')})</>
+                      ) : (
+                        'Browse available dates and halls below, or click "No Hall" if you have your own venue.'
+                      )}
+                    </span>
+                    {chosenHall && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedHallId('')}
+                        className="text-[10px] text-red-600 hover:text-red-700 font-bold underline cursor-pointer ml-2"
+                      >
+                        Remove Hall
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {includeHall && (
+                <>
               {/* Calendar Grid */}
               <div className="bg-white border border-cream-200 p-5 rounded-luxury shadow-sm space-y-4">
                 <div className="flex justify-between items-center bg-cream-50 p-2.5 rounded-luxury">
@@ -1869,9 +1951,19 @@ export const EventBookingPage: React.FC = () => {
                         📍 {[chosenHall.mandal, chosenHall.district, chosenHall.state].filter(Boolean).join(', ') || chosenHall.location || 'Block A'} | 🧑 Capacity: {chosenHall.capacity || 500} pax
                       </p>
                     </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-[9px] text-neutral-400 uppercase font-bold tracking-wider">Starting Price</p>
-                      <p className="font-bold text-gold-600 font-mono text-sm mt-0.5">₹{Number(chosenHall.basePrice).toLocaleString('en-IN')}</p>
+                    <div className="flex items-center gap-3 self-end sm:self-center">
+                      <div className="text-right shrink-0">
+                        <p className="text-[9px] text-neutral-400 uppercase font-bold tracking-wider">Starting Price</p>
+                        <p className="font-bold text-gold-600 font-mono text-sm mt-0.5">₹{Number(chosenHall.basePrice).toLocaleString('en-IN')}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedHallId('')}
+                        className="px-2.5 py-1 bg-white hover:bg-red-50 text-red-600 border border-red-200 rounded text-[10px] font-bold uppercase tracking-wider transition-colors"
+                        title="Remove hall selection"
+                      >
+                        Remove
+                      </button>
                     </div>
                   </div>
                 )}
@@ -1955,14 +2047,15 @@ export const EventBookingPage: React.FC = () => {
                             <div className="flex justify-end pt-2.5 border-t border-cream-100">
                               {hall.available ? (
                                 <button
-                                  onClick={() => setSelectedHallId(hall.id)}
+                                  type="button"
+                                  onClick={() => setSelectedHallId(isSelected ? '' : hall.id)}
                                   className={`px-3 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider border transition-all ${
                                     isSelected
                                       ? 'bg-primary-800 text-white border-primary-800'
                                       : 'bg-white text-primary-800 border-primary-800 hover:bg-primary-50'
                                   }`}
                                 >
-                                  {isSelected ? '✓ Selected' : 'Select Hall'}
+                                  {isSelected ? '✓ Selected (Click to remove)' : 'Select Hall'}
                                 </button>
                               ) : (
                                 <button disabled className="bg-gray-150 text-gray-400 border border-gray-200 px-3 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider cursor-not-allowed">
@@ -1977,6 +2070,8 @@ export const EventBookingPage: React.FC = () => {
                   </div>
                 )}
               </div>
+                </>
+              )}
             </div>
 
             {/* Right Summary Sidebar */}
@@ -1994,11 +2089,22 @@ export const EventBookingPage: React.FC = () => {
                 )}
 
                 <div className="space-y-2 text-neutral-500">
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span>Selected Hall:</span>
-                    <span className="font-bold text-primary-800 truncate max-w-[120px]">
-                      {chosenHall ? chosenHall.name : 'None selected'}
-                    </span>
+                    <div className="text-right">
+                      <span className="font-bold text-primary-800 truncate max-w-[140px] block">
+                        {chosenHall ? chosenHall.name : 'None (Own Venue)'}
+                      </span>
+                      {chosenHall && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedHallId('')}
+                          className="text-[9px] text-red-500 hover:text-red-700 underline"
+                        >
+                          Remove Hall
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div className="flex justify-between">
                     <span>Event Date:</span>
@@ -2094,7 +2200,7 @@ export const EventBookingPage: React.FC = () => {
               </div>
               <div className="py-2 flex justify-between">
                 <span className="text-neutral-400 font-bold uppercase tracking-wider text-[8px]">Venue Hall</span>
-                <span className="font-bold text-primary-800">{chosenHall ? chosenHall.name : 'Taj Mahal Ballroom'}</span>
+                <span className="font-bold text-primary-800">{chosenHall ? chosenHall.name : 'Own Venue / No Hall'}</span>
               </div>
               <div className="py-2 flex justify-between">
                 <span className="text-neutral-400 font-bold uppercase tracking-wider text-[8px]">Booking Status</span>

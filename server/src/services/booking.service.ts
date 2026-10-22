@@ -28,7 +28,7 @@ export class BookingService {
   async createPendingBooking(
     userId: string,
     data: {
-      hallId: string;
+      hallId?: string;
       eventType: string;
       eventDate: string; // YYYY-MM-DD
       startTime: string; // HH:MM
@@ -92,19 +92,26 @@ export class BookingService {
       throw new Error('INVALID_GUEST_COUNT');
     }
 
-    // 2. Fetch User & Hall
+    // 2. Fetch User & Hall (Hall is optional)
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
       throw new Error('USER_NOT_FOUND');
     }
 
-    const hall = await prisma.hall.findUnique({ where: { id: hallId } });
-    if (!hall) {
-      throw new Error('HALL_NOT_FOUND');
-    }
+    let hall: any = null;
+    let hallAmount = 0;
 
-    if (hall.status !== 'AVAILABLE') {
-      throw new Error('HALL_UNAVAILABLE_STATUS');
+    if (hallId) {
+      hall = await prisma.hall.findUnique({ where: { id: hallId } });
+      if (!hall) {
+        throw new Error('HALL_NOT_FOUND');
+      }
+
+      if (hall.status !== 'AVAILABLE') {
+        throw new Error('HALL_UNAVAILABLE_STATUS');
+      }
+
+      hallAmount = Number(hall.basePrice);
     }
 
     const effectiveCustomerName = customerName || user.name || 'Customer';
@@ -113,7 +120,6 @@ export class BookingService {
     const effectiveAddress = customerAddress || [addressLine1, addressLine2, city, district, state, pincode, country].filter(Boolean).join(', ');
 
     // 3. Backend Price Calculation (Frontend total is NEVER trusted)
-    const hallAmount = Number(hall.basePrice);
     const servicesAmount = selectedServices.reduce((sum: number, s: any) => sum + Number(s.price || 0), 0);
     const subtotal = hallAmount + servicesAmount;
     const gstAmount = Math.round(subtotal * 0.18); // 18% GST
@@ -122,16 +128,18 @@ export class BookingService {
     // 4. Double booking prevention inside transaction
     const booking = await prisma.$transaction(
       async (tx) => {
-        const conflict = await this.bookingRepo.findConflictingBooking(
-          tx,
-          hallId,
-          normalizedDate,
-          startTime,
-          endTime
-        );
+        if (hallId) {
+          const conflict = await this.bookingRepo.findConflictingBooking(
+            tx,
+            hallId,
+            normalizedDate,
+            startTime,
+            endTime
+          );
 
-        if (conflict) {
-          throw new Error('CONFLICT');
+          if (conflict) {
+            throw new Error('CONFLICT');
+          }
         }
 
         // Find or create customer record
@@ -165,7 +173,7 @@ export class BookingService {
             bookingNumber,
             userId,
             customerId: customer.id,
-            hallId,
+            hallId: hallId || null,
             eventType,
             eventDate: normalizedDate,
             startTime,
