@@ -48,8 +48,8 @@ export const contactConfig: ContactDetails = {
   },
   socials: {
     instagram: 'https://www.instagram.com/gkbooking26?utm_source=qr&cplk=eW41MG41a29rdjNp',
-    facebook: 'https://facebook.com/gkbooking',
-    youtube: 'https://youtube.com/c/gkbooking'
+    facebook: 'https://www.facebook.com/share/1JvQZ1hbJq/',
+    youtube: 'https://youtube.com/@gkbooking?si=JJ4ArURG-ZxlCX1S'
   },
   faqs: [
     {

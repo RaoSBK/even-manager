@@ -1137,6 +1137,152 @@ app.get('/api/bookings/hall/:bookingId/history', async (req: Request, res: Respo
   }
 });
 
+// Helper to send contact enquiry email to gkbooking26@gmail.com
+async function sendContactEnquiryEmail(data: {
+  id: string;
+  name: string;
+  email: string;
+  mobile: string;
+  subject: string;
+  message: string;
+  createdAt: Date;
+}) {
+  const targetRecipient = process.env.CONTACT_EMAIL || process.env.COMPANY_EMAIL || 'gkbooking26@gmail.com';
+
+  let smtpHost = process.env.SMTP_HOST || '';
+  let smtpPort = parseInt(process.env.SMTP_PORT || '587');
+  let smtpUser = process.env.SMTP_USER || process.env.EMAIL_USER || '';
+  let smtpPass = process.env.SMTP_PASS || process.env.EMAIL_PASS || '';
+  const fromEmail = process.env.COMPANY_EMAIL || smtpUser || 'no-reply@gkbooking.in';
+
+  // Check database settings table if not in environment
+  if (!smtpHost || !smtpUser) {
+    try {
+      const dbSettings = await prisma.settings.findMany();
+      for (const s of dbSettings) {
+        if (s.key === 'SMTP_HOST' && s.value) smtpHost = s.value;
+        if (s.key === 'SMTP_PORT' && s.value) smtpPort = parseInt(s.value);
+        if (s.key === 'SMTP_USER' && s.value) smtpUser = s.value;
+        if (s.key === 'SMTP_PASS' && s.value) smtpPass = s.value;
+      }
+    } catch (e) {
+      // Ignore settings lookup error
+    }
+  }
+
+  const formattedDate = new Date(data.createdAt).toLocaleString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  const emailHtml = `
+    <div style="font-family: Arial, Helvetica, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+      <div style="background-color: #1e3a8a; padding: 22px; text-align: center; color: #ffffff;">
+        <h2 style="margin: 0; font-size: 22px; letter-spacing: 1px; color: #ffffff;">GK BOOKING</h2>
+        <p style="margin: 6px 0 0; font-size: 13px; color: #dbeafe;">New Contact Form Message</p>
+      </div>
+
+      <div style="padding: 24px; color: #374151;">
+        <p style="margin-top: 0; font-size: 15px; color: #1f2937;">
+          You have received a new customer enquiry on <strong>GK BOOKING</strong>:
+        </p>
+
+        <table style="width: 100%; border-collapse: collapse; margin-top: 16px; margin-bottom: 20px; font-size: 14px;">
+          <tr style="border-bottom: 1px solid #f3f4f6;">
+            <td style="padding: 10px 0; font-weight: bold; width: 140px; color: #4b5563;">Customer Name:</td>
+            <td style="padding: 10px 0; color: #111827; font-weight: 600;">${data.name}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #f3f4f6;">
+            <td style="padding: 10px 0; font-weight: bold; color: #4b5563;">Email Address:</td>
+            <td style="padding: 10px 0;"><a href="mailto:${data.email}" style="color: #2563eb; text-decoration: none; font-weight: 600;">${data.email}</a></td>
+          </tr>
+          <tr style="border-bottom: 1px solid #f3f4f6;">
+            <td style="padding: 10px 0; font-weight: bold; color: #4b5563;">Mobile Number:</td>
+            <td style="padding: 10px 0;"><a href="tel:${data.mobile}" style="color: #2563eb; text-decoration: none; font-weight: 600;">+91 ${data.mobile}</a></td>
+          </tr>
+          <tr style="border-bottom: 1px solid #f3f4f6;">
+            <td style="padding: 10px 0; font-weight: bold; color: #4b5563;">Subject:</td>
+            <td style="padding: 10px 0; color: #1e3a8a; font-weight: bold;">${data.subject}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 0; font-weight: bold; color: #4b5563;">Received At:</td>
+            <td style="padding: 10px 0; color: #6b7280; font-size: 13px;">${formattedDate}</td>
+          </tr>
+        </table>
+
+        <div style="background-color: #f9fafb; border-left: 4px solid #b45309; padding: 16px; border-radius: 4px; margin-bottom: 24px;">
+          <h4 style="margin: 0 0 8px; color: #92400e; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Customer Message:</h4>
+          <p style="margin: 0; white-space: pre-wrap; font-size: 14px; line-height: 1.6; color: #1f2937;">${data.message}</p>
+        </div>
+
+        <div style="text-align: center; margin-top: 25px; padding-top: 15px; border-top: 1px solid #f3f4f6;">
+          <a href="mailto:${data.email}?subject=Re: ${encodeURIComponent(data.subject)}" style="background-color: #1e3a8a; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; font-size: 13px; display: inline-block;">Reply to ${data.name} (${data.email})</a>
+        </div>
+      </div>
+
+      <div style="background-color: #f3f4f6; padding: 14px; text-align: center; font-size: 11px; color: #6b7280; border-top: 1px solid #e5e7eb;">
+        GK Event Management System • Enquiry Ref ID: ${data.id}<br/>
+        This email was automatically dispatched to <strong>${targetRecipient}</strong>
+      </div>
+    </div>
+  `;
+
+  if (smtpUser && smtpPass) {
+    try {
+      const transportConfig: any = smtpHost
+        ? {
+            host: smtpHost,
+            port: smtpPort,
+            secure: smtpPort === 465,
+            auth: { user: smtpUser, pass: smtpPass }
+          }
+        : {
+            service: 'gmail',
+            auth: { user: smtpUser, pass: smtpPass }
+          };
+
+      const transporter = nodemailer.createTransport(transportConfig);
+
+      await transporter.sendMail({
+        from: `"GK BOOKING Enquiry" <${fromEmail}>`,
+        replyTo: `"${data.name}" <${data.email}>`,
+        to: targetRecipient,
+        subject: `[New Website Message] ${data.subject} - from ${data.name}`,
+        html: emailHtml
+      });
+
+      console.log(`[Email] Contact enquiry successfully emailed to ${targetRecipient}`);
+      return;
+    } catch (sendError) {
+      console.error('[Email Error] Failed to send contact enquiry email via SMTP:', sendError);
+    }
+  }
+
+  // Fallback logging
+  const logDir = path.resolve(__dirname, '../../database');
+  if (!fs.existsSync(logDir)) {
+    fs.mkdirSync(logDir, { recursive: true });
+  }
+  const logPath = path.join(logDir, 'email_logs.txt');
+  const logEntry = `
+=============================================
+Timestamp: ${new Date().toISOString()}
+To: ${targetRecipient}
+Reply-To: ${data.name} <${data.email}>
+Mobile: ${data.mobile}
+Subject: [New Website Message] ${data.subject} - from ${data.name}
+Message:
+${data.message}
+=============================================
+`;
+  fs.appendFileSync(logPath, logEntry, 'utf-8');
+  console.log(`[Email Notice] SMTP credentials not set. Logged enquiry from ${data.name} (${data.email}) for ${targetRecipient} to database/email_logs.txt`);
+}
+
 // POST Contact Enquiry
 app.post('/api/contact', async (req: Request, res: Response) => {
   const { userId, name, email, mobile, subject, message } = req.body;
@@ -1159,6 +1305,17 @@ app.post('/api/contact', async (req: Request, res: Response) => {
         status: 'Pending'
       }
     });
+
+    // Send email notification to gkbooking26@gmail.com
+    sendContactEnquiryEmail({
+      id,
+      name,
+      email,
+      mobile,
+      subject,
+      message,
+      createdAt: enquiry.createdAt
+    }).catch(err => console.error('Background email sending error:', err));
 
     return res.status(201).json({
       message: 'Message sent successfully!',

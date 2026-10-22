@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet } from 'react-router';
 import Navbar from '../components/common/Navbar';
-import { ShieldCheck, Percent, HelpCircle, Lock, Instagram, Mail } from 'lucide-react';
+import { ShieldCheck, Percent, HelpCircle, Lock, Instagram, Mail, Facebook, Youtube } from 'lucide-react';
 import { contactConfig } from '../constants/contactConfig';
 
 export const MainLayout: React.FC = () => {
@@ -79,7 +79,27 @@ export const MainLayout: React.FC = () => {
                 title="Follow us on Instagram"
               >
                 <Instagram size={14} className="text-gold-400" />
-                <span>@gkbooking26</span>
+                <span>Instagram</span>
+              </a>
+              <a 
+                href={contactConfig.socials.facebook} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="flex items-center gap-2 hover:text-gold-400 transition-colors"
+                title="Follow us on Facebook"
+              >
+                <Facebook size={14} className="text-gold-400" />
+                <span>Facebook</span>
+              </a>
+              <a 
+                href={contactConfig.socials.youtube} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="flex items-center gap-2 hover:text-gold-400 transition-colors"
+                title="Subscribe on YouTube"
+              >
+                <Youtube size={14} className="text-gold-400" />
+                <span>YouTube</span>
               </a>
             </div>
           </div>

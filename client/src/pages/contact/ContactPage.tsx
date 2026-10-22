@@ -423,7 +423,7 @@ export const ContactPage: React.FC = () => {
                     <span className="text-blue-600 p-1 bg-blue-50 rounded-full"><Facebook size={14} /></span>
                     <span>Facebook</span>
                   </div>
-                  <span className="text-[10px] text-gray-400">/gkbooking &rarr;</span>
+                  <span className="text-[10px] text-gray-400">GK Booking &rarr;</span>
                 </a>
 
                 {/* YouTube */}
@@ -437,7 +437,7 @@ export const ContactPage: React.FC = () => {
                     <span className="text-red-600 p-1 bg-red-50 rounded-full"><Youtube size={14} /></span>
                     <span>YouTube</span>
                   </div>
-                  <span className="text-[10px] text-gray-400">GK BOOKING Channel &rarr;</span>
+                  <span className="text-[10px] text-gray-400">@gkbooking &rarr;</span>
                 </a>
               </div>
             </div>
@@ -505,12 +505,21 @@ export const ContactPage: React.FC = () => {
               Thank you for contacting GK BOOKING. Our customer care team will get back to you soon.
             </p>
 
-            <button
-              onClick={() => setShowSuccessModal(false)}
-              className="w-full bg-primary-800 hover:bg-primary-900 text-white font-bold text-xs py-2.5 rounded-lg transition-all shadow"
-            >
-              Dismiss
-            </button>
+            <div className="flex flex-col gap-2.5">
+              <a
+                href="mailto:gkbooking26@gmail.com?subject=Enquiry%20to%20GK%20Booking"
+                className="w-full bg-gold-600 hover:bg-gold-700 text-white font-bold text-xs py-2.5 rounded-lg transition-all shadow flex items-center justify-center gap-1.5"
+              >
+                <Mail size={14} />
+                <span>Open in Email App (gkbooking26@gmail.com)</span>
+              </a>
+              <button
+                onClick={() => setShowSuccessModal(false)}
+                className="w-full bg-primary-800 hover:bg-primary-900 text-white font-bold text-xs py-2.5 rounded-lg transition-all shadow"
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}
