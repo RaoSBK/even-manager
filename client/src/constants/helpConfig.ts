@@ -41,13 +41,13 @@ export const helpFAQs: HelpFAQ[] = [
     id: 'acc-1',
     category: 'Account & Login',
     question: 'How do I create an account?',
-    answer: 'Click "Login / Signup" in the navigation bar, select "Sign Up", enter your name, email, mobile, and password. Confirm using the demo verification code 123456.'
+    answer: 'Click "Login / Signup" in the navigation bar, select "Sign Up", enter your name, email, mobile, and password. Verify your account using the 6-digit OTP sent to your registered mobile number.'
   },
   {
     id: 'acc-2',
     category: 'Account & Login',
     question: 'How do I verify my mobile number?',
-    answer: 'A verification prompt will ask for a 6-digit OTP during signup. Type the demo verification code "123456" to instantly verify your profile.'
+    answer: 'A verification prompt will ask for a 6-digit OTP during signup. Enter the 6-digit SMS verification code sent to your registered mobile number.'
   },
   {
     id: 'acc-3',

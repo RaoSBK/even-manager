@@ -65,7 +65,7 @@ export const VEHICLE_CATEGORIES: CategoryInfo[] = [
   }
 ];
 
-export const SAMPLE_VEHICLES: Vehicle[] = [
+export const FLEET_VEHICLES: Vehicle[] = [
   // 1. Cars
   {
     id: 'veh-mercedes-e',
@@ -335,3 +335,5 @@ export const EVENT_TYPES = [
   'Airport & Hotel Transfers',
   'Other Special Celebration'
 ];
+
+export const SAMPLE_VEHICLES = FLEET_VEHICLES;

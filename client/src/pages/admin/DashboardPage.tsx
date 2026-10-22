@@ -21,37 +21,16 @@ export const DashboardPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Mock recent activity log
-  const recentActivities: ActivityItem[] = [
-    {
-      id: 'act1',
-      title: 'New Booking Registered',
-      description: 'Marriage Ceremony booked at Taj Mahal Ballroom.',
-      timestamp: '15m ago',
-      type: 'booking'
-    },
-    {
-      id: 'act2',
-      title: 'Payment Confirmed',
-      description: 'Received deposit for Grand Banquet event.',
-      timestamp: '1h ago',
-      type: 'payment'
-    },
-    {
-      id: 'act3',
-      title: 'New Employee Registered',
-      description: 'Added Senior Decor Coordinator.',
-      timestamp: '3h ago',
-      type: 'user'
-    },
-    {
-      id: 'act4',
-      title: 'Hall Checked',
-      description: 'Taj Mahal Grand Ballroom marked available.',
-      timestamp: '1d ago',
-      type: 'vendor'
-    }
-  ];
+  // Dynamic recent activity log derived from live bookings
+  const recentActivities: ActivityItem[] = recentBookings.slice(0, 5).map((b) => ({
+    id: b.id,
+    title: `Booking #${b.bookingNumber}`,
+    description: `${b.eventType || 'Event'} booking (${b.status}) - ₹${Number(b.totalAmount || 0).toLocaleString('en-IN')}`,
+    timestamp: b.createdAt
+      ? new Date(b.createdAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })
+      : 'Recent',
+    type: b.status === 'CONFIRMED' ? 'payment' : 'booking'
+  }));
 
   useEffect(() => {
     const fetchData = async () => {

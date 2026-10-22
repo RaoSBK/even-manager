@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router';
 import { MapPin, Users, IndianRupee, ArrowRight, Info, ChevronRight, Home } from 'lucide-react';
 import { hallApi } from '../../api/hallApi';
-import { sampleHalls } from '../../constants/hallsData';
 
 // Mapped assets for halls
 const getHallAssets = (hallCode: string, name: string) => {
@@ -55,15 +54,6 @@ export const HallDetailPage: React.FC = () => {
         return;
       }
       
-      // First check local sampleHalls
-      const sample = sampleHalls.find((h) => h.id === id);
-      if (sample) {
-        setHall(sample);
-        setActiveImage(sample.image);
-        setLoading(false);
-        return;
-      }
-
       // Fetch from DB
       try {
         const dbHall = await hallApi.getById(id);
@@ -81,9 +71,9 @@ export const HallDetailPage: React.FC = () => {
             images: assets.images,
             facilities: assets.facilities,
             status: dbHall.status,
-            state: 'Telangana',
-            district: 'Central',
-            mandal: 'Main'
+            state: dbHall.state || 'Telangana',
+            district: dbHall.district || '',
+            mandal: dbHall.mandal || ''
           };
           setHall(mapped);
           setActiveImage(assets.image);

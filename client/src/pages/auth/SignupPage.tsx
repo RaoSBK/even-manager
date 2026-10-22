@@ -67,7 +67,7 @@ export const SignupPage: React.FC = () => {
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-cream-200 rounded-luxury focus:outline-none focus:ring-1 focus:ring-gold-500 focus:border-gold-500 text-sm"
-              placeholder="e.g. Rahul Kumar"
+              placeholder="Enter your full name"
               disabled={submitting}
             />
           </div>
@@ -86,7 +86,7 @@ export const SignupPage: React.FC = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-cream-200 rounded-luxury focus:outline-none focus:ring-1 focus:ring-gold-500 focus:border-gold-500 text-sm"
-              placeholder="e.g. rahul@example.com"
+              placeholder="Enter your email address"
               disabled={submitting}
             />
           </div>
@@ -105,7 +105,7 @@ export const SignupPage: React.FC = () => {
               value={mobile}
               onChange={(e) => setMobile(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-cream-200 rounded-luxury focus:outline-none focus:ring-1 focus:ring-gold-500 focus:border-gold-500 text-sm"
-              placeholder="e.g. 9876543210 (10 digits)"
+              placeholder="Enter 10-digit mobile number"
               disabled={submitting}
             />
           </div>

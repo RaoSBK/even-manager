@@ -4,144 +4,77 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('--- Starting Database Seeding ---');
+  console.log('--- Starting Production Database Seeding ---');
 
-  // 1. Hash passwords
-  const adminHash = await bcrypt.hash('admin123', 10);
-  const employeeHash = await bcrypt.hash('employee123', 10);
-  const customerHash = await bcrypt.hash('password123', 10);
-
-  // 2. Create Users
-  console.log('Seeding Users...');
-  const adminUser = await prisma.user.upsert({
-    where: { email: 'admin@gkevents.com' },
-    update: {},
-    create: {
-      id: 'admin-seed',
-      name: 'Admin',
-      email: 'admin@gkevents.com',
-      mobile: '9999999999',
-      password: adminHash,
-      role: 'Admin',
-    },
+  // 1. Ensure Super Admin Account exists
+  console.log('Ensuring Admin user...');
+  const existingAdmin = await prisma.user.findFirst({
+    where: { role: 'Admin' }
   });
 
-  const employeeUser = await prisma.user.upsert({
-    where: { email: 'employee@gkevents.com' },
-    update: {},
-    create: {
-      id: 'employee-seed',
-      name: 'Employee',
-      email: 'employee@gkevents.com',
-      mobile: '8888888888',
-      password: employeeHash,
-      role: 'Employee',
-    },
-  });
+  if (!existingAdmin) {
+    const adminHash = await bcrypt.hash('admin123', 10);
+    await prisma.user.create({
+      data: {
+        name: 'GK Admin',
+        email: 'rishiadmin@gkbooking.in',
+        mobile: '7842884158',
+        password: adminHash,
+        role: 'Admin',
+      },
+    });
+    console.log('Created default admin: rishiadmin@gkbooking.in');
+  } else {
+    console.log(`Admin account already exists: ${existingAdmin.email}`);
+  }
 
-  const customerUser = await prisma.user.upsert({
-    where: { email: 'customer@gkevents.com' },
-    update: {},
-    create: {
-      id: 'customer-seed',
-      name: 'Rao SBK',
-      email: 'customer@gkevents.com',
-      mobile: '9876543210',
-      password: customerHash,
-      role: 'Customer',
-    },
-  });
-
-  // 3. Create Profiles (Customer & Employee)
-  console.log('Seeding Customer & Employee Profiles...');
-  const customerProfile = await prisma.customer.upsert({
-    where: { userId: customerUser.id },
-    update: {},
-    create: {
-      id: 'customer-profile-seed',
-      userId: customerUser.id,
-      fullName: 'Rao SBK',
-      email: 'customer@gkevents.com',
-      phone: '9876543210',
-      address: '123 Luxury Avenue',
-      city: 'Vijayawada',
-      state: 'Andhra Pradesh',
-      postalCode: '520001',
-    },
-  });
-
-  const employeeProfile = await prisma.employee.upsert({
-    where: { userId: employeeUser.id },
-    update: {},
-    create: {
-      id: 'employee-profile-seed',
-      userId: employeeUser.id,
-      employeeCode: 'EMP001',
-      department: 'Events Planning',
-      designation: 'Senior Event Coordinator',
-      status: 'ACTIVE',
-    },
-  });
-
-  // 4. Create Halls
-  console.log('Seeding Halls...');
+  // 2. Ensure Function Halls Master Catalog
+  console.log('Seeding Function Halls Catalog...');
   const hallsToSeed = [
     {
-      id: 'hall-seed',
-      hallCode: 'HALL-A',
-      name: 'Taj Mahal Grand Ballroom',
-      description: 'Luxury ballroom with high ceilings and premium chandeliers',
-      location: 'A-Block, Ground Floor',
-      capacity: 500,
-      basePrice: 75000.00,
-      status: HallStatus.AVAILABLE,
-    },
-    {
-      id: 'hall-b-seed',
-      hallCode: 'T-LGA',
-      name: 'Luxury Grand Arena',
-      description: 'Spacious arena suitable for large conventions and receptions',
-      location: 'B-Block, First Floor',
-      capacity: 1000,
-      basePrice: 120000.00,
-      status: HallStatus.AVAILABLE,
-    },
-    {
-      id: 'gk-grand-convention',
       hallCode: 'GK-GCH',
       name: 'GK Grand Convention Hall',
       description: 'A luxurious convention center designed for grand wedding celebrations and premium events.',
-      location: 'NH-44 Bypass Road, Jadcherla',
+      location: 'NH-44 Bypass Road, Jadcherla, Telangana',
+      state: 'Telangana',
+      district: 'Mahabubnagar',
+      mandal: 'Jadcherla',
       capacity: 1500,
       basePrice: 150000.00,
       status: HallStatus.AVAILABLE,
     },
     {
-      id: 'royal-palace-function',
       hallCode: 'RP-FH',
       name: 'Royal Palace Function Hall',
       description: 'An elegant palace-style function hall perfect for royalty-themed weddings and massive gatherings.',
-      location: 'Kollapur Road, Nagarkurnool',
+      location: 'Kollapur Road, Nagarkurnool, Telangana',
+      state: 'Telangana',
+      district: 'Nagarkurnool',
+      mandal: 'Nagarkurnool',
       capacity: 2000,
       basePrice: 200000.00,
       status: HallStatus.AVAILABLE,
     },
     {
-      id: 'sri-lakshmi-function',
       hallCode: 'SL-FH',
       name: 'Sri Lakshmi Function Hall',
       description: 'A pocket-friendly venue for birthdays, engagements, and medium-sized family celebrations.',
-      location: 'Station Road, Wanaparthy',
+      location: 'Station Road, Wanaparthy, Telangana',
+      state: 'Telangana',
+      district: 'Wanaparthy',
+      mandal: 'Wanaparthy',
       capacity: 800,
       basePrice: 80000.00,
       status: HallStatus.AVAILABLE,
     },
     {
-      id: 'golden-banquet-hall',
       hallCode: 'GB-H',
       name: 'Golden Banquet Hall',
       description: 'An indoor banquet hall crafted for premium corporate meetups, intimate gatherings, and sangeet celebrations.',
-      location: 'Raichur Road, Gadwal',
+      location: 'Raichur Road, Gadwal, Telangana',
+      state: 'Telangana',
+      district: 'Jogulamba Gadwal',
+      mandal: 'Gadwal',
       capacity: 500,
       basePrice: 60000.00,
       status: HallStatus.AVAILABLE,
@@ -155,6 +88,9 @@ async function main() {
         name: h.name,
         description: h.description,
         location: h.location,
+        state: h.state,
+        district: h.district,
+        mandal: h.mandal,
         capacity: h.capacity,
         basePrice: h.basePrice,
         status: h.status,
@@ -163,153 +99,8 @@ async function main() {
     });
   }
 
-
-  // 5. Create Events
-  console.log('Seeding Events...');
-  const event = await prisma.event.upsert({
-    where: { eventCode: 'EVT-2026-001' },
-    update: {},
-    create: {
-      id: 'event-seed',
-      eventCode: 'EVT-2026-001',
-      customerId: customerProfile.id,
-      eventName: 'Grand Wedding Banquet',
-      eventType: 'WEDDING',
-      description: 'Elegant grand ballroom traditional wedding party',
-      eventDate: new Date('2026-10-15T12:00:00Z'),
-      startTime: '09:00',
-      endTime: '22:00',
-      expectedGuestCount: 250,
-      status: 'PLANNING',
-      budget: 150000.00,
-    },
-  });
-
-  // 6. Create Bookings
-  console.log('Seeding Bookings...');
-  await prisma.booking.upsert({
-    where: { bookingNumber: 'BKG-2026-001' },
-    update: {},
-    create: {
-      id: 'booking-seed',
-      bookingNumber: 'BKG-2026-001',
-      eventId: event.id,
-      customerId: customerProfile.id,
-      status: 'CONFIRMED',
-      totalAmount: 150000.00,
-      advanceAmount: 50000.00,
-      balanceAmount: 100000.00,
-    },
-  });
-
-  // 7. Create Legacy Hall Bookings
-  console.log('Seeding Legacy Hall Bookings...');
-  await prisma.hallBooking.upsert({
-    where: { id: 'hall-booking-seed' },
-    update: {},
-    create: {
-      id: 'hall-booking-seed',
-      userId: customerUser.id,
-      customerName: 'Rao SBK',
-      email: 'customer@gkevents.com',
-      mobile: '9876543210',
-      state: 'Andhra Pradesh',
-      district: 'Krishna',
-      mandal: 'Vijayawada',
-      hallId: 'hall-seed',
-      hallName: 'Taj Mahal Grand Ballroom',
-      hallAddress: 'A-Block, Ground Floor',
-      eventDate: '2026-10-15',
-      bookingDate: new Date().toISOString().split('T')[0],
-      costPerDay: 75000.00,
-      totalAmount: 75000.00,
-      status: 'Confirmed',
-      eventId: event.id,
-      eventType: 'General Event',
-      guestsCount: 250,
-      eventSession: 'Full Day',
-      foodItems: '[]',
-    },
-  });
-
-  // 8. Create Tasks
-  console.log('Seeding Tasks...');
-  await prisma.task.upsert({
-    where: { id: 'task-seed' },
-    update: {},
-    create: {
-      id: 'task-seed',
-      eventId: event.id,
-      assignedTo: employeeProfile.id,
-      title: 'Confirm Catering Menu',
-      description: 'Verify final food items and taste approval with the customer',
-      priority: 'HIGH',
-      status: 'TODO',
-    },
-  });
-
-  // 9. Create Vendors & Services
-  console.log('Seeding Vendors & Services...');
-  const vendor = await prisma.vendor.upsert({
-    where: { vendorCode: 'VND001' },
-    update: {},
-    create: {
-      id: 'vendor-seed',
-      vendorCode: 'VND001',
-      name: 'Star Decoration Services',
-      companyName: 'Star Decor Ltd',
-      status: 'ACTIVE',
-    },
-  });
-
-  await prisma.vendorService.upsert({
-    where: { id: 'vendor-service-seed' },
-    update: {},
-    create: {
-      id: 'vendor-service-seed',
-      vendorId: vendor.id,
-      name: 'Floral Backdrop Decoration',
-      description: 'Elegant flowers backdrop setup',
-      basePrice: 25000.00,
-    },
-  });
-
-  // 10. Create Inventory Items
-  console.log('Seeding Inventory Items...');
-  await prisma.inventoryItem.upsert({
-    where: { itemCode: 'INV-CHAIR-01' },
-    update: {},
-    create: {
-      id: 'inventory-seed',
-      itemCode: 'INV-CHAIR-01',
-      name: 'Premium Banqueting Chairs',
-      category: 'Furniture',
-      quantity: 200,
-      unit: 'pieces',
-      minimumStock: 20,
-      unitCost: 150.00,
-      status: 'ACTIVE',
-    },
-  });
-
-  // 11. Create Quotations
-  console.log('Seeding Quotations...');
-  await prisma.quotation.upsert({
-    where: { quotationNumber: 'QTN-2026-001' },
-    update: {},
-    create: {
-      id: 'quotation-seed',
-      quotationNumber: 'QTN-2026-001',
-      eventId: event.id,
-      customerId: customerProfile.id,
-      subtotal: 120000.00,
-      totalAmount: 120000.00,
-      status: 'DRAFT',
-    },
-  });
-
-  // 12. Seed Food Items
-  console.log('Seeding Food Items...');
+  // 3. Ensure Food Items Master Catalog
+  console.log('Seeding Catering Food Items Catalog...');
   const foodItems = [
     { name: 'Paneer Butter Masala', category: 'VEG', price: 180 },
     { name: 'Veg Biryani', category: 'VEG', price: 160 },
@@ -384,7 +175,7 @@ async function main() {
     });
   }
 
-  console.log('--- Database Seeding Completed Successfully! ---');
+  console.log('--- Production Database Seeding Completed Successfully ---');
 }
 
 main()

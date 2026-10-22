@@ -381,7 +381,7 @@ export const HelpPage: React.FC = () => {
                     <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gold-500"><Mail size={14} /></span>
                     <input
                       type="email"
-                      placeholder="john@example.com"
+                      placeholder="Enter your email address"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className={`w-full bg-cream-50 border rounded-lg p-2.5 pl-10 text-xs font-semibold text-primary-800 outline-none focus:border-gold-500 transition-all ${

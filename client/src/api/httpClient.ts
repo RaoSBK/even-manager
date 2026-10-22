@@ -1,4 +1,5 @@
-import { demoAuthService } from '../services/demoAuthService';
+const TOKEN_KEY = 'gk_events_token';
+const SESSION_KEY = 'gk_events_session';
 
 const getApiHost = () => {
   const envUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL;
@@ -30,7 +31,7 @@ export async function request<T>(endpoint: string, options: RequestOptions = {})
     }
   }
 
-  const token = demoAuthService.getToken();
+  const token = localStorage.getItem(TOKEN_KEY);
   const requestHeaders = new Headers(headers);
   
   if (token) {
@@ -48,7 +49,8 @@ export async function request<T>(endpoint: string, options: RequestOptions = {})
 
   if (response.status === 401) {
     // Session expired or unauthorized
-    await demoAuthService.logout();
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(SESSION_KEY);
     // Redirect to login page
     window.location.href = '/login';
     throw new Error('Your session has expired. Please log in again.');
@@ -88,4 +90,3 @@ export const httpClient = {
   delete: <T>(endpoint: string, options?: RequestInit) =>
     request<T>(endpoint, { method: 'DELETE', ...options }),
 };
-

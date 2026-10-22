@@ -232,7 +232,7 @@ export const ContactPage: React.FC = () => {
                   </label>
                   <input
                     type="text"
-                    placeholder="John Doe"
+                    placeholder="Enter your full name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className={`w-full bg-cream-50 border rounded-lg p-2.5 text-xs font-semibold text-primary-800 outline-none focus:border-gold-500 transition-all ${
@@ -253,7 +253,7 @@ export const ContactPage: React.FC = () => {
                   </label>
                   <input
                     type="email"
-                    placeholder="john@example.com"
+                    placeholder="Enter your email address"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className={`w-full bg-cream-50 border rounded-lg p-2.5 text-xs font-semibold text-primary-800 outline-none focus:border-gold-500 transition-all ${

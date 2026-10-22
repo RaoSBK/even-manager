@@ -63,7 +63,7 @@ export const LoginPage: React.FC = () => {
               value={emailOrMobile}
               onChange={(e) => setEmailOrMobile(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 border border-cream-200 rounded-luxury focus:outline-none focus:ring-1 focus:ring-gold-500 focus:border-gold-500 text-sm"
-              placeholder="e.g. admin@gkevent.com, 9876543210, or mgr_taj"
+              placeholder="Enter your email, mobile number, or ID"
               disabled={submitting}
             />
           </div>
@@ -111,43 +111,6 @@ export const LoginPage: React.FC = () => {
           )}
         </button>
       </form>
-
-      {/* Demo credentials helper panel */}
-      <div className="bg-cream-50 border border-cream-200 rounded-luxury p-4 text-xs text-primary-800">
-        <p className="font-bold text-gold-600 uppercase tracking-wider mb-2">Demo Accounts (Click to Fill):</p>
-        <div className="space-y-1.5 font-mono">
-          <button
-            type="button"
-            onClick={() => {
-              setEmailOrMobile('admin@gkevents.com');
-              setPassword('admin123');
-            }}
-            className="block text-left w-full hover:bg-cream-100 p-1 rounded"
-          >
-            🔑 <span className="font-bold">ADMIN:</span> admin@gkevents.com / admin123
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setEmailOrMobile('employee@gkevents.com');
-              setPassword('employee123');
-            }}
-            className="block text-left w-full hover:bg-cream-100 p-1 rounded"
-          >
-            🔑 <span className="font-bold">EMPLOYEE:</span> employee@gkevents.com / employee123
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setEmailOrMobile('customer@gkevents.com');
-              setPassword('password123');
-            }}
-            className="block text-left w-full hover:bg-cream-100 p-1 rounded"
-          >
-            🔑 <span className="font-bold">USER:</span> customer@gkevents.com / password123
-          </button>
-        </div>
-      </div>
 
       <div className="text-center text-xs text-neutral-400">
         Don't have an account?{' '}

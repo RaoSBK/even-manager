@@ -24,7 +24,7 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 import {
   VEHICLE_CATEGORIES,
-  SAMPLE_VEHICLES,
+  FLEET_VEHICLES,
   EVENT_TYPES,
   Vehicle,
   VehicleCategory
@@ -85,9 +85,9 @@ export const TravelBookingPage: React.FC = () => {
   const [passengerEmail, setPassengerEmail] = useState(user?.email || '');
   const [specialRequirements, setSpecialRequirements] = useState('');
 
-  // Submission / Demo Confirmation State
+  // Submission & Booking Confirmation State
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [demoBookingRef, setDemoBookingRef] = useState<string>('');
+  const [bookingRef, setBookingRef] = useState<string>('');
   const [bookingTimestamp, setBookingTimestamp] = useState<string>('');
 
   // Sync auth user changes if available
@@ -104,7 +104,7 @@ export const TravelBookingPage: React.FC = () => {
 
   // Filtered vehicles list based on category, filters, and search
   const filteredVehicles = useMemo(() => {
-    return SAMPLE_VEHICLES.filter((v) => {
+    return FLEET_VEHICLES.filter((v) => {
       // Category filter
       if (selectedCategory !== 'all' && v.category !== selectedCategory) {
         return false;
@@ -240,7 +240,7 @@ export const TravelBookingPage: React.FC = () => {
     setIsSubmitting(true);
     setTimeout(() => {
       const generatedRef = `GK-TRV-${Math.floor(100000 + Math.random() * 900000)}`;
-      setDemoBookingRef(generatedRef);
+      setBookingRef(generatedRef);
       setBookingTimestamp(new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }));
       setIsSubmitting(false);
       setCurrentStep('confirmation');
@@ -252,7 +252,7 @@ export const TravelBookingPage: React.FC = () => {
   const handleResetFlow = () => {
     setSelectedVehicle(null);
     setCurrentStep('selection');
-    setDemoBookingRef('');
+    setBookingRef('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -794,7 +794,7 @@ export const TravelBookingPage: React.FC = () => {
                       Available Vehicles Fleet
                     </h3>
                     <p className="text-xs text-neutral-400 mt-0.5">
-                      Showing {filteredVehicles.length} of {SAMPLE_VEHICLES.length} vehicles • Demonstration catalogue
+                      Showing {filteredVehicles.length} of {FLEET_VEHICLES.length} vehicles • Demonstration catalogue
                     </p>
                   </div>
 
@@ -1724,7 +1724,7 @@ export const TravelBookingPage: React.FC = () => {
                   Client Demo Reference ID
                 </p>
                 <p className="text-xl font-bold font-mono text-primary-900 tracking-wider">
-                  {demoBookingRef}
+                  {bookingRef}
                 </p>
                 <p className="text-[10px] text-neutral-400">Generated: {bookingTimestamp}</p>
               </div>

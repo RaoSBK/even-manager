@@ -18,7 +18,7 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<Toast[]>([]);
-  const [unreadCount, setUnreadCount] = useState<number>(3); // Mock unread notification badge
+  const [unreadCount, setUnreadCount] = useState<number>(0);
 
   const addToast = (message: string, type: Toast['type'] = 'success') => {
     const id = Date.now().toString();

@@ -82,43 +82,16 @@ export const PaymentPage: React.FC = () => {
   const { user } = useAuth();
   const { addToast } = useNotifications();
 
-  // Retrieve passed booking payload from navigation state or fallback to default sample
+  // Retrieve passed booking payload from navigation state
   const stateData = location.state?.bookingData || location.state;
-
-  // Fallback demo booking data if user navigated directly
-  const fallbackBooking = {
-    userId: user?.id || 'USR-DEMO-01',
-    customerName: user?.name || 'Rahul Kumar',
-    email: user?.email || 'user@gkevent.com',
-    mobile: user?.mobile || '9876543210',
-    state: 'Telangana',
-    district: 'Hyderabad',
-    mandal: 'Gachibowli',
-    hallId: 'hall-01',
-    hallName: 'GK Royal Palace Banquet Hall',
-    hallAddress: 'Financial District, Gachibowli, Hyderabad, Telangana 500032',
-    eventDate: '2026-11-20',
-    costPerDay: 150000,
-    totalAmount: 168000,
-    capacity: 600,
-    eventType: 'Wedding Reception',
-    guestsCount: 400,
-    eventSession: 'Full Day (09:00 AM - 06:00 PM)',
-    foodItems: [
-      { id: 'f-1', name: 'Hyderabadi Dum Biryani (Chicken)', price: 350 },
-      { id: 'f-2', name: 'Paneer Butter Masala & Butter Naan', price: 250 },
-      { id: 'f-3', name: 'Gulab Jamun & Ice Cream', price: 120 }
-    ]
-  };
-
-  const bookingData = stateData?.hallName ? stateData : fallbackBooking;
+  const bookingData = stateData || null;
 
   // Calculate Subtotals
   const foodList: Array<{ id: string; name: string; price: number }> = 
-    Array.isArray(bookingData.foodItems) ? bookingData.foodItems : [];
+    Array.isArray(bookingData?.foodItems) ? bookingData.foodItems : [];
   const foodTotal = foodList.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
-  const hallCost = Number(bookingData.costPerDay || bookingData.totalAmount || 150000);
-  const grandTotal = Number(bookingData.totalAmount || (hallCost + foodTotal));
+  const hallCost = Number(bookingData?.costPerDay || bookingData?.totalAmount || 0);
+  const grandTotal = Number(bookingData?.totalAmount || (hallCost + foodTotal));
 
   // Payment Selection State
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType>('UPI');
@@ -152,11 +125,11 @@ export const PaymentPage: React.FC = () => {
   const [qrTimer, setQrTimer] = useState<number>(300);
 
   // Card
-  const [cardHolder, setCardHolder] = useState<string>(bookingData.customerName || 'Rahul Kumar');
-  const [cardNumber, setCardNumber] = useState<string>('4532 8921 7845 9210');
-  const [cardExpiry, setCardExpiry] = useState<string>('12/28');
-  const [cardCvv, setCardCvv] = useState<string>('842');
-  const [saveCard, setSaveCard] = useState<boolean>(true);
+  const [cardHolder, setCardHolder] = useState<string>(bookingData?.customerName || user?.name || '');
+  const [cardNumber, setCardNumber] = useState<string>('');
+  const [cardExpiry, setCardExpiry] = useState<string>('');
+  const [cardCvv, setCardCvv] = useState<string>('');
+  const [saveCard, setSaveCard] = useState<boolean>(false);
 
   // Net Banking
   const [selectedBank, setSelectedBank] = useState<string>('HDFC');
@@ -164,7 +137,7 @@ export const PaymentPage: React.FC = () => {
 
   // Wallet
   const [selectedWallet, setSelectedWallet] = useState<string>('PHONEPE');
-  const [walletPhone, setWalletPhone] = useState<string>(bookingData.mobile || '9876543210');
+  const [walletPhone, setWalletPhone] = useState<string>(bookingData?.mobile || user?.mobile || '');
 
   // Processing & State Machine
   const [status, setStatus] = useState<'IDLE' | 'PROCESSING' | 'SUCCESS' | 'FAILED' | 'CANCELLED'>('IDLE');
@@ -338,6 +311,36 @@ export const PaymentPage: React.FC = () => {
       paymentStatus: 'PAID & CONFIRMED'
     });
   };
+
+  if (!bookingData) {
+    return (
+      <div className="bg-cream-50 min-h-screen py-16 flex items-center justify-center font-sans">
+        <div className="bg-white p-8 max-w-md w-full rounded-luxury border border-cream-200 text-center space-y-4 shadow-luxury">
+          <div className="w-16 h-16 bg-gold-50 text-gold-600 rounded-full mx-auto flex items-center justify-center">
+            <CreditCard size={28} />
+          </div>
+          <h2 className="text-xl font-bold font-serif text-primary-800">No Pending Booking Found</h2>
+          <p className="text-xs text-neutral-500">
+            Please select an event or function hall to start a booking and proceed to payment.
+          </p>
+          <div className="flex gap-3 pt-2">
+            <button
+              onClick={() => navigate('/events/book/marriage')}
+              className="w-1/2 py-2.5 bg-primary-800 text-white rounded-lg text-xs font-bold hover:bg-primary-900 transition-all cursor-pointer"
+            >
+              Book Event
+            </button>
+            <button
+              onClick={() => navigate('/halls')}
+              className="w-1/2 py-2.5 bg-gold-500 text-white rounded-lg text-xs font-bold hover:bg-gold-600 transition-all cursor-pointer"
+            >
+              Explore Halls
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-cream-50 min-h-screen py-8 font-sans text-primary-950">
