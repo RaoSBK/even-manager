@@ -22,7 +22,15 @@ const SESSION_KEY = 'gk_events_session';
 const TOKEN_KEY = 'gk_events_token';
 const PENDING_SIGNUP_KEY = 'gk_events_pending_signup';
 
-const BACKEND_BASE = `${import.meta.env.VITE_API_URL || 'http://127.0.0.1:5050'}/api`;
+const getApiHost = () => {
+  const envUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL;
+  if (envUrl) {
+    return envUrl.replace(/\/api\/?$/, '');
+  }
+  return 'http://127.0.0.1:5050';
+};
+
+const BACKEND_BASE = `${getApiHost()}/api`;
 
 function mapRole(backendRole: string): UserRole {
   const roleUpper = (backendRole || '').toUpperCase();

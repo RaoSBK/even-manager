@@ -38,28 +38,94 @@ const app = express();
 const PORT = process.env.PORT || 5050;
 
 const defaultAllowedOrigins = [
+  'https://gkbooking.in',
+  'https://www.gkbooking.in',
+  'http://gkbooking.in',
+  'http://www.gkbooking.in',
   'http://localhost:5173',
   'http://localhost:3000',
   'http://localhost:5050',
   'http://localhost:8080',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:5050',
   'http://127.0.0.1:5500',
   'http://127.0.0.1:8080'
 ];
 
-const configuredOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(',').map(o => o.trim()).filter(Boolean)
-  : defaultAllowedOrigins;
+const normalizeOrigin = (urlStr: string) => urlStr.trim().replace(/\/+$/, '').toLowerCase();
 
-app.use(cors({
+const envOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(/[,;]/).map(o => o.trim()).filter(Boolean)
+  : [];
+
+const allowAllOrigins = envOrigins.includes('*') || process.env.CORS_ORIGIN === '*';
+
+const allowedOriginsList = Array.from(
+  new Set([...defaultAllowedOrigins.map(normalizeOrigin), ...envOrigins.map(normalizeOrigin)])
+);
+
+function isAllowedOrigin(origin: string): boolean {
+  if (!origin) return true;
+  if (allowAllOrigins || process.env.NODE_ENV !== 'production') return true;
+
+  const normalized = normalizeOrigin(origin);
+
+  if (allowedOriginsList.includes(normalized)) {
+    return true;
+  }
+
+  try {
+    const parsed = new URL(normalized);
+    const hostname = parsed.hostname.toLowerCase();
+
+    // Localhost / loopback on any port
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') {
+      return true;
+    }
+
+    // Official production domain and subdomains
+    if (hostname === 'gkbooking.in' || hostname.endsWith('.gkbooking.in')) {
+      return true;
+    }
+
+    // Common deployment platforms
+    if (
+      hostname.endsWith('.onrender.com') ||
+      hostname.endsWith('.netlify.app') ||
+      hostname.endsWith('.vercel.app')
+    ) {
+      return true;
+    }
+  } catch {
+    if (normalized.includes('gkbooking.in') || normalized.includes('localhost') || normalized.includes('127.0.0.1')) {
+      return true;
+    }
+  }
+
+  // If CORS_ORIGIN is not explicitly configured to restrict domains, be permissive
+  if (!process.env.CORS_ORIGIN) {
+    return true;
+  }
+
+  return false;
+}
+
+const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
-    if (!origin) return callback(null, true);
-    if (process.env.NODE_ENV !== 'production' || configuredOrigins.includes('*') || configuredOrigins.includes(origin)) {
+    if (!origin || isAllowedOrigin(origin)) {
       return callback(null, true);
     }
-    return callback(new Error('Not allowed by CORS'));
+    console.warn(`[CORS] Rejected request from origin: ${origin}`);
+    return callback(null, false);
   },
-  credentials: true
-}));
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(express.json());
 
 // Serve static assets (favicons, robots.txt, logo.png) if requested via backend
@@ -1154,6 +1220,17 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/employee', employeeRoutes);
+
+// Global Error Handler
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  console.error('[Server Error]', err.stack || err.message || err);
+  if (res.headersSent) {
+    return next(err);
+  }
+  return res.status(err.status || 500).json({
+    message: err.message || 'Internal Server Error'
+  });
+});
 
 // Start Server
 if (process.env.NODE_ENV !== 'test') {
