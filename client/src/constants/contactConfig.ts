@@ -12,6 +12,7 @@ export interface ContactDetails {
     value: string; // mailto: URL format
   };
   address: {
+    title?: string;
     display: string;
     mapsLink: string;
   };
@@ -41,11 +42,12 @@ export const contactConfig: ContactDetails = {
     value: 'mailto:gkbooking26@gmail.com'
   },
   address: {
-    display: 'GK Event Management, Plot No. 12, Golden Plaza, Jubilee Hills, Road No. 36, Hyderabad, Telangana, 500033',
-    mapsLink: 'https://maps.google.com/?q=GK+Event+Management+Jubilee+Hills+Hyderabad'
+    title: 'Mahbubnagar, Telangana',
+    display: 'GK Event Management, Mahbubnagar, Telangana',
+    mapsLink: 'https://maps.app.goo.gl/4hTwCQ1pAgaNedwRA'
   },
   socials: {
-    instagram: 'https://www.instagram.com/gkbooking26?igsh=MWpqa3J5MXl1NTk3cA==',
+    instagram: 'https://www.instagram.com/gkbooking26?utm_source=qr&cplk=eW41MG41a29rdjNp',
     facebook: 'https://facebook.com/gkbooking',
     youtube: 'https://youtube.com/c/gkbooking'
   },

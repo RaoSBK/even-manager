@@ -365,13 +365,18 @@ export const ContactPage: React.FC = () => {
               </div>
 
               {/* Styled Maps Placeholder */}
-              <div className="h-44 bg-cream-100 border border-cream-150 rounded-lg flex flex-col items-center justify-center text-center p-4 relative mb-4">
-                <div className="w-10 h-10 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-full flex items-center justify-center mb-2 animate-bounce">
+              <a
+                href={contactConfig.address.mapsLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="h-44 bg-cream-100 hover:bg-cream-150/70 border border-cream-150 rounded-lg flex flex-col items-center justify-center text-center p-4 relative mb-4 transition-all group block cursor-pointer"
+              >
+                <div className="w-10 h-10 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-full flex items-center justify-center mb-2 group-hover:scale-110 transition-transform animate-bounce">
                   <MapPin size={20} />
                 </div>
-                <h5 className="font-bold text-xs text-primary-800 mb-1">Jubilee Hills, Hyderabad</h5>
-                <p className="text-[10px] text-gray-400 max-w-[200px] leading-relaxed">Central Office Hub location details configuration</p>
-              </div>
+                <h5 className="font-bold text-xs text-primary-800 mb-1">{contactConfig.address.title || 'Mahbubnagar, Telangana'}</h5>
+                <p className="text-[10px] text-neutral-500 max-w-[220px] leading-relaxed">{contactConfig.address.display}</p>
+              </a>
 
               <a
                 href={contactConfig.address.mapsLink}
