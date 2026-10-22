@@ -293,12 +293,7 @@ export const EventHero: React.FC = () => {
                     <button
                       onClick={() => {
                         handleCloseModal();
-                        const el = document.getElementById('location-venues');
-                        if (el) {
-                          el.scrollIntoView({ behavior: 'smooth' });
-                        } else {
-                          navigate('/halls');
-                        }
+                        navigate('/halls');
                       }}
                       className="w-full py-2.5 bg-gold-500 hover:bg-gold-600 text-white rounded-luxury text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow cursor-pointer"
                     >
