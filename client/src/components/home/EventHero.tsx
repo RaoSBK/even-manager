@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Sparkles, Award, Users, ArrowRight, X, ArrowLeft, ChevronRight, MapPin } from 'lucide-react';
+import { Sparkles, Award, Users, ArrowRight, X, ArrowLeft, ChevronRight } from 'lucide-react';
 import heroImage from '../../assets/images/hero-wedding.jpg';
 
-type ServiceCategory = 'EVENT' | 'HALL' | 'TRAVEL' | null;
+type ServiceCategory = 'EVENT' | 'TRAVEL' | null;
 
 export const EventHero: React.FC = () => {
   const navigate = useNavigate();
@@ -46,15 +46,6 @@ export const EventHero: React.FC = () => {
     { name: 'Saree Function', path: '/events/book/saree', icon: '✨', desc: 'Traditional decor & stage setups' },
     { name: 'Dawath', path: '/events/book/dawath', icon: '🍽️', desc: 'Premium banquet dining & feasts' },
     { name: 'Other Events', path: '/events/book/other', icon: '🎉', desc: 'Corporate, anniversaries & custom celebrations' }
-  ];
-
-  const hallOptions = [
-    { name: 'Taj Mahal Grand Ballroom', path: '/halls/hall-seed/book', icon: '🏛️', desc: 'Banjara Hills, Hyderabad • 500+ Guests' },
-    { name: 'Luxury Grand Arena', path: '/halls/hall-b-seed/book', icon: '🏟️', desc: 'Madhapur, Hyderabad • 1000+ Guests' },
-    { name: 'GK Grand Convention Hall', path: '/halls/gk-grand-convention/book', icon: '🏰', desc: 'Jadcherla, Mahabubnagar • 1500+ Guests' },
-    { name: 'Royal Palace Function Hall', path: '/halls/royal-palace-function/book', icon: '👑', desc: 'Nagarkurnool, Telangana • 2000+ Guests' },
-    { name: 'Sri Lakshmi Function Hall', path: '/halls/sri-lakshmi-function/book', icon: '✨', desc: 'Wanaparthy, Telangana • 800+ Guests' },
-    { name: 'Browse All Function Halls by Location', path: '/halls', icon: '🔍', desc: 'Filter by State, District & Mandal' }
   ];
 
   const travelOptions = [
@@ -198,8 +189,6 @@ export const EventHero: React.FC = () => {
                 <h3 className="text-lg font-bold font-serif text-primary-800">
                   {selectedService === 'EVENT'
                     ? 'Event Booking Options'
-                    : selectedService === 'HALL'
-                    ? 'Function Hall Booking'
                     : selectedService === 'TRAVEL'
                     ? 'Travelling Booking Options'
                     : 'Select Booking Option'}
@@ -207,8 +196,6 @@ export const EventHero: React.FC = () => {
                 <p className="text-xs text-neutral-400 mt-0.5">
                   {selectedService === 'EVENT'
                     ? 'Select an existing event option to proceed with your booking'
-                    : selectedService === 'HALL'
-                    ? 'Choose a venue or browse all available function halls'
                     : selectedService === 'TRAVEL'
                     ? 'Choose a vehicle or transportation service for your event'
                     : 'Select one of our primary services to proceed with your booking'}
@@ -228,7 +215,14 @@ export const EventHero: React.FC = () => {
                 {serviceCategories.map((service, idx) => (
                   <button
                     key={service.id}
-                    onClick={() => setSelectedService(service.id)}
+                    onClick={() => {
+                      if (service.id === 'HALL') {
+                        handleCloseModal();
+                        navigate('/halls');
+                      } else {
+                        setSelectedService(service.id);
+                      }
+                    }}
                     className="w-full flex items-center justify-between p-4 border border-cream-200 hover:border-[#155EEF] hover:bg-blue-50/30 rounded-luxury text-left transition-all group shadow-sm hover:shadow cursor-pointer"
                   >
                     <div className="flex items-center gap-4">
@@ -260,12 +254,7 @@ export const EventHero: React.FC = () => {
             {/* STEP 2: Sub-options for selected service */}
             {selectedService && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                {(selectedService === 'EVENT'
-                  ? eventOptions
-                  : selectedService === 'HALL'
-                  ? hallOptions
-                  : travelOptions
-                ).map((opt) => (
+                {(selectedService === 'EVENT' ? eventOptions : travelOptions).map((opt) => (
                   <button
                     key={opt.name}
                     onClick={() => {
@@ -287,21 +276,6 @@ export const EventHero: React.FC = () => {
                     </div>
                   </button>
                 ))}
-
-                {selectedService === 'HALL' && (
-                  <div className="col-span-1 sm:col-span-2 pt-2">
-                    <button
-                      onClick={() => {
-                        handleCloseModal();
-                        navigate('/halls');
-                      }}
-                      className="w-full py-2.5 bg-gold-500 hover:bg-gold-600 text-white rounded-luxury text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow cursor-pointer"
-                    >
-                      <MapPin size={14} />
-                      <span>Filter Venues by State, District & Mandal &rarr;</span>
-                    </button>
-                  </div>
-                )}
 
                 {selectedService === 'TRAVEL' && (
                   <div className="col-span-1 sm:col-span-2 pt-2">

@@ -29,9 +29,12 @@ export const EventListingPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           
           {/* Card 1: Event Management */}
-          <div className="luxury-card flex flex-col justify-between p-6 hover:shadow-luxury-lg hover:border-gold-300 transition-all duration-300">
+          <div 
+            onClick={() => navigate('/events/book/marriage')}
+            className="luxury-card flex flex-col justify-between p-6 hover:shadow-luxury-lg hover:border-gold-300 transition-all duration-300 cursor-pointer group"
+          >
             <div>
-              <div className="bg-primary-50 text-primary-800 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-5 border border-primary-100">
+              <div className="bg-primary-50 text-primary-800 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-5 border border-primary-100 group-hover:scale-105 transition-all">
                 <Calendar size={22} className="text-primary-800" />
               </div>
               <h3 className="text-lg font-bold font-serif text-primary-800 mb-2">Event Management</h3>
@@ -40,17 +43,20 @@ export const EventListingPage: React.FC = () => {
               </p>
             </div>
             <button 
-              onClick={() => navigate('/events/book/marriage')} 
-              className="w-full py-2.5 bg-primary-800 text-white font-medium text-xs rounded-lg hover:bg-primary-900 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              onClick={(e) => { e.stopPropagation(); navigate('/events/book/marriage'); }} 
+              className="w-full py-2.5 bg-primary-800 text-white font-medium text-xs rounded-lg hover:bg-primary-900 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm hover:shadow"
             >
               Start Booking &rarr;
             </button>
           </div>
 
           {/* Card 2: Function Hall Booking */}
-          <div className="luxury-card flex flex-col justify-between p-6 border-gold-300 shadow-luxury-lg hover:border-gold-500 transition-all duration-300">
+          <div 
+            onClick={() => navigate('/halls')}
+            className="luxury-card flex flex-col justify-between p-6 border-gold-300 shadow-luxury-lg hover:border-gold-500 transition-all duration-300 cursor-pointer group"
+          >
             <div>
-              <div className="bg-gold-50 text-gold-600 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-5 border border-gold-200">
+              <div className="bg-gold-50 text-gold-600 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-5 border border-gold-200 group-hover:scale-105 transition-all">
                 <Landmark size={22} className="text-gold-600" />
               </div>
               <h3 className="text-lg font-bold font-serif text-primary-800 mb-2">Function Hall Booking</h3>
@@ -59,8 +65,8 @@ export const EventListingPage: React.FC = () => {
               </p>
             </div>
             <button 
-              onClick={() => navigate('/halls')} 
-              className="w-full py-2.5 bg-gold-500 text-white font-medium text-xs rounded-lg hover:bg-gold-600 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              onClick={(e) => { e.stopPropagation(); navigate('/halls'); }} 
+              className="w-full py-2.5 bg-gold-500 text-white font-medium text-xs rounded-lg hover:bg-gold-600 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm hover:shadow"
             >
               Start Booking &rarr;
             </button>
